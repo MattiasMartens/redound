@@ -4,10 +4,15 @@ import {
 import {
   Option
 } from 'fp-ts/lib/Option'
+import { Possible } from './patterns'
 
 export type CoreEventType = "ADD" | "REMOVE" | "UPDATE"
 
 export type EventScope = "VOID" | "ROOT" | "CHILD" // | "DEEP_CHILD"
+
+// May be emitted by emitter, but not to be received by consumer
+// (handled at the framework level).
+export type MetaEvent = "SEAL" | "VOID"
 
 /**
  * Vocabulary:
@@ -42,6 +47,7 @@ export type Event<T, Query> = {
   species: EventSpecies,
   eventScope: EventScope,
   payload: T,
+  provenance: Map<Source<any, any, any, any>, number>,
   eventUniqueTag: string,
   clockStamp: number,
   cause: Option<QueryState<Query>>
@@ -50,7 +56,10 @@ export type Event<T, Query> = {
 export type Outcome<T, Finalization, Query> = Either<{
   error: Error,
   event: Option<Event<T, Query>>
-}, Finalization>
+}, {
+  finalization: Finalization,
+  lastTick: number
+}>
 
 export type EventSpec<T> = {
   type: CoreEventType,
@@ -88,6 +97,7 @@ export type Derivation<T, Member, Finalization, Query> = GenericEmitter<T, Membe
       source: Source<SourceType, unknown, Finalization, Query>
     }) => Promise<Member>,
   open: () => Member,
+  seal: (params: { member: Member, emit: (e: Event<T, Query>) => Promise<void>, remainingUnsealedSources: Set<Source<any, any, any, any>> }) => Promise<Possible<"SEAL">>,
   close: (m: Member, o: Outcome<T, Finalization, Query>) => Promise<void>,
   sourceCapability: Option<{
     pull: (emit: (e: Event<T, Query>) => Promise<void>, query: Query, r: Member) => Promise<FinalQueryState<Query>>
