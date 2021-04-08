@@ -1,0 +1,4 @@
+- Backpressure in the case of multiple subscribers
+  - Principle of least astonishment: probably manage backpressure independently for each subscriber. In some cases this could cause sync issues where two subscribers feed into a single consumer; that's where the runtime clock comes in.
+- Query: also pass query state - resolution, failure, and if resolved, the final event's clock-tick.
+- Errors: we want a clean, standardized paradigm for handling event processing errors and when to terminate sources based on failures in their downstream. It's already established that errors don't propagate directly, but that it is a separate concern handled by the owner of all application sources and sinks.
