@@ -27,7 +27,18 @@ export type Event<T, Query> = {
   eventUniqueTag: string,
   eventUniqueCompositeTags: Map<SourceTag, Set<EventUniqueTag>>,
   clockStamp: number,
-  cause: Option<Query>
+  cause: Option<{
+    state: "WAITING",
+    query: Query
+  } | {
+    state: "FAILED",
+    error: Error,
+    query: Query
+  } | {
+    state: "SUCCESSFUL",
+    latestResultantTick: number,
+    query: Query
+  }>
 }
 
 export type Outcome<T, Finalization, Query> = Either<{
