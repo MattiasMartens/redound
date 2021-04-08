@@ -26,7 +26,7 @@ export function declareSource<T, References, Finalization, Query>(
   const processedTag = tag(bareTag, prefix)
 
   return {
-    consumers: [],
+    consumers: new Set(),
     close,
     emits,
     open,

@@ -52,7 +52,7 @@ export type EventSpec<T> = {
 }
 
 export type GenericEmitter<T> = {
-  consumers: {}[],
+  consumers: Set<Sink<T>>,
   emits: Set<EventSpec<T>>,
   /** In general, it should be enforced that the type of instances of Event<T> is confined to the subtypes specified in `emits`. In TypeScript it is best to offer the ability to enforce it at runtime. */
   open: (emit: (e: Event<T>) => Promise<void>) => References,
@@ -71,7 +71,11 @@ type Member = any
 export type Derivation<T> = GenericEmitter<T> & {
   dependencies: Set<Source<any>>,
   member: Member,
-  unroll: (member: Member, emit: (e: Event<T>) => Promise<void>) => Promise<void>
+  unroll: (member: Member, emit: (e: Event<T>) => Promise<void>) => Promise<void>,
+  consumes: Set<EventSpec<T>>,
+  consume: <SourceType>(e: Event<SourceType>, emit: (e: Event<T>) => Promise<void>, s: Source<SourceType>) => Promise<void>,
+  open: () => References,
+  close: (r: References, o: Outcome<T, any>) => Promise<void>
 }
 
 export type Sink<T> = {
