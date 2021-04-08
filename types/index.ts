@@ -46,14 +46,16 @@ export type Outcome<T> = Either<{
 
 type References = any
 
+export type EventSpec<T> = {
+  type: CoreEventType,
+  species: EventSpecies,
+  eventScope: EventScope,
+  payload: T
+}
+
 export type GenericEmitter<T> = {
   consumers: {}[],
-  emits: Set<{
-    type: CoreEventType,
-    species: EventSpecies,
-    eventScope: EventScope,
-    payload: T
-  }>,
+  emits: Set<EventSpec<T>>,
   /** In general, it should be enforced that the type of instances of Event<T> is confined to the subtypes specified in `emits`. In TypeScript it is best to offer the ability to enforce it at runtime. */
   open: (emit: (e: Event<T>) => Promise<void>) => References,
   close: (r: References) => Promise<void>
@@ -76,6 +78,7 @@ export type Transform<T> = GenericEmitter<T> & {
 
 export type Sink<T> = {
   source: Source<T>,
+  consumes: Set<EventSpec<T>>,
   consume: (e: Event<T>) => Promise<void>,
   open: () => References,
   close: (r: References) => Promise<void>
