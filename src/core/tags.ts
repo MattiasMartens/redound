@@ -3,14 +3,16 @@ import {
   v4 as uuid
 } from 'uuid'
 
-export function tag(
+const SEPARATOR = '--'
+
+export function initializeTag(
   prefix?: string,
   id?: string
 ) {
   const tag = [
     ...(prefix === undefined ? [] : [prefix]),
     id === undefined ? uuid() : id
-  ].join("-")
+  ].join(SEPARATOR)
 
   return registerKey(tag)
 }

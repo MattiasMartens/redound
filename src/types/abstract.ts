@@ -19,34 +19,38 @@ export type EventSpecies = string
 export type EventUniqueTag = string
 export type SourceTag = string
 
+export type FinalQueryState<Query> = {
+  state: "FAILED",
+  error: Error,
+  query: Query
+} | {
+  state: "SUCCESSFUL",
+  finalResultantTick: number,
+  query: Query
+}
+
+
+export type QueryState<Query> = {
+  state: "WAITING",
+  latestResultantTick: number,
+  query: Query
+} | FinalQueryState<Query>
+
+
 export type Event<T, Query> = {
   type: CoreEventType,
   species: EventSpecies,
   eventScope: EventScope,
   payload: T,
   eventUniqueTag: string,
-  eventUniqueCompositeTags: Map<SourceTag, Set<EventUniqueTag>>,
   clockStamp: number,
-  cause: Option<{
-    state: "WAITING",
-    query: Query
-  } | {
-    state: "FAILED",
-    error: Error,
-    query: Query
-  } | {
-    state: "SUCCESSFUL",
-    latestResultantTick: number,
-    query: Query
-  }>
+  cause: Option<QueryState<Query>>
 }
 
 export type Outcome<T, Finalization, Query> = Either<{
   error: Error,
   event: Option<Event<T, Query>>
 }, Finalization>
-
-type References = any
 
 export type EventSpec<T> = {
   type: CoreEventType,
@@ -55,7 +59,7 @@ export type EventSpec<T> = {
   payload: T
 }
 
-export type GenericEmitter<T, Finalization, Query> = {
+export type GenericEmitter<T, References, Finalization, Query> = {
   emits: Set<EventSpec<T>>,
   /** In general, it should be enforced that the type of instances of Event<T> is confined to the subtypes specified in `emits`. In TypeScript it is best to offer the ability to enforce it at runtime. */
   open: (emit: (e: Event<T, never>) => Promise<void>) => References,
@@ -63,9 +67,9 @@ export type GenericEmitter<T, Finalization, Query> = {
   name: string
 }
 
-export type Source<T, Finalization, Query> = GenericEmitter<T, Finalization, Query> & {
+export type Source<T, References, Finalization, Query> = GenericEmitter<T, References, Finalization, Query> & {
   close: (r: References, o: Outcome<T, Finalization, Query>) => Promise<void>,
-  pull: (emit: (e: Event<T, Query>) => Promise<void>, query: Query, r: References) => void,
+  pull: (emit: (e: Event<T, Query>) => Promise<void>, query: Query, r: References) => Promise<FinalQueryState<Query>>,
   // Experiment -- mechanism to induce an effect upstream of
   // the source, using the event paradigm. In essence, in the
   // standard track, upstream data produces events. This
@@ -73,22 +77,24 @@ export type Source<T, Finalization, Query> = GenericEmitter<T, Finalization, Que
   push?: (e: Event<T, never>) => Promise<Event<T, never>>
 }
 
-type Member = any
-
-export type Derivation<T, Finalization, Query> = GenericEmitter<T, Finalization, Query> & {
-  dependencies: Set<Source<any, any, any>>,
-  member: Member,
+export type Derivation<T, Member, Finalization, Query> = GenericEmitter<T, Member, Finalization, Query> & {
   unroll: (member: Member, emit: (e: Event<T, never>) => Promise<void>) => Promise<void>,
   consumes: Set<EventSpec<T>>,
-  consume: <SourceType>(e: Event<SourceType, any>, emit: (e: Event<T, Query>) => Promise<void>, s: Source<SourceType, Finalization, Query>) => Promise<void>,
-  open: () => References,
-  close: (r: References, o: Outcome<T, Finalization, Query>) => Promise<void>,
+  consume: <SourceType>(
+    params: {
+      event: Event<SourceType, any>,
+      emit: (e: Event<T, Query>) => Promise<void>,
+      member: Member,
+      source: Source<SourceType, unknown, Finalization, Query>
+    }) => Promise<Member>,
+  open: () => Member,
+  close: (m: Member, o: Outcome<T, Finalization, Query>) => Promise<void>,
   sourceCapability: Option<{
-    pull: (emit: (e: Event<T, Query>) => Promise<void>, query: Query, r: References) => void
+    pull: (emit: (e: Event<T, Query>) => Promise<void>, query: Query, r: Member) => Promise<FinalQueryState<Query>>
   }>
 }
 
-export type Sink<T, Finalization, Query> = {
+export type Sink<T, Finalization, Query, References> = {
   consumes: Set<EventSpec<T>>,
   consume: (e: Event<T, Query>) => Promise<void>,
   open: () => References,

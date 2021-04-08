@@ -34,6 +34,7 @@ export const tick = () => {
       }
     }
   )
+  return runtimeClock
 }
 
 export function awaitTick(tick: number) {
