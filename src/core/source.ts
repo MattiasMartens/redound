@@ -16,13 +16,13 @@ export function declareSource<T, References, Finalization, Query>(
     pull
   }: {
     emits: Set<EventSpec<T>>,
-    open: (emit: (e: Event<T>) => Promise<void>) => Outcome<T, Finalization>,
-    pull: (emit: (e: Event<T>) => Promise<void>, query: Query, r: References) => void,
-    close: (r: References, o: Outcome<T, Finalization>) => Promise<void>,
+      open: (emit: (e: Event<T, never>) => Promise<void>) => Outcome<T, Finalization, Query>,
+      pull: (emit: (e: Event<T, Query>) => Promise<void>, query: Query, r: References) => void,
+      close: (r: References, o: Outcome<T, Finalization, Query>) => Promise<void>,
     tag?: string,
     prefix?: string
   }
-): Source<T> {
+): Source<T, Query> {
   const processedTag = tag(bareTag, prefix)
 
   return {
