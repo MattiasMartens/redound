@@ -10,6 +10,16 @@ export const registerKey = (id: string) => {
 }
 
 let runtimeClock = 1
+let clockWasHydrated = false
+
+export function hydrateClock(tick: number) {
+  if (runtimeClock === 1 && !clockWasHydrated) {
+    runtimeClock = tick
+    clockWasHydrated = true
+  } else {
+    throw new Error('Clock has already been hydrated, or has already ticked; therefore, cannot guarantee app correctness. Structure your code to call hydrateClock() before it is possible for anything to tick.')
+  }
+}
 
 const clockAwaiters: Map<number, ((currentTick: number) => void)[]> = new Map()
 

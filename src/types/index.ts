@@ -65,7 +65,12 @@ export type GenericEmitter<T, Finalization, Query> = {
 
 export type Source<T, Finalization, Query> = GenericEmitter<T, Finalization, Query> & {
   close: (r: References, o: Outcome<T, Finalization, Query>) => Promise<void>,
-  pull: (emit: (e: Event<T, Query>) => Promise<void>, query: Query, r: References) => void
+  pull: (emit: (e: Event<T, Query>) => Promise<void>, query: Query, r: References) => void,
+  // Experiment -- mechanism to induce an effect upstream of
+  // the source, using the event paradigm. In essence, in the
+  // standard track, upstream data produces events. This
+  // method would allow events to produce upstream data.
+  push?: (e: Event<T, never>) => Promise<Event<T, never>>
 }
 
 type Member = any
@@ -77,7 +82,10 @@ export type Derivation<T, Finalization, Query> = GenericEmitter<T, Finalization,
   consumes: Set<EventSpec<T>>,
   consume: <SourceType>(e: Event<SourceType, any>, emit: (e: Event<T, Query>) => Promise<void>, s: Source<SourceType, Finalization, Query>) => Promise<void>,
   open: () => References,
-  close: (r: References, o: Outcome<T, Finalization, Query>) => Promise<void>
+  close: (r: References, o: Outcome<T, Finalization, Query>) => Promise<void>,
+  sourceCapability: Option<{
+    pull: (emit: (e: Event<T, Query>) => Promise<void>, query: Query, r: References) => void
+  }>
 }
 
 export type Sink<T, Finalization, Query> = {
