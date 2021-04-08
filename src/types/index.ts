@@ -37,9 +37,7 @@ type Option<T> = {
   value: T
 }
 
-type Finalization = any
-
-export type Outcome<T> = Either<{
+export type Outcome<T, Finalization> = Either<{
   error: Error,
   event: Option<Event<T>>
 }, Finalization>
@@ -58,7 +56,7 @@ export type GenericEmitter<T> = {
   emits: Set<EventSpec<T>>,
   /** In general, it should be enforced that the type of instances of Event<T> is confined to the subtypes specified in `emits`. In TypeScript it is best to offer the ability to enforce it at runtime. */
   open: (emit: (e: Event<T>) => Promise<void>) => References,
-  close: (r: References, o: Outcome<T>) => Promise<void>
+  close: (r: References, o: Outcome<T, any>) => Promise<void>
 }
 
 type Query = any
@@ -81,5 +79,5 @@ export type Sink<T> = {
   consumes: Set<EventSpec<T>>,
   consume: (e: Event<T>) => Promise<void>,
   open: () => References,
-  close: (r: References, o: Outcome<T>) => Promise<void>
+  close: (r: References, o: Outcome<T, any>) => Promise<void>
 }
