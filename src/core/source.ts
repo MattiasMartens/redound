@@ -7,7 +7,7 @@ import {
   Source
 } from '@/types/abstract'
 import { SourceInstance, GenericConsumerInstance, Controller } from '@/types/instances'
-import { isSome, some } from 'fp-ts/lib/Option'
+import { isNone, isSome, Option, some } from 'fp-ts/lib/Option'
 import { fromNullable, none } from 'fp-ts/lib/Option'
 import { clock } from './clock'
 import { initializeTag } from './tags'
@@ -21,7 +21,40 @@ export function declareSimpleSource<T, References>(source: Source<T, References,
   return source
 }
 
-export function initializeSource<T, References, Finalization, Query>(source: Source<T, References, Finalization, Query>, { id, tick, controller }: { id?: string, tick?: number, controller?: Controller<Finalization, Query> }): SourceInstance<T, References, Finalization, Query> {
+type ControllerReceiver<Finalization, Query> = {
+  controller: Option<Controller<Finalization, Query>>
+  consumers?: Set<ControllerReceiver<Finalization, Query>>,
+  id: string
+}
+
+export async function propagateController<Finalization, Query>(
+  component: ControllerReceiver<Finalization, Query>,
+  controller: Controller<Finalization, Query>
+) {
+  if (isNone(component.controller)) {
+    component.controller = some(controller)
+
+    if (component.consumers) {
+      forEachIterable(
+        component.consumers,
+        receiver => propagateController(
+          receiver,
+          controller
+        )
+      )
+    }
+  } else {
+    const existingController = component.controller.value
+
+    if (existingController !== controller) {
+      throw new Error(`Tried to propagate controller ${controller.id} to component ${component.id} but it had already received controller ${controller.id}. A component may only have one controller during its lifecycle.`)
+    } else {
+      // Controller already set by another path, no-op
+    }
+  }
+}
+
+export function initializeSourceInstance<T, References, Finalization, Query>(source: Source<T, References, Finalization, Query>, { id, tick, controller }: { id?: string, tick?: number, controller?: Controller<Finalization, Query> }): SourceInstance<T, References, Finalization, Query> {
   const tag = initializeTag(
     source.name,
     id
@@ -86,6 +119,13 @@ export async function subscribe<T, References, Finalization, Query>(
     }
 
     source.consumers.add(consumer)
+
+    if (isSome(source.controller)) {
+      propagateController(
+        consumer,
+        source.controller.value
+      )
+    }
   } else {
     throw new Error(`Attempted action subscribe() on source ${source.id} in incompatible lifecycle state: ${source.lifecycle.state}`)
   }

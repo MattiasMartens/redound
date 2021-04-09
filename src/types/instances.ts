@@ -14,13 +14,16 @@ export type Controller<Finalization, Query> = {
   rescue: (
     error: Error,
     event: Event<any, Query>
-  ) => Option<Outcome<any, Finalization, Query>>
+  ) => Option<Outcome<any, Finalization, Query>>,
+  id: string
 }
 
 export type GenericConsumerInstance<T, Finalization, Query> = {
   consume: (e: Event<T, Query> | MetaEvent<Query>) => Promise<void>,
   close: (o: Outcome<T, Finalization, Query>) => Promise<void>,
   seal: (source: SourceInstance<any, any, any, any>) => Promise<void>,
+  controller: Option<Controller<Finalization, Query>>,
+  consumers?: Set<GenericConsumerInstance<any, Finalization, Query>>,
   id: string
 }
 
