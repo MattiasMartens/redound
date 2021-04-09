@@ -83,6 +83,7 @@ export type GenericEmitter<T, References, Finalization, Query> = {
 }
 
 export type Source<T, References, Finalization, Query> = GenericEmitter<T, References, Finalization, Query> & {
+  graphComponentType: "Source",
   close: (r: References, o: Outcome<any, Finalization, Query>) => Promise<void>,
   pull: (emit: (e: Event<T, Query> | MetaEvent<Query>) => Promise<void>, query: Query, r: References) => Promise<FinalQueryState<Query>>,
   // Experiment -- mechanism to induce an effect upstream of
@@ -93,6 +94,7 @@ export type Source<T, References, Finalization, Query> = GenericEmitter<T, Refer
 }
 
 export type Derivation<T, Member, Finalization, Query> = GenericEmitter<T, Member, Finalization, Query> & {
+  graphComponentType: "Derivation",
   unroll: (member: Member, emit: (e: Event<T, never> | MetaEvent<Query>) => Promise<void>) => Promise<void>,
   consumes: Set<EventSpec<T>>,
   consume: <SourceType>(
@@ -111,6 +113,7 @@ export type Derivation<T, Member, Finalization, Query> = GenericEmitter<T, Membe
 }
 
 export type Sink<T, References, Finalization, Query> = {
+  graphComponentType: "Sink",
   consumes: Set<EventSpec<T>>,
   consume: (e: Event<T, Query>, r: References) => Promise<void>,
   open: () => References,

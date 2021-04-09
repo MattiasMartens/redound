@@ -4,14 +4,23 @@ import {
   Event,
   MetaEvent,
   Outcome,
+  QueryState,
   Source
 } from '@/types/abstract'
 import { SourceInstance, GenericConsumerInstance, Controller } from '@/types/instances'
-import { isNone, isSome, Option, some } from 'fp-ts/lib/Option'
+import { fromPredicate, isNone, isSome, Option, some } from 'fp-ts/lib/Option'
 import { fromNullable, none } from 'fp-ts/lib/Option'
-import { clock } from './clock'
-import { consume } from './sink'
+import { clock, tick } from './clock'
+import { consume, close as consumerClose } from './consumer'
 import { initializeTag } from './tags'
+
+// Dependency Map:
+// source imports sink
+// source imports derivation
+// source imports consumer
+// consumer imports sink
+// consumer imports derivation
+// (there is no need for a generic "emitter")
 
 /**
  * TypeScript doesn't allow mixing inferred with optional
@@ -89,9 +98,7 @@ export async function emit<T, References, Finalization, Query>(
         mapIterable(
           source.consumers,
           async c => {
-            // TODO need a consume function that operates on a generic consumer,
-            // but delegates to either the Sink or Derivation implementations.
-            consume(c as any, source as any, event)
+            consume(source, c, event)
           }
         )
       ).then(() => void (source.backpressure = none))
@@ -114,9 +121,9 @@ export function open<T, References, Finalization, Query>(
   }
 }
 
-export async function subscribe<T, References, Finalization, Query>(
-  source: SourceInstance<T, References, Finalization, Query>,
-  consumer: GenericConsumerInstance<T, Finalization, Query>
+export async function subscribe<T, Finalization, Query>(
+  source: SourceInstance<T, any, Finalization, Query>,
+  consumer: GenericConsumerInstance<T, any, Finalization, Query>
 ) {
   if (source.lifecycle.state !== "ENDED") {
     if (source.lifecycle.state === "READY") {
@@ -136,25 +143,42 @@ export async function subscribe<T, References, Finalization, Query>(
   }
 }
 
-export function unsubscribe<T, References, Finalization, Query>(
-  source: SourceInstance<T, References, Finalization, Query>,
-  consumer: GenericConsumerInstance<T, Finalization, Query>
+export function sealEvent<Query>(
+  source: SourceInstance<any, any, any, Query>,
+  q?: QueryState<Query>
+): MetaEvent<Query> {
+  tick(source.clock)
+
+  return {
+    type: "SEAL",
+    cause: fromNullable(q),
+    provenance: new Map([
+      [source.id, source.clock.tick]
+    ])
+  }
+}
+
+export function unsubscribe<T, Finalization, Query>(
+  source: SourceInstance<T, any, Finalization, Query>,
+  consumer: GenericConsumerInstance<T, any, Finalization, Query>
 ) {
   source.consumers.delete(consumer)
 }
 
 export function seal<T, References, Finalization, Query>(
-  source: SourceInstance<T, References, Finalization, Query>
+  source: SourceInstance<T, References, Finalization, Query>,
+  query?: QueryState<Query>
 ) {
   if (source.lifecycle.state === "ACTIVE") {
     source.lifecycle.state = "SEALED"
 
     forEachIterable(
       source.consumers,
-      // TODO need a seal function that operates on a generic consumer,
-      // but delegates to either the Sink or Derivation implementations.
-      // @ts-ignore
-      consumer => consumer.seal(source)
+      consumer => consume(
+        source,
+        consumer,
+        sealEvent(source, query)
+      )
     )
   } else if (source.lifecycle.state === "ENDED") {
     // no-op
@@ -177,8 +201,11 @@ export function close<T, References, Finalization, Query>(
       source.consumers,
       // TODO need a close function that operates on a generic consumer,
       // but delegates to either the Sink or Derivation implementations.
-      // @ts-ignore
-      consumer => consumer.close(outcome)
+      consumer => consumerClose(
+        source,
+        consumer,
+        outcome
+      )
     )
   } else {
     throw new Error(`Attempted action close() on source ${source.id} in incompatible lifecycle state: ${source.lifecycle.state}`)

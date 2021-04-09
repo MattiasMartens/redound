@@ -40,15 +40,10 @@ export function initializeSinkInstance<T, References, Finalization, Query>(sink:
     },
     source: sourceInstance,
     references: none,
-    backpressure: none,
     controller: fromNullable(controller),
     id: tag
   }
 }
-
-// consume: (e: Event<T, Query> | MetaEvent<Query>) => Promise<void>,
-//   close: (o: Outcome<T, Finalization, Query>) => Promise<void>,
-//   seal: (source: SourceInstance<any, any, any, any>) => Promise<void>,
 
 export async function consume<T, References, Finalization, Query>(
   source: SourceInstance<T, References, Finalization, Query>,
@@ -56,14 +51,13 @@ export async function consume<T, References, Finalization, Query>(
   e: Event<T, Query> | MetaEvent<Query>
 ) {
   if (sink.lifecycle.state === "ACTIVE") {
-    const references = getSome(sink.references)
-
     if (e.type === "VOID") {
       // no-op: just update the sink's provenance clock.
     } else if (e.type === "SEAL") {
       // also no-op: The sink doesn't care about this, at least until it triggers
       // the controller to close it.
     } else {
+      const references = getSome(sink.references)
       await sink.prototype.consume(e as Event<T, Query>, references)
     }
 
@@ -82,6 +76,20 @@ export async function consume<T, References, Finalization, Query>(
       )
     )
   } else {
-    throw new Error(`Attempted action emit() on sink ${sink.id} in incompatible lifecycle state: ${source.lifecycle.state}`)
+    throw new Error(`Attempted action consume() on sink ${sink.id} in incompatible lifecycle state: ${source.lifecycle.state}`)
+  }
+}
+
+export async function close<T, References, Finalization, Query>(
+  source: SourceInstance<T, References, Finalization, Query>,
+  sink: SinkInstance<T, References, Finalization, Query>,
+  outcome: Outcome<T, Finalization, Query>
+) {
+  if (sink.lifecycle.state === "ACTIVE") {
+    const references = getSome(sink.references)
+
+    await sink.prototype.close(references, outcome)
+  } else {
+    throw new Error(`Attempted action close() on sink ${sink.id} in incompatible lifecycle state: ${source.lifecycle.state}`)
   }
 }
