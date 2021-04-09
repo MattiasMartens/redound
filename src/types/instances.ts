@@ -5,14 +5,15 @@ import { Clock } from '@/core/clock'
 export type GenericConsumerInstance<T, Finalization, Query> = {
   consume: (e: Event<T, Query> | MetaEvent<Query>) => Promise<void>,
   close: (o: Outcome<T, Finalization, Query>) => Promise<void>,
-  seal: (source: Source<any, any, any, any>) => Promise<void>
+  seal: (source: SourceInstance<any, any, any, any>) => Promise<void>
 }
 
 export type SourceInstance<T, References, Finalization, Query> = {
   clock: Clock,
   prototype: Source<T, References, Finalization, Query>,
-  subscribers: Set<GenericConsumerInstance<T, Finalization, Query>>,
-  outcome: Option<Outcome<T, Finalization, Query>>,
+  consumers: Set<GenericConsumerInstance<T, Finalization, Query>>,
+  sealed: boolean,
+  lifecycle: { state: "READY" | "ACTIVE" | "SEALED" } | { state: "ENDED", outcome: Outcome<T, Finalization, Query> },
   // Initialized to 'Some' on first subscription event,
   // reverted to 'None' once closed.
   references: Option<References>,
