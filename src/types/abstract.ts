@@ -78,12 +78,12 @@ export type GenericEmitter<T, References, Finalization, Query> = {
   emits: Set<EventSpec<T>>,
   /** In general, it should be enforced that the type of instances of Event<T> is confined to the subtypes specified in `emits`. In TypeScript it is best to offer the ability to enforce it at runtime. */
   open: (emit: (e: Event<T, never> | MetaEvent<Query>) => Promise<void>) => References,
-  close: (r: References, o: Outcome<T, Finalization, Query>) => Promise<void>,
+  close: (r: References, o: Outcome<any, Finalization, Query>) => Promise<void>,
   name: string
 }
 
 export type Source<T, References, Finalization, Query> = GenericEmitter<T, References, Finalization, Query> & {
-  close: (r: References, o: Outcome<T, Finalization, Query>) => Promise<void>,
+  close: (r: References, o: Outcome<any, Finalization, Query>) => Promise<void>,
   pull: (emit: (e: Event<T, Query> | MetaEvent<Query>) => Promise<void>, query: Query, r: References) => Promise<FinalQueryState<Query>>,
   // Experiment -- mechanism to induce an effect upstream of
   // the source, using the event paradigm. In essence, in the
@@ -104,7 +104,7 @@ export type Derivation<T, Member, Finalization, Query> = GenericEmitter<T, Membe
     }) => Promise<Member>,
   open: () => Member,
   seal: (params: { member: Member, emit: (e: Event<T, Query> | MetaEvent<Query>) => Promise<void>, remainingUnsealedSources: Set<Source<any, any, any, any>> }) => Promise<Possible<"SEAL">>,
-  close: (m: Member, o: Outcome<T, Finalization, Query>) => Promise<void>,
+  close: (m: Member, o: Outcome<any, Finalization, Query>) => Promise<void>,
   sourceCapability: Option<{
     pull: (emit: (e: Event<T, Query> | MetaEvent<Query>) => Promise<void>, query: Query, r: Member) => Promise<FinalQueryState<Query>>
   }>
@@ -114,6 +114,6 @@ export type Sink<T, Finalization, Query, References> = {
   consumes: Set<EventSpec<T>>,
   consume: (e: Event<T, Query>) => Promise<void>,
   open: () => References,
-  close: (r: References, o: Outcome<T, Finalization, Query>) => Promise<void>,
+  close: (r: References, o: Outcome<any, Finalization, Query>) => Promise<void>,
   name: string
 }
