@@ -1,4 +1,4 @@
-type Clock = {
+export type Clock = {
   tick: number,
   awaiters: Map<number, ((currentTick: number) => void)[]>
 }
