@@ -10,6 +10,7 @@ import { SourceInstance, GenericConsumerInstance, Controller } from '@/types/ins
 import { isNone, isSome, Option, some } from 'fp-ts/lib/Option'
 import { fromNullable, none } from 'fp-ts/lib/Option'
 import { clock } from './clock'
+import { consume } from './sink'
 import { initializeTag } from './tags'
 
 /**
@@ -87,7 +88,11 @@ export async function emit<T, References, Finalization, Query>(
       voidPromiseIterable(
         mapIterable(
           source.consumers,
-          async c => c.consume(event)
+          async c => {
+            // TODO need a consume function that operates on a generic consumer,
+            // but delegates to either the Sink or Derivation implementations.
+            consume(c as any, source as any, event)
+          }
         )
       ).then(() => void (source.backpressure = none))
     )
@@ -146,6 +151,9 @@ export function seal<T, References, Finalization, Query>(
 
     forEachIterable(
       source.consumers,
+      // TODO need a seal function that operates on a generic consumer,
+      // but delegates to either the Sink or Derivation implementations.
+      // @ts-ignore
       consumer => consumer.seal(source)
     )
   } else if (source.lifecycle.state === "ENDED") {
@@ -167,6 +175,9 @@ export function close<T, References, Finalization, Query>(
 
     forEachIterable(
       source.consumers,
+      // TODO need a close function that operates on a generic consumer,
+      // but delegates to either the Sink or Derivation implementations.
+      // @ts-ignore
       consumer => consumer.close(outcome)
     )
   } else {

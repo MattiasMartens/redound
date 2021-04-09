@@ -110,9 +110,9 @@ export type Derivation<T, Member, Finalization, Query> = GenericEmitter<T, Membe
   }>
 }
 
-export type Sink<T, Finalization, Query, References> = {
+export type Sink<T, References, Finalization, Query> = {
   consumes: Set<EventSpec<T>>,
-  consume: (e: Event<T, Query>) => Promise<void>,
+  consume: (e: Event<T, Query>, r: References) => Promise<void>,
   open: () => References,
   close: (r: References, o: Outcome<any, Finalization, Query>) => Promise<void>,
   name: string

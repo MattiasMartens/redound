@@ -18,27 +18,23 @@ export type Controller<Finalization, Query> = {
   id: string
 }
 
-export type GenericConsumerInstance<T, Finalization, Query> = {
-  consume: (e: Event<T, Query> | MetaEvent<Query>) => Promise<void>,
-  close: (o: Outcome<T, Finalization, Query>) => Promise<void>,
-  seal: (source: SourceInstance<any, any, any, any>) => Promise<void>,
+export type GenericConsumerInstance<References, Finalization, Query> = {
   controller: Option<Controller<Finalization, Query>>,
   consumers?: Set<GenericConsumerInstance<any, Finalization, Query>>,
   id: string
 }
 
-type ConsumerId = string
 export type SourceInstance<T, References, Finalization, Query> = {
-  clock: Clock,
   prototype: Source<T, References, Finalization, Query>,
+  controller: Option<Controller<Finalization, Query>>
+  id: string
+  clock: Clock,
   consumers: Set<GenericConsumerInstance<T, Finalization, Query>>,
   backpressure: Option<Promise<void>>,
   lifecycle: { state: "READY" | "ACTIVE" | "SEALED" } | { state: "ENDED", outcome: Outcome<T, Finalization, Query> },
   // Initialized to 'Some' on first subscription event,
   // reverted to 'None' once closed.
-  references: Option<References>,
-  id: string,
-  controller: Option<Controller<Finalization, Query>>
+  references: Option<References>
 }
 
 export type DerivationInstance<T, Member, Finalization, Query> = {
@@ -46,7 +42,14 @@ export type DerivationInstance<T, Member, Finalization, Query> = {
   controller: Option<Controller<Finalization, Query>>
 }
 
-export type SinkInstance<T, Finalization, Query, References> = {
-  prototype: Sink<T, Finalization, Query, References>,
-  controller: Option<Controller<Finalization, Query>>
+type SourceId = string
+export type SinkInstance<T, References, Finalization, Query> = {
+  prototype: Sink<T, References, Finalization, Query>,
+  controller: Option<Controller<Finalization, Query>>,
+  id: string
+  latestTickByProvenance: Map<SourceId, number>
+  source: SourceInstance<T, References, Finalization, Query>,
+  backpressure: Option<Promise<void>>,
+  lifecycle: { state: "ACTIVE" } | { state: "ENDED", outcome: Outcome<T, Finalization, Query> },
+  references: Option<References>
 }

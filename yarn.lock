@@ -2,15 +2,34 @@
 # yarn lockfile v1
 
 
+"@types/node@*":
+  version "14.14.37"
+  resolved "https://registry.yarnpkg.com/@types/node/-/node-14.14.37.tgz#a3dd8da4eb84a996c36e331df98d82abd76b516e"
+  integrity sha512-XYmBiy+ohOR4Lh5jE379fV2IU+6Jn4g5qASinhitfyO71b/sCo6MKsMLF5tc7Zf2CE8hViVQyYSobJNke8OvUw==
+
 "@types/uuid@^8.3.0":
   version "8.3.0"
   resolved "https://registry.yarnpkg.com/@types/uuid/-/uuid-8.3.0.tgz#215c231dff736d5ba92410e6d602050cce7e273f"
   integrity sha512-eQ9qFW/fhfGJF8WKHGEHZEyVWfZxrT+6CLIJGBcZPfxUh/+BnEj+UCGYMlr9qZuX/2AltsvwrGqp0LhEW8D0zQ==
 
+big-m@^5.2.0:
+  version "5.2.0"
+  resolved "https://registry.yarnpkg.com/big-m/-/big-m-5.2.0.tgz#e0b5b8c811ab7644eb54b1c2818f179f6cccf642"
+  integrity sha512-NpPOm7KqIX1CpSJMoXeWXjv4iN2fRGQwY7PQvvZwfDACpp96mze/pQfyKJefS3xJShFhjmKdmKO2FTjexPjPLA==
+  dependencies:
+    ts-stream "^2.0.1"
+
 fp-ts@^2.9.5:
   version "2.9.5"
   resolved "https://registry.yarnpkg.com/fp-ts/-/fp-ts-2.9.5.tgz#6690cd8b76b84214a38fc77cbbbd04a38f86ea90"
   integrity sha512-MiHrA5teO6t8zKArE3DdMPT/Db6v2GUt5yfWnhBTrrsVfeCJUUnV6sgFvjGNBKDmEMqVwRFkEePL7wPwqrLKKA==
+
+ts-stream@^2.0.1:
+  version "2.0.2"
+  resolved "https://registry.yarnpkg.com/ts-stream/-/ts-stream-2.0.2.tgz#5ce2ecd97b73b50cee748eef3b5bebfe0dbdc740"
+  integrity sha512-uzlo7pwDcbhlImCikr895lYkm5fpbEvlANM62Z0IoNFdb03futr3bo3BaO4RdONqL1J7gieDP/LyiCycnD+ljg==
+  dependencies:
+    "@types/node" "*"
 
 uuid@^8.3.2:
   version "8.3.2"
