@@ -12,17 +12,20 @@ import { SourceInstance, GenericConsumerInstance, Controller } from '@/types/ins
 import {
   noop
 } from '@/patterns/functions'
-import { isNone, isSome, Option, some } from 'fp-ts/lib/Option'
+import { isSome, some } from 'fp-ts/lib/Option'
 import { fromNullable, none } from 'fp-ts/lib/Option'
 import { clock, tick } from './clock'
 import { consume, close as consumerClose } from './consumer'
 import { bareSourceEmittedToEvent } from './events'
 import { initializeTag } from './tags'
+import { propagateController } from './controller'
+import { createSetFromNullable } from '@/patterns/sets'
 
 // Dependency Map:
 // source imports sink
 // source imports derivation
 // source imports consumer
+// source imports controller
 // consumer imports sink
 // consumer imports derivation
 // (there is no need for a generic "emitter")
@@ -40,39 +43,6 @@ export function declareSimpleSource<T, References>(source: Omit<Source<T, Refere
       pull: noop
     }
   ) as Source<T, References, never, never>
-}
-
-type ControllerReceiver<Finalization, Query> = {
-  controller: Option<Controller<Finalization, Query>>
-  consumers?: Set<ControllerReceiver<Finalization, Query>>,
-  id: string
-}
-
-export async function propagateController<Finalization, Query>(
-  component: ControllerReceiver<Finalization, Query>,
-  controller: Controller<Finalization, Query>
-) {
-  if (isNone(component.controller)) {
-    component.controller = some(controller)
-
-    if (component.consumers) {
-      forEachIterable(
-        component.consumers,
-        receiver => propagateController(
-          receiver,
-          controller
-        )
-      )
-    }
-  } else {
-    const existingController = component.controller.value
-
-    if (existingController !== controller) {
-      throw new Error(`Tried to propagate controller ${controller.id} to component ${component.id} but it had already received controller ${controller.id}. A component may only have one controller during its lifecycle.`)
-    } else {
-      // Controller already set by another path, no-op
-    }
-  }
 }
 
 export function initializeSourceInstance<T, References, Finalization, Query>(source: Source<T, References, Finalization, Query>, { id, tick, controller }: { id?: string, tick?: number, controller?: Controller<Finalization, Query> } = {}): SourceInstance<T, References, Finalization, Query> {
@@ -123,7 +93,7 @@ export function open<T, References, Finalization, Query>(
   source: SourceInstance<T, References, Finalization, Query>
 ) {
   if (source.lifecycle.state === "READY") {
-    const emitToSource = (e: BareSourceEmitted<T>) => {
+    const sourceEmit = (e: BareSourceEmitted<T>) => {
       tick(source.clock)
       emit(
         source,
@@ -135,7 +105,7 @@ export function open<T, References, Finalization, Query>(
     }
 
     source.lifecycle.state = "ACTIVE"
-    const references = source.prototype.open(emitToSource)
+    const references = source.prototype.open(sourceEmit)
     source.references = some(references)
   } else {
     throw new Error(`Attempted action open() on source ${source.id} in incompatible lifecycle state: ${source.lifecycle.state}`)
@@ -172,7 +142,7 @@ export function sealEvent<Query>(
 
   return {
     type: "SEAL",
-    cause: fromNullable(q),
+    cause: createSetFromNullable(q),
     provenance: new Map([
       [source.id, source.clock.tick]
     ])

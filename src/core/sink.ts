@@ -8,7 +8,7 @@ import {
   Outcome,
   Sink
 } from '@/types/abstract'
-import { SourceInstance, Controller, SinkInstance } from '@/types/instances'
+import { SourceInstance, Controller, SinkInstance, GenericEmitterInstance } from '@/types/instances'
 import { getSome } from '@/patterns/options'
 import { fromNullable, none, some } from 'fp-ts/lib/Option'
 import { initializeTag } from './tags'
@@ -31,7 +31,7 @@ export function declareSimpleSink<T, References>(sink: Omit<Sink<T, References, 
   ) as Sink<T, References, never, never>
 }
 
-export function initializeSinkInstance<T, References, Finalization, Query>(sink: Sink<T, References, Finalization, Query>, sourceInstance: SourceInstance<T, any, Finalization, Query>, { id, controller }: { id?: string, controller?: Controller<Finalization, Query> } = {}): SinkInstance<T, References, Finalization, Query> {
+export function initializeSinkInstance<T, References, Finalization, Query>(sink: Sink<T, References, Finalization, Query>, sourceInstance: SourceInstance<T, any, Finalization, Query>, { id }: { id?: string } = {}): SinkInstance<T, References, Finalization, Query> {
   const tag = initializeTag(
     sink.name,
     id
@@ -47,14 +47,14 @@ export function initializeSinkInstance<T, References, Finalization, Query>(sink:
     // Maybe not!
     source: sourceInstance,
     references: some(sink.open()),
-    controller: fromNullable(controller),
+    controller: none,
     id: tag
   }
 }
 
-export async function consume<T, References, Finalization, Query>(
-  source: SourceInstance<T, References, Finalization, Query>,
-  sink: SinkInstance<T, References, Finalization, Query>,
+export async function consume<T, MemberOrReferences, Finalization, Query>(
+  source: GenericEmitterInstance<T, MemberOrReferences, Finalization, Query>,
+  sink: SinkInstance<T, any, Finalization, Query>,
   e: BroadEvent<T, Query>
 ) {
   if (sink.lifecycle.state === "ACTIVE") {

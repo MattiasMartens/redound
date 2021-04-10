@@ -1,5 +1,5 @@
 import { Option } from "fp-ts/lib/Option";
-import { Derivation, Event, MetaEvent, Outcome, Sink, Source } from "./abstract";
+import { Derivation, Event, Outcome, Sink, Source } from "./abstract";
 import { Clock } from '@/core/clock'
 
 /**
@@ -40,14 +40,16 @@ export type DerivationInstance<T, Member, Finalization, Query> = {
   id: string,
   latestTickByProvenance: Map<SourceId, number>,
   sourcesByRole: {
-    indistinct: Set<SourceId>,
+    numbered: SourceId[],
     named: Map<DerivationRole, SourceId>
   },
   consumers: Set<GenericConsumerInstance<T, any, Finalization, Query>>,
   backpressure: Option<Promise<void>>,
-  lifecycle: { state: "ACTIVE" | "SEALED" } | { state: "ENDED", outcome: Outcome<T, Finalization, Query> },
-  member: Member
+  lifecycle: { state: "READY" | "ACTIVE" | "SEALED" } | { state: "ENDED", outcome: Outcome<T, Finalization, Query> },
+  member: Option<Member>
 }
+
+export type GenericEmitterInstance<T, MemberOrReferences, Finalization, Query> = SourceInstance<T, MemberOrReferences, Finalization, Query> | DerivationInstance<T, MemberOrReferences, Finalization, Query>
 
 type SourceId = string
 export type SinkInstance<T, References, Finalization, Query> = {

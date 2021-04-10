@@ -50,13 +50,13 @@ export type Event<T, Query> = {
   // Number is max tick received from source that was involved in producing
   // this event.
   provenance: Map<SourceId, number>,
-  cause: Option<QueryState<Query>>
+  cause: Set<QueryState<Query>>
 }
 
 export type MetaEvent<Query> = {
   type: MetaEventType,
   provenance: Map<SourceId, number>,
-  cause: Option<QueryState<Query>>
+  cause: Set<QueryState<Query>>
 }
 
 export type BroadEvent<T, Query> = Event<T, Query> | MetaEvent<Query>
@@ -65,6 +65,13 @@ export type BareSourceEmitted<T> = Omit<
   Event<T, never>,
   'provenance' | 'cause'
 >
+
+export type BareDerivationEmitted<T> = Omit<
+  Event<T, never>,
+  'provenance' | 'cause'
+> & {
+  incitingEvents?: Set<Event<any, any>>
+}
 
 export type Outcome<T, Finalization, Query> = Either<{
   error: Error,
