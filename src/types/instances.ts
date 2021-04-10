@@ -25,7 +25,7 @@ export type SourceInstance<T, References, Finalization, Query> = {
   controller: Option<Controller<Finalization, Query>>
   id: string
   clock: Clock,
-  consumers: Set<GenericConsumerInstance<T, References, Finalization, Query>>,
+  consumers: Set<GenericConsumerInstance<T, any, Finalization, Query>>,
   backpressure: Option<Promise<void>>,
   lifecycle: { state: "READY" | "ACTIVE" | "SEALED" } | { state: "ENDED", outcome: Outcome<T, Finalization, Query> },
   // Initialized to 'Some' on first subscription event,
@@ -33,19 +33,31 @@ export type SourceInstance<T, References, Finalization, Query> = {
   references: Option<References>
 }
 
+type DerivationRole = string
 export type DerivationInstance<T, Member, Finalization, Query> = {
   prototype: Derivation<T, Member, Finalization, Query>,
   controller: Option<Controller<Finalization, Query>>,
-  id: string
+  id: string,
+  latestTickByProvenance: Map<SourceId, number>,
+  sourcesByRole: {
+    indistinct: Set<SourceId>,
+    named: Map<DerivationRole, SourceId>
+  },
+  consumers: Set<GenericConsumerInstance<T, any, Finalization, Query>>,
+  backpressure: Option<Promise<void>>,
+  lifecycle: { state: "ACTIVE" | "SEALED" } | { state: "ENDED", outcome: Outcome<T, Finalization, Query> },
+  member: Member
 }
 
 type SourceId = string
 export type SinkInstance<T, References, Finalization, Query> = {
   prototype: Sink<T, References, Finalization, Query>,
   controller: Option<Controller<Finalization, Query>>,
-  id: string
-  latestTickByProvenance: Map<SourceId, number>
+  id: string,
+  latestTickByProvenance: Map<SourceId, number>,
   source: SourceInstance<T, References, Finalization, Query>,
   lifecycle: { state: "ACTIVE" } | { state: "ENDED", outcome: Outcome<T, Finalization, Query> },
+  // Initialized to 'Some' on first subscription event,
+  // reverted to 'None' once closed.
   references: Option<References>
 }
