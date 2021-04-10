@@ -29,7 +29,7 @@ export function declareSimpleSink<T, References>(sink: Omit<Sink<T, References, 
   return sink as Sink<T, References, never, never>
 }
 
-export function initializeSinkInstance<T, References, Finalization, Query>(sink: Sink<T, References, Finalization, Query>, { id, tick, controller }: { id?: string, tick?: number, controller?: Controller<Finalization, Query> }, sourceInstance: SourceInstance<T, References, Finalization, Query>): SinkInstance<T, References, Finalization, Query> {
+export function initializeSinkInstance<T, References, Finalization, Query>(sink: Sink<T, References, Finalization, Query>, sourceInstance: SourceInstance<T, any, Finalization, Query>, { id, tick, controller }: { id?: string, tick?: number, controller?: Controller<Finalization, Query> } = {}): SinkInstance<T, References, Finalization, Query> {
   const tag = initializeTag(
     sink.name,
     id

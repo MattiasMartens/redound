@@ -70,7 +70,7 @@ export async function propagateController<Finalization, Query>(
   }
 }
 
-export function initializeSourceInstance<T, References, Finalization, Query>(source: Source<T, References, Finalization, Query>, { id, tick, controller }: { id?: string, tick?: number, controller?: Controller<Finalization, Query> }): SourceInstance<T, References, Finalization, Query> {
+export function initializeSourceInstance<T, References, Finalization, Query>(source: Source<T, References, Finalization, Query>, { id, tick, controller }: { id?: string, tick?: number, controller?: Controller<Finalization, Query> } = {}): SourceInstance<T, References, Finalization, Query> {
   const tag = initializeTag(
     source.name,
     id
