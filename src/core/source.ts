@@ -33,11 +33,13 @@ import { initializeTag } from './tags'
  * Source.
  */
 export function declareSimpleSource<T, References>(source: Omit<Source<T, References, never, never>, "graphComponentType" | "pull">) {
-  // @ts-ignore
-  source.graphComponentType = "Source"
-  // @ts-ignore
-  source.pull = noop
-  return source as Source<T, References, never, never>
+  return Object.assign(
+    source,
+    {
+      graphComponentType: "Source",
+      pull: noop
+    }
+  ) as Source<T, References, never, never>
 }
 
 type ControllerReceiver<Finalization, Query> = {

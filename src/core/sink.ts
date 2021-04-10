@@ -23,7 +23,12 @@ import { identity } from '@/patterns/functions'
 export function declareSimpleSink<T, References>(sink: Omit<Sink<T, References, never, never>, 'graphComponentType'>) {
   // @ts-ignore
   sink.graphComponentType = "Sink"
-  return sink as Sink<T, References, never, never>
+  return Object.assign(
+    sink,
+    {
+      graphComponentType: "Sink"
+    }
+  ) as Sink<T, References, never, never>
 }
 
 export function initializeSinkInstance<T, References, Finalization, Query>(sink: Sink<T, References, Finalization, Query>, sourceInstance: SourceInstance<T, any, Finalization, Query>, { id, controller }: { id?: string, controller?: Controller<Finalization, Query> } = {}): SinkInstance<T, References, Finalization, Query> {

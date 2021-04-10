@@ -3,7 +3,7 @@ export type Clock = {
   awaiters: Map<number, ((currentTick: number) => void)[]>
 }
 
-export function clock(tick = 1): Clock {
+export function clock(tick = 0): Clock {
   return {
     tick,
     awaiters: new Map()
