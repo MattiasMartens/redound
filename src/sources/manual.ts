@@ -42,7 +42,7 @@ export function manualSourcePrototype<T>(
             type: "UPDATE",
             species: "UPDATE",
             eventScope: "ROOT",
-            payload: params.initialValue as any as T
+            payload: t
           })
           return t
         }

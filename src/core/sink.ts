@@ -1,7 +1,6 @@
 import {
   mapCollectInto, reconcileFold
 } from 'big-m'
-import { forEachIterable, mapIterable } from '@/patterns/iterables'
 import {
   BroadEvent,
   Event,
@@ -9,11 +8,9 @@ import {
   Outcome,
   Sink
 } from '@/types/abstract'
-import { SourceInstance, GenericConsumerInstance, Controller, SinkInstance } from '@/types/instances'
+import { SourceInstance, Controller, SinkInstance } from '@/types/instances'
 import { getSome } from '@/patterns/options'
-import { isSome, some } from 'fp-ts/lib/Option'
-import { fromNullable, none } from 'fp-ts/lib/Option'
-import { clock } from './clock'
+import { fromNullable, none, some } from 'fp-ts/lib/Option'
 import { initializeTag } from './tags'
 import { identity } from '@/patterns/functions'
 
@@ -29,7 +26,7 @@ export function declareSimpleSink<T, References>(sink: Omit<Sink<T, References, 
   return sink as Sink<T, References, never, never>
 }
 
-export function initializeSinkInstance<T, References, Finalization, Query>(sink: Sink<T, References, Finalization, Query>, sourceInstance: SourceInstance<T, any, Finalization, Query>, { id, tick, controller }: { id?: string, tick?: number, controller?: Controller<Finalization, Query> } = {}): SinkInstance<T, References, Finalization, Query> {
+export function initializeSinkInstance<T, References, Finalization, Query>(sink: Sink<T, References, Finalization, Query>, sourceInstance: SourceInstance<T, any, Finalization, Query>, { id, controller }: { id?: string, controller?: Controller<Finalization, Query> } = {}): SinkInstance<T, References, Finalization, Query> {
   const tag = initializeTag(
     sink.name,
     id
@@ -41,8 +38,10 @@ export function initializeSinkInstance<T, References, Finalization, Query>(sink:
     lifecycle: {
       state: "ACTIVE"
     },
+    // TODO does a sink need an explicit reference to its source?
+    // Maybe not!
     source: sourceInstance,
-    references: none,
+    references: some(sink.open()),
     controller: fromNullable(controller),
     id: tag
   }
@@ -92,6 +91,7 @@ export async function close<T, References, Finalization, Query>(
     const references = getSome(sink.references)
 
     await sink.prototype.close(references, outcome)
+    sink.references = none
   } else {
     throw new Error(`Attempted action close() on sink ${sink.id} in incompatible lifecycle state: ${source.lifecycle.state}`)
   }

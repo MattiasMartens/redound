@@ -9,7 +9,10 @@ import {
   Source
 } from '@/types/abstract'
 import { SourceInstance, GenericConsumerInstance, Controller } from '@/types/instances'
-import { fromPredicate, isNone, isSome, Option, some } from 'fp-ts/lib/Option'
+import {
+  noop
+} from '@/patterns/functions'
+import { isNone, isSome, Option, some } from 'fp-ts/lib/Option'
 import { fromNullable, none } from 'fp-ts/lib/Option'
 import { clock, tick } from './clock'
 import { consume, close as consumerClose } from './consumer'
