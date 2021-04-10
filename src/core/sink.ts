@@ -3,6 +3,7 @@ import {
 } from 'big-m'
 import { forEachIterable, mapIterable } from '@/patterns/iterables'
 import {
+  BroadEvent,
   Event,
   MetaEvent,
   Outcome,
@@ -48,7 +49,7 @@ export function initializeSinkInstance<T, References, Finalization, Query>(sink:
 export async function consume<T, References, Finalization, Query>(
   source: SourceInstance<T, References, Finalization, Query>,
   sink: SinkInstance<T, References, Finalization, Query>,
-  e: Event<T, Query> | MetaEvent<Query>
+  e: BroadEvent<T, Query>
 ) {
   if (sink.lifecycle.state === "ACTIVE") {
     if (e.type === "VOID") {

@@ -59,6 +59,13 @@ export type MetaEvent<Query> = {
   cause: Option<QueryState<Query>>
 }
 
+export type BroadEvent<T, Query> = Event<T, Query> | MetaEvent<Query>
+
+export type BareSourceEmitted<T> = Omit<
+  Event<T, never>,
+  'provenance' | 'cause'
+>
+
 export type Outcome<T, Finalization, Query> = Either<{
   error: Error,
   event: Option<Event<T, Query>>
@@ -77,15 +84,15 @@ export type EventSpec<T> = {
 export type GenericEmitter<T, References, Finalization, Query> = {
   emits: Set<EventSpec<T>>,
   /** In general, it should be enforced that the type of instances of Event<T> is confined to the subtypes specified in `emits`. In TypeScript it is best to offer the ability to enforce it at runtime. */
-  open: (emit: (e: Event<T, never> | MetaEvent<Query>) => Promise<void>) => References,
-  close: (r: References, o: Outcome<any, Finalization, Query>) => Promise<void>,
+  open: (emit: (e: BareSourceEmitted<T>) => void | Promise<void>) => References,
+  close: (r: References, o: Outcome<any, Finalization, Query>) => void | Promise<void>,
   name: string
 }
 
 export type Source<T, References, Finalization, Query> = GenericEmitter<T, References, Finalization, Query> & {
   graphComponentType: "Source",
-  close: (r: References, o: Outcome<any, Finalization, Query>) => Promise<void>,
-  pull: (emit: (e: Event<T, Query> | MetaEvent<Query>) => Promise<void>, query: Query, r: References) => Promise<FinalQueryState<Query>>,
+  close: (r: References, o: Outcome<any, Finalization, Query>) => void | Promise<void>,
+  pull: (emit: (e: BareSourceEmitted<T>) => Promise<void>, query: Query, r: References) => void | Promise<FinalQueryState<Query>>,
   // Experiment -- mechanism to induce an effect upstream of
   // the source, using the event paradigm. In essence, in the
   // standard track, upstream data produces events. This
@@ -95,20 +102,20 @@ export type Source<T, References, Finalization, Query> = GenericEmitter<T, Refer
 
 export type Derivation<T, Member, Finalization, Query> = GenericEmitter<T, Member, Finalization, Query> & {
   graphComponentType: "Derivation",
-  unroll: (member: Member, emit: (e: Event<T, never> | MetaEvent<Query>) => Promise<void>) => Promise<void>,
+  unroll: (member: Member, emit: (e: BareSourceEmitted<T>) => void | Promise<void>) => Promise<void>,
   consumes: Set<EventSpec<T>>,
   consume: <SourceType>(
     params: {
       event: Event<SourceType, any>,
-      emit: (e: Event<T, Query> | MetaEvent<Query>) => Promise<void>,
+      emit: (e: BareSourceEmitted<T>) => void | Promise<void>,
       member: Member,
       source: Source<SourceType, unknown, Finalization, Query>
     }) => Promise<Member>,
   open: () => Member,
-  seal: (params: { member: Member, emit: (e: Event<T, Query> | MetaEvent<Query>) => Promise<void>, remainingUnsealedSources: Set<Source<any, any, any, any>> }) => Promise<Possible<"SEAL">>,
+  seal: (params: { member: Member, emit: (e: BareSourceEmitted<T>) => void | Promise<void>, remainingUnsealedSources: Set<Source<any, any, any, any>> }) => Promise<Possible<"SEAL">>,
   close: (m: Member, o: Outcome<any, Finalization, Query>) => Promise<void>,
   sourceCapability: Option<{
-    pull: (emit: (e: Event<T, Query> | MetaEvent<Query>) => Promise<void>, query: Query, r: Member) => Promise<FinalQueryState<Query>>
+    pull: (emit: (e: BareSourceEmitted<T>) => void | Promise<void>, query: Query, r: Member) => Promise<FinalQueryState<Query>>
   }>
 }
 

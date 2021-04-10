@@ -1,6 +1,7 @@
 import { voidPromiseIterable } from '@/patterns/async'
 import { forEachIterable, mapIterable } from '@/patterns/iterables'
 import {
+  BareSourceEmitted,
   Event,
   MetaEvent,
   Outcome,
@@ -12,6 +13,7 @@ import { fromPredicate, isNone, isSome, Option, some } from 'fp-ts/lib/Option'
 import { fromNullable, none } from 'fp-ts/lib/Option'
 import { clock, tick } from './clock'
 import { consume, close as consumerClose } from './consumer'
+import { bareSourceEmittedToEvent } from './events'
 import { initializeTag } from './tags'
 
 // Dependency Map:
@@ -27,8 +29,12 @@ import { initializeTag } from './tags'
  * types, so this allows a simpler type declaration for a
  * Source.
  */
-export function declareSimpleSource<T, References>(source: Source<T, References, never, never>) {
-  return source
+export function declareSimpleSource<T, References>(source: Omit<Source<T, References, never, never>, "graphComponentType" | "pull">) {
+  // @ts-ignore
+  source.graphComponentType = "Source"
+  // @ts-ignore
+  source.pull = noop
+  return source as Source<T, References, never, never>
 }
 
 type ControllerReceiver<Finalization, Query> = {
@@ -112,7 +118,17 @@ export function open<T, References, Finalization, Query>(
   source: SourceInstance<T, References, Finalization, Query>
 ) {
   if (source.lifecycle.state === "READY") {
-    const emitToSource = (e: Event<T, never> | MetaEvent<Query>) => emit(source, e)
+    const emitToSource = (e: BareSourceEmitted<T>) => {
+      tick(source.clock)
+      emit(
+        source,
+        bareSourceEmittedToEvent(
+          e,
+          source
+        )
+      )
+    }
+
     source.lifecycle.state = "ACTIVE"
     const references = source.prototype.open(emitToSource)
     source.references = some(references)
