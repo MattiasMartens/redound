@@ -122,8 +122,8 @@ export type Derivation<T, Member, Finalization, Query> = GenericEmitter<T, Membe
 export type Sink<T, References, Finalization, Query> = {
   graphComponentType: "Sink",
   consumes: Set<EventSpec<T>>,
-  consume: (e: Event<T, Query>, r: References) => Promise<void>,
+  consume: (e: Event<T, Query>, r: References) => void | Promise<void>,
   open: () => References,
-  close: (r: References, o: Outcome<any, Finalization, Query>) => Promise<void>,
+  close: (r: References, o: Outcome<any, Finalization, Query>) => void | Promise<void>,
   name: string
 }

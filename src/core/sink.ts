@@ -23,8 +23,10 @@ import { identity } from '@/patterns/functions'
  * types, so this allows a simpler type declaration for a
  * Source.
  */
-export function declareSimpleSink<T, References>(sink: Sink<T, References, never, never>) {
-  return sink
+export function declareSimpleSink<T, References>(sink: Omit<Sink<T, References, never, never>, 'graphComponentType'>) {
+  // @ts-ignore
+  sink.graphComponentType = "Sink"
+  return sink as Sink<T, References, never, never>
 }
 
 export function initializeSinkInstance<T, References, Finalization, Query>(sink: Sink<T, References, Finalization, Query>, { id, tick, controller }: { id?: string, tick?: number, controller?: Controller<Finalization, Query> }, sourceInstance: SourceInstance<T, References, Finalization, Query>): SinkInstance<T, References, Finalization, Query> {
