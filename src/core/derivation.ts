@@ -24,7 +24,7 @@ import { getSome } from '@/patterns/options'
 import { mapCollectInto, reconcileFold } from 'big-m'
 import { identity } from '@/patterns/functions'
 
-function* allSources(sourcesByRole: DerivationInstance<any, any, any, any>["sourcesByRole"]) {
+export function* allSources(sourcesByRole: DerivationInstance<any, any, any, any>["sourcesByRole"]) {
   for (const [source] of sourcesByRole.named) {
     yield source
   }
