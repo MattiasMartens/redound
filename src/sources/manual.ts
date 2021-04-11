@@ -53,7 +53,7 @@ export function manualSourcePrototype<T>(
         }
       }
     },
-    generate(references, emit) {
+    generate(emit, references) {
       references.registerEmit(emit)
     }
   })

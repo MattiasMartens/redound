@@ -22,7 +22,7 @@ export function* without<T, K>(arr: Iterable<T>, against: Iterable<T>, keyFn: (i
   }
 }
 
-export function forEachIterable<T, V>(iterable: Iterable<T>, mapper: (t: T, i: number) => void): void {
+export function forEachIterable<T, V>(iterable: Iterable<T>, mapper: (t: T, i: number) => any): void {
   let i = 0
   for (const value of iterable) {
     mapper(value, i)

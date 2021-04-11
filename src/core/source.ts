@@ -109,8 +109,8 @@ export function open<T, References, Finalization, Query>(
     // TODO Pass failure here to controller if any
     wrapAsync(
       () => source.prototype.generate(
-        references,
-        sourceEmit
+        sourceEmit,
+        references
       )
     ).then(
       (doNotSeal) => doNotSeal || seal(source)
