@@ -8,7 +8,8 @@ export function main() {
   const sourceInstance = initializeSourceInstance(
     manualSourcePrototype()
   )
-  const sinkInstance = makeSink(
+
+  makeSink(
     consoleLogSinkPrototype(),
     sourceInstance
   )

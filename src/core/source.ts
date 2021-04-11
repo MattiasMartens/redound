@@ -1,4 +1,4 @@
-import { voidPromiseIterable } from '@/patterns/async'
+import { voidPromiseIterable, wrapAsync } from '@/patterns/async'
 import { forEachIterable, mapIterable } from '@/patterns/iterables'
 import {
   BareSourceEmitted,
@@ -107,7 +107,12 @@ export function open<T, References, Finalization, Query>(
     source.references = some(references)
 
     // TODO Pass failure here to controller if any
-    source.prototype.generate(sourceEmit).then(
+    wrapAsync(
+      () => source.prototype.generate(
+        references,
+        sourceEmit
+      )
+    ).then(
       (doNotSeal) => doNotSeal || seal(source)
     )
   } else {

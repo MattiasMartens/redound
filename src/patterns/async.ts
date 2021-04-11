@@ -18,3 +18,12 @@ export function encapsulatePromise<T>(promise: Promise<T>) {
     }
   }
 }
+
+const neverPromise = new Promise(() => { }) as Promise<never>
+export function never(): Promise<never> {
+  return neverPromise
+}
+
+export async function wrapAsync<T>(fn: () => T | Promise<T>) {
+  return await fn()
+}

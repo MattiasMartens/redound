@@ -1,4 +1,4 @@
-import { declareSimpleSink } from "@/core/sink"
+import { declareSimpleSink } from "@/core/index.author"
 import { noop } from "@/patterns/functions"
 import { Sink } from "@/types/abstract"
 

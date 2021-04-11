@@ -1,7 +1,7 @@
 import { noop } from "@/patterns/functions"
 import { Source } from "@/types/abstract"
 import { pipe } from "fp-ts/lib/function"
-import { map, none, some, Option, None, Some } from "fp-ts/lib/Option"
+import { map, none, some, None, Some } from "fp-ts/lib/Option"
 import {
   declareSimpleSource
 } from "../core/source"
@@ -18,22 +18,12 @@ export function manualSourcePrototype<T>(
     close: noop,
     name,
     emits: new Set(/** TODO */),
-    open: (emit) => {
+    open: () => {
       const initialValueExists = "initialValue" in params
       let state = initialValueExists ? some<T>(params.initialValue as any) : none
 
-      pipe(
-        state,
-        map(
-          payload => emit({
-            type: "ADD",
-            species: "INITIAL",
-            eventScope: "ROOT",
-            payload: params.initialValue as any as T
-          })
-        )
-      )
-      
+      let emit: any
+
       return {
         get: () => state,
         set: (t: T) => {
@@ -45,8 +35,26 @@ export function manualSourcePrototype<T>(
             payload: t
           })
           return t
+        },
+        registerEmit: (_emit: any) => {
+          emit = _emit
+
+          pipe(
+            state,
+            map(
+              t => emit({
+                type: "ADD",
+                species: "INITIAL",
+                eventScope: "ROOT",
+                payload: t
+              })
+            )
+          )
         }
       }
+    },
+    generate(references, emit) {
+      references.registerEmit(emit)
     }
   })
 }

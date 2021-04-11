@@ -104,7 +104,10 @@ type NotSealed = "NOT_SEALED"
 
 export type Source<T, References, Finalization, Query> = GenericEmitter<T, References, Finalization, Query> & {
   graphComponentType: "Source",
-  generate: (emit: (e: BareSourceEmitted<T>) => void | Promise<void>) => Promise<Possible<NotSealed>>,
+  generate: (
+    r: References,
+    emit: (e: BareSourceEmitted<T>) => void | Promise<void>
+  ) => void | Possible<NotSealed> | Promise<void | Possible<NotSealed>>,
   close: (r: References, o: Outcome<any, Finalization, Query>) => void | Promise<void>,
   pull: (emit: (e: BareSourceEmitted<T>) => Promise<void>, query: Query, r: References) => void | Promise<FinalQueryState<Query>>,
   // Experiment -- mechanism to induce an effect upstream of
