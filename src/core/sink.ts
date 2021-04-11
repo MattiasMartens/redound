@@ -4,16 +4,14 @@ import {
 import {
   BroadEvent,
   Event,
-  MetaEvent,
   Outcome,
   Sink
 } from '@/types/abstract'
-import { SourceInstance, Controller, SinkInstance, GenericEmitterInstance } from '@/types/instances'
+import { SourceInstance, SinkInstance, GenericEmitterInstance, DerivationInstance } from '@/types/instances'
 import { getSome } from '@/patterns/options'
-import { fromNullable, none, some } from 'fp-ts/lib/Option'
+import { none, some } from 'fp-ts/lib/Option'
 import { initializeTag } from './tags'
 import { identity } from '@/patterns/functions'
-
 
 /**
  * TypeScript doesn't allow mixing inferred with optional
@@ -88,7 +86,7 @@ export async function consume<T, MemberOrReferences, Finalization, Query>(
 }
 
 export async function close<T, References, Finalization, Query>(
-  source: SourceInstance<T, References, Finalization, Query>,
+  source: GenericEmitterInstance<T, References, Finalization, Query>,
   sink: SinkInstance<T, References, Finalization, Query>,
   outcome: Outcome<T, Finalization, Query>
 ) {

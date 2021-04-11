@@ -40,9 +40,10 @@ export type DerivationInstance<T, Member, Finalization, Query> = {
   id: string,
   latestTickByProvenance: Map<SourceId, number>,
   sourcesByRole: {
-    numbered: SourceId[],
-    named: Map<DerivationRole, SourceId>
+    numbered: GenericEmitterInstance<any, any, any, any>[],
+    named: Map<GenericEmitterInstance<any, any, any, any>, DerivationRole>
   },
+  sealedSources: Set<GenericEmitterInstance<any, any, any, any>>,
   consumers: Set<GenericConsumerInstance<T, any, Finalization, Query>>,
   backpressure: Option<Promise<void>>,
   lifecycle: { state: "READY" | "ACTIVE" | "SEALED" } | { state: "ENDED", outcome: Outcome<T, Finalization, Query> },

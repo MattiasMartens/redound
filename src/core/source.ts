@@ -28,6 +28,7 @@ import { createSetFromNullable } from '@/patterns/sets'
 // source imports controller
 // consumer imports sink
 // consumer imports derivation
+// derivation imports sink
 // (there is no need for a generic "emitter")
 
 /**
@@ -78,9 +79,7 @@ export async function emit<T, References, Finalization, Query>(
       voidPromiseIterable(
         mapIterable(
           source.consumers,
-          async c => {
-            consume(source, c, event)
-          }
+          async c => consume(source, c, event)
         )
       ).then(() => void (source.backpressure = none))
     )
@@ -105,8 +104,13 @@ export function open<T, References, Finalization, Query>(
     }
 
     source.lifecycle.state = "ACTIVE"
-    const references = source.prototype.open(sourceEmit)
+    const references = source.prototype.open()
     source.references = some(references)
+
+    // TODO Pass failure here to controller if any
+    source.prototype.generate(sourceEmit).then(
+      (doNotSeal) => doNotSeal || seal(source)
+    )
   } else {
     throw new Error(`Attempted action open() on source ${source.id} in incompatible lifecycle state: ${source.lifecycle.state}`)
   }
@@ -138,8 +142,6 @@ export function sealEvent<Query>(
   source: SourceInstance<any, any, any, Query>,
   q?: QueryState<Query>
 ): MetaEvent<Query> {
-  tick(source.clock)
-
   return {
     type: "SEAL",
     cause: createSetFromNullable(q),
@@ -163,12 +165,15 @@ export function seal<T, References, Finalization, Query>(
   if (source.lifecycle.state === "ACTIVE") {
     source.lifecycle.state = "SEALED"
 
+    tick(source.clock)
+    const e = sealEvent(source, query)
+
     forEachIterable(
       source.consumers,
       consumer => consume(
         source,
         consumer,
-        sealEvent(source, query)
+        e
       )
     )
   } else if (source.lifecycle.state === "ENDED") {
@@ -190,8 +195,6 @@ export function close<T, References, Finalization, Query>(
 
     forEachIterable(
       source.consumers,
-      // TODO need a close function that operates on a generic consumer,
-      // but delegates to either the Sink or Derivation implementations.
       consumer => consumerClose(
         source,
         consumer,

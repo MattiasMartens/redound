@@ -4,6 +4,7 @@ import {
 import {
   Option
 } from 'fp-ts/lib/Option'
+import { GenericEmitterInstance } from './instances'
 import { Possible } from './patterns'
 
 export type CoreEventType = "ADD" | "REMOVE" | "UPDATE"
@@ -91,13 +92,19 @@ export type EventSpec<T> = {
 export type GenericEmitter<T, References, Finalization, Query> = {
   emits: Set<EventSpec<T>>,
   /** In general, it should be enforced that the type of instances of Event<T> is confined to the subtypes specified in `emits`. In TypeScript it is best to offer the ability to enforce it at runtime. */
-  open: (emit: (e: BareSourceEmitted<T>) => void | Promise<void>) => References,
+  open: () => References,
   close: (r: References, o: Outcome<any, Finalization, Query>) => void | Promise<void>,
   name: string
 }
 
+// Indicate that more events may still be emitted, i.e., in response to Queries.
+// (The resolution of the promise of generation() always precludes events being
+// emitted in any other way.)
+type NotSealed = "NOT_SEALED"
+
 export type Source<T, References, Finalization, Query> = GenericEmitter<T, References, Finalization, Query> & {
   graphComponentType: "Source",
+  generate: (emit: (e: BareSourceEmitted<T>) => void | Promise<void>) => Promise<Possible<NotSealed>>,
   close: (r: References, o: Outcome<any, Finalization, Query>) => void | Promise<void>,
   pull: (emit: (e: BareSourceEmitted<T>) => Promise<void>, query: Query, r: References) => void | Promise<FinalQueryState<Query>>,
   // Experiment -- mechanism to induce an effect upstream of
@@ -116,10 +123,11 @@ export type Derivation<T, Member, Finalization, Query> = GenericEmitter<T, Membe
       event: Event<SourceType, any>,
       emit: (e: BareSourceEmitted<T>) => void | Promise<void>,
       member: Member,
-      source: Source<SourceType, unknown, Finalization, Query>
-    }) => Promise<Member>,
+      source: GenericEmitterInstance<SourceType, unknown, Finalization, Query>
+    }
+  ) => Promise<Member>,
   open: () => Member,
-  seal: (params: { member: Member, emit: (e: BareSourceEmitted<T>) => void | Promise<void>, remainingUnsealedSources: Set<Source<any, any, any, any>> }) => Promise<Possible<"SEAL">>,
+  seal: (params: { member: Member, emit: (e: BareSourceEmitted<T>) => void | Promise<void>, remainingUnsealedSources: Set<GenericEmitterInstance<any, any, any, any>> }) => Promise<Possible<"SEAL">>,
   close: (m: Member, o: Outcome<any, Finalization, Query>) => Promise<void>,
   sourceCapability: Option<{
     pull: (emit: (e: BareSourceEmitted<T>) => void | Promise<void>, query: Query, r: Member) => Promise<FinalQueryState<Query>>

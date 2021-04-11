@@ -1,3 +1,27 @@
+
+export function* filterIterable<T>(iterable: Iterable<T>, filter: (t: T, i: number) => boolean): Iterable<T> {
+  let i = 0
+  for (const value of iterable) {
+    if (filter(value, i)) {
+      yield value
+    }
+    i++
+  }
+}
+
+
+export function* without<T, K>(arr: Iterable<T>, against: Iterable<T>, keyFn: (item: T) => K = (item: T) => item as unknown as K) {
+  const againstAsSet = new Set(mapIterable(against, keyFn))
+
+  for (const item of arr) {
+    const key = keyFn(item)
+
+    if (!againstAsSet.has(key)) {
+      yield item
+    }
+  }
+}
+
 export function forEachIterable<T, V>(iterable: Iterable<T>, mapper: (t: T, i: number) => void): void {
   let i = 0
   for (const value of iterable) {
