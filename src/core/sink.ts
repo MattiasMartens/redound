@@ -29,7 +29,7 @@ export function declareSimpleSink<T, References>(sink: Omit<Sink<T, References, 
   ) as Sink<T, References, never, never>
 }
 
-export function initializeSinkInstance<T, References, Finalization, Query>(sink: Sink<T, References, Finalization, Query>, sourceInstance: SourceInstance<T, any, Finalization, Query>, { id }: { id?: string } = {}): SinkInstance<T, References, Finalization, Query> {
+export function initializeSinkInstance<T, References, Finalization, Query>(sink: Sink<T, References, Finalization, Query>, emitterInstance: GenericEmitterInstance<T, any, Finalization, Query>, { id }: { id?: string } = {}): SinkInstance<T, References, Finalization, Query> {
   const tag = initializeTag(
     sink.name,
     id
@@ -43,7 +43,7 @@ export function initializeSinkInstance<T, References, Finalization, Query>(sink:
     },
     // TODO does a sink need an explicit reference to its source?
     // Maybe not!
-    source: sourceInstance,
+    source: emitterInstance,
     references: some(sink.open()),
     controller: none,
     id: tag

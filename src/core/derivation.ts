@@ -111,7 +111,7 @@ export function open<T, Member, Finalization, Query>(
   }
 }
 
-export async function subscribe<T, Finalization, Query>(
+export function subscribe<T, Finalization, Query>(
   derivation: DerivationInstance<T, any, Finalization, Query>,
   consumer: GenericConsumerInstance<T, any, Finalization, Query>,
   openSource: (s: SourceInstance<any, any, any, any>) => void

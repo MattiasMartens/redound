@@ -58,7 +58,7 @@ export type SinkInstance<T, References, Finalization, Query> = {
   controller: Option<Controller<Finalization, Query>>,
   id: string,
   latestTickByProvenance: Map<SourceId, number>,
-  source: SourceInstance<T, References, Finalization, Query>,
+  source: GenericEmitterInstance<T, References, Finalization, Query>,
   lifecycle: { state: "ACTIVE" } | { state: "ENDED", outcome: Outcome<T, Finalization, Query> },
   // Initialized to 'Some' on first subscription event,
   // reverted to 'None' once closed.

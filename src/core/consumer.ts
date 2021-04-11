@@ -6,7 +6,8 @@ import {
 } from "./sink"
 
 import {
-  consume as derivationConsume
+  consume as derivationConsume,
+  close as derivationClose
 } from "./derivation"
 
 export function consume<T, MemberOrReferences, Finalization, Query>(
@@ -41,6 +42,9 @@ export function close<T, MemberOrReferences, Finalization, Query>(
       outcome
     )
   } else {
-    // TODO derivationConsume
+    derivationClose(
+      source as DerivationInstance<any, any, any, any>,
+      outcome
+    )
   }
 }
