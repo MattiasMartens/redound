@@ -30,6 +30,15 @@ export function forEachIterable<T, V>(iterable: Iterable<T>, mapper: (t: T, i: n
   }
 }
 
+export function* tapIterable<T>(iterable: Iterable<T>, forEach: (t: T, i: number) => void): Iterable<T> {
+  let i = 0
+  for (const value of iterable) {
+    forEach(value, i)
+    yield value
+    i++
+  }
+}
+
 export function* mapIterable<T, V>(iterable: Iterable<T>, mapper: (t: T, i: number) => V): Iterable<V> {
   let i = 0
   for (const value of iterable) {

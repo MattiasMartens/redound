@@ -1,5 +1,5 @@
 import { voidPromiseIterable } from '@/patterns/async'
-import { filterIterable, forEachIterable, mapIterable, without } from '@/patterns/iterables'
+import { filterIterable, forEachIterable, mapIterable, tapIterable, without } from '@/patterns/iterables'
 import {
   BareDerivationEmitted,
   BroadEvent,

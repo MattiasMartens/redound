@@ -7,7 +7,7 @@ import {
   Outcome,
   Sink
 } from '@/types/abstract'
-import { SourceInstance, SinkInstance, GenericEmitterInstance, DerivationInstance } from '@/types/instances'
+import { SinkInstance, GenericEmitterInstance } from '@/types/instances'
 import { getSome } from '@/patterns/options'
 import { none, some } from 'fp-ts/lib/Option'
 import { initializeTag } from './tags'

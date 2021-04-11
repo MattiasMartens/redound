@@ -23,7 +23,6 @@ import { createSetFromNullable } from '@/patterns/sets'
 
 // Dependency Map:
 // source imports sink
-// source imports derivation
 // source imports consumer
 // source imports controller
 // consumer imports sink
