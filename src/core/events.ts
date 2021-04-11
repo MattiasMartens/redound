@@ -1,7 +1,7 @@
 import { identity } from "@/patterns/functions"
 import { flatMap, mapIterable } from "@/patterns/iterables"
 import { createSetFromNullable } from "@/patterns/sets"
-import { BareDerivationEmitted, BareSourceEmitted, BroadEvent, Event, QueryState } from "@/types/abstract"
+import { BareDerivationEmitted, BareSourceEmitted, BroadEvent, CoreEvent, QueryState } from "@/types/abstract"
 import { SourceInstance } from "@/types/instances"
 import { Possible } from "@/types/patterns"
 import { mapCollect, reconcileFold } from "big-m"

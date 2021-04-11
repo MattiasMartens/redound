@@ -2,7 +2,7 @@ import { voidPromiseIterable, wrapAsync } from '@/patterns/async'
 import { forEachIterable, mapIterable } from '@/patterns/iterables'
 import {
   BareSourceEmitted,
-  Event,
+  CoreEvent,
   MetaEvent,
   Outcome,
   QueryState,
@@ -67,7 +67,7 @@ export function initializeSourceInstance<T, References, Finalization, Query>(sou
 
 export async function emit<T, References, Finalization, Query>(
   source: SourceInstance<T, References, Finalization, Query>,
-  event: Event<T, Query> | MetaEvent<Query>
+  event: CoreEvent<T, Query> | MetaEvent<Query>
 ) {
   if (source.lifecycle.state === "ACTIVE") {
     if (isSome(source.backpressure)) {

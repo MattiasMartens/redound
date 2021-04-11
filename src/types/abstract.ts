@@ -43,7 +43,7 @@ export type QueryState<Query> = {
 
 type SourceId = string
 
-export type Event<T, Query> = {
+export type CoreEvent<T, Query> = {
   type: CoreEventType,
   species: EventSpecies,
   eventScope: EventScope,
@@ -60,23 +60,23 @@ export type MetaEvent<Query> = {
   cause: Set<QueryState<Query>>
 }
 
-export type BroadEvent<T, Query> = Event<T, Query> | MetaEvent<Query>
+export type BroadEvent<T, Query> = CoreEvent<T, Query> | MetaEvent<Query>
 
-export type BareSourceEmitted<T> = Omit<
-  Event<T, never>,
+export type SourceEvent<T> = Omit<
+  CoreEvent<T, never>,
   'provenance' | 'cause'
 >
 
-export type BareDerivationEmitted<T> = Omit<
-  Event<T, never>,
+export type DerivationEvent<T> = Omit<
+  CoreEvent<T, never>,
   'provenance' | 'cause'
 > & {
-  incitingEvents?: Set<Event<any, any>>
+  incitingEvents?: Set<CoreEvent<any, any>>
 }
 
 export type Outcome<T, Finalization, Query> = Either<{
   error: Error,
-  event: Option<Event<T, Query>>
+  event: Option<CoreEvent<T, Query>>
 }, {
   finalization: Finalization,
   lastTick: number
@@ -105,42 +105,42 @@ type NotSealed = "NOT_SEALED"
 export type Source<T, References, Finalization, Query> = GenericEmitter<T, References, Finalization, Query> & {
   graphComponentType: "Source",
   generate: (
-    emit: (e: BareSourceEmitted<T>) => void | Promise<void>,
+    emit: (e: SourceEvent<T>) => void | Promise<void>,
     r: References
   ) => void | Possible<NotSealed> | Promise<void | Possible<NotSealed>>,
   close: (r: References, o: Outcome<any, Finalization, Query>) => void | Promise<void>,
-  pull: (emit: (e: BareSourceEmitted<T>) => Promise<void>, query: Query, r: References) => void | Promise<FinalQueryState<Query>>,
+  pull: (emit: (e: SourceEvent<T>) => Promise<void>, query: Query, r: References) => void | Promise<FinalQueryState<Query>>,
   // Experiment -- mechanism to induce an effect upstream of
   // the source, using the event paradigm. In essence, in the
   // standard track, upstream data produces events. This
   // method would allow events to produce upstream data.
-  push?: (e: Event<T, never>) => Promise<Event<T, never>>
+  push?: (e: CoreEvent<T, never>) => Promise<CoreEvent<T, never>>
 }
 
 export type Derivation<SourceType, T, Member, Finalization, Query> = GenericEmitter<T, Member, Finalization, Query> & {
   graphComponentType: "Derivation",
-  unroll: (member: Member, emit: (e: BareSourceEmitted<T>) => void | Promise<void>) => Promise<void>,
+  unroll: (member: Member, emit: (e: SourceEvent<T>) => void | Promise<void>) => Promise<void>,
   consumes: Set<EventSpec<T>>,
   consume: (
     params: {
-      event: Event<SourceType, any>,
-      emit: (e: BareSourceEmitted<T>) => void | Promise<void>,
+      event: CoreEvent<SourceType, any>,
+      emit: (e: SourceEvent<T>) => void | Promise<void>,
       member: Member,
       source: GenericEmitterInstance<SourceType, unknown, Finalization, Query>
     }
   ) => Promise<Member>,
   open: () => Member,
-  seal: (params: { member: Member, emit: (e: BareSourceEmitted<T>) => void | Promise<void>, remainingUnsealedSources: Set<GenericEmitterInstance<any, any, any, any>> }) => Promise<Possible<"SEAL">>,
+  seal: (params: { member: Member, emit: (e: SourceEvent<T>) => void | Promise<void>, remainingUnsealedSources: Set<GenericEmitterInstance<any, any, any, any>> }) => Promise<Possible<"SEAL">>,
   close: (m: Member, o: Outcome<any, Finalization, Query>) => Promise<void>,
   sourceCapability: Option<{
-    pull: (emit: (e: BareSourceEmitted<T>) => void | Promise<void>, query: Query, r: Member) => Promise<FinalQueryState<Query>>
+    pull: (emit: (e: SourceEvent<T>) => void | Promise<void>, query: Query, r: Member) => Promise<FinalQueryState<Query>>
   }>
 }
 
 export type Sink<T, References, Finalization, Query> = {
   graphComponentType: "Sink",
   consumes: Set<EventSpec<T>>,
-  consume: (e: Event<T, Query>, r: References) => void | Promise<void>,
+  consume: (e: CoreEvent<T, Query>, r: References) => void | Promise<void>,
   open: () => References,
   close: (r: References, o: Outcome<any, Finalization, Query>) => void | Promise<void>,
   name: string

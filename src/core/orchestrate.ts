@@ -23,7 +23,7 @@ export function makeSink<T, References, Finalization, Query>(sink: Sink<T, Refer
     )
   } else {
     derivationSubscribe(
-      sourceInstance as DerivationInstance<any, any, any, any>,
+      sourceInstance as DerivationInstance<any, any, any, any, any>,
       sinkInstance
     )
   }
@@ -32,7 +32,7 @@ export function makeSink<T, References, Finalization, Query>(sink: Sink<T, Refer
 }
 
 export function derivationSubscribe<T, Finalization, Query>(
-  derivation: DerivationInstance<T, any, Finalization, Query>,
+  derivation: DerivationInstance<any, T, any, Finalization, Query>,
   consumer: GenericConsumerInstance<T, any, Finalization, Query>
 ) {
   return derivationSubscribeCore(
@@ -42,7 +42,7 @@ export function derivationSubscribe<T, Finalization, Query>(
   )
 }
 
-export function makeDerivation<T, Member, Finalization, Query>(derivation: Derivation<T, Member, Finalization, Query>, sources: DerivationInstance<any, any, any, any>["sourcesByRole"], params: { id?: string } = {}): DerivationInstance<T, Member, Finalization, Query> {
+export function makeDerivation<SourceType, T, Member, Finalization, Query>(derivation: Derivation<SourceType, T, Member, Finalization, Query>, sources: DerivationInstance<any, any, any, any, any>["sourcesByRole"], params: { id?: string } = {}): DerivationInstance<SourceType, T, Member, Finalization, Query> {
   const derivationInstance = initializeDerivationInstance(
     derivation,
     sources,
@@ -55,7 +55,7 @@ export function makeDerivation<T, Member, Finalization, Query>(derivation: Deriv
       if (!["SEALED", "ENDED"].includes(emitter.lifecycle.state)) {
         if (emitter.prototype.graphComponentType === "Derivation") {
           derivationSubscribe(
-            emitter as DerivationInstance<any, any, any, any>,
+            emitter as DerivationInstance<any, any, any, any, any>,
             derivationInstance
           )
         } else {

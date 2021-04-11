@@ -4,7 +4,7 @@ import {
   BareDerivationEmitted,
   BroadEvent,
   Derivation,
-  Event,
+  CoreEvent,
   MetaEvent,
   Outcome,
   QueryState
@@ -77,7 +77,7 @@ export function initializeDerivationInstance<SourceType, T, Member, Finalization
 // TODO Some of this logic may be mergeable with a source's emit()
 export async function emit<T, References, Finalization, Query>(
   derivation: DerivationInstance<any, T, References, Finalization, Query>,
-  event: Event<T, Query> | MetaEvent<Query>
+  event: CoreEvent<T, Query> | MetaEvent<Query>
 ) {
   if (derivation.lifecycle.state === "ACTIVE") {
     if (isSome(derivation.backpressure)) {
@@ -215,7 +215,7 @@ export function close<References, Finalization, Query>(
 function genericConsume<T, MemberOrReferences, Finalization, Query>(
   emitter: GenericEmitterInstance<T, MemberOrReferences, Finalization, Query>,
   consumer: GenericConsumerInstance<T, any, Finalization, Query>,
-  event: Event<T, Query> | MetaEvent<Query>
+  event: CoreEvent<T, Query> | MetaEvent<Query>
 ) {
   if (consumer.prototype.graphComponentType === "Sink") {
     return sinkConsume(
@@ -279,7 +279,7 @@ export async function consume<T, MemberOrReferences, Finalization, Query>(
       }
 
       await derivation.prototype.consume({
-        event: e as Event<T, Query>,
+        event: e as CoreEvent<T, Query>,
         emit: derivationEmit,
         member,
         source

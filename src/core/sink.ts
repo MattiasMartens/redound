@@ -3,7 +3,7 @@ import {
 } from 'big-m'
 import {
   BroadEvent,
-  Event,
+  CoreEvent,
   Outcome,
   Sink
 } from '@/types/abstract'
@@ -63,7 +63,7 @@ export async function consume<T, MemberOrReferences, Finalization, Query>(
       // the controller to close it.
     } else {
       const references = getSome(sink.references)
-      await sink.prototype.consume(e as Event<T, Query>, references)
+      await sink.prototype.consume(e as CoreEvent<T, Query>, references)
     }
 
     mapCollectInto(

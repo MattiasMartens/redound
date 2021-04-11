@@ -1,4 +1,4 @@
-import { Event, GenericEmitter, MetaEvent, Outcome } from "@/types/abstract"
+import { CoreEvent, GenericEmitter, MetaEvent, Outcome } from "@/types/abstract"
 import { DerivationInstance, GenericConsumerInstance, GenericEmitterInstance, SinkInstance, SourceInstance } from "@/types/instances"
 import {
   consume as sinkConsume,
@@ -13,7 +13,7 @@ import {
 export function consume<T, MemberOrReferences, Finalization, Query>(
   emitter: GenericEmitterInstance<T, MemberOrReferences, Finalization, Query>,
   consumer: GenericConsumerInstance<T, any, Finalization, Query>,
-  event: Event<T, Query> | MetaEvent<Query>
+  event: CoreEvent<T, Query> | MetaEvent<Query>
 ) {
   if (consumer.prototype.graphComponentType === "Sink") {
     return sinkConsume(

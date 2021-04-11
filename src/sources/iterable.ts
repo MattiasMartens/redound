@@ -1,8 +1,6 @@
 import { noop } from "@/patterns/functions"
 import { forEachIterable } from "@/patterns/iterables"
-import { BareSourceEmitted, Event, Source } from "@/types/abstract"
-import { pipe } from "fp-ts/lib/function"
-import { map, none, some, None, Some } from "fp-ts/lib/Option"
+import { Source } from "@/types/abstract"
 import {
   declareSimpleSource
 } from "../core/source"

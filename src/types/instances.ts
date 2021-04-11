@@ -1,5 +1,5 @@
 import { Option } from "fp-ts/lib/Option";
-import { Derivation, Event, Outcome, Sink, Source } from "./abstract";
+import { Derivation, CoreEvent, Outcome, Sink, Source } from "./abstract";
 import { Clock } from '@/core/clock'
 
 /**
@@ -13,7 +13,7 @@ export type Controller<Finalization, Query> = {
   seal: (source: SourceInstance<any, any, Finalization, Query>) => Option<Outcome<any, Finalization, Query>>,
   rescue: (
     error: Error,
-    event: Event<any, Query>
+    event: CoreEvent<any, Query>
   ) => Option<Outcome<any, Finalization, Query>>,
   id: string
 }
