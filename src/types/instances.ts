@@ -9,7 +9,7 @@ import { Clock } from '@/core/clock'
  */
 export type Controller<Finalization, Query> = {
   sources: Set<SourceInstance<any, any, Finalization, Query>>,
-  sinks: Set<SinkInstance<any, any, Finalization, Query> | DerivationInstance<any, any, Finalization, Query>>,
+  sinks: Set<SinkInstance<any, any, Finalization, Query> | DerivationInstance<any, any, any, Finalization, Query>>,
   seal: (source: SourceInstance<any, any, Finalization, Query>) => Option<Outcome<any, Finalization, Query>>,
   rescue: (
     error: Error,
@@ -18,7 +18,7 @@ export type Controller<Finalization, Query> = {
   id: string
 }
 
-export type GenericConsumerInstance<T, MemberOrReferences, Finalization, Query> = SinkInstance<T, MemberOrReferences, Finalization, Query> | DerivationInstance<T, MemberOrReferences, Finalization, Query>
+export type GenericConsumerInstance<T, MemberOrReferences, Finalization, Query> = SinkInstance<T, MemberOrReferences, Finalization, Query> | DerivationInstance<T, any, MemberOrReferences, Finalization, Query>
 
 export type SourceInstance<T, References, Finalization, Query> = {
   prototype: Source<T, References, Finalization, Query>,
@@ -34,8 +34,8 @@ export type SourceInstance<T, References, Finalization, Query> = {
 }
 
 type DerivationRole = string
-export type DerivationInstance<T, Member, Finalization, Query> = {
-  prototype: Derivation<T, Member, Finalization, Query>,
+export type DerivationInstance<SourceType, T, Member, Finalization, Query> = {
+  prototype: Derivation<SourceType, T, Member, Finalization, Query>,
   controller: Option<Controller<Finalization, Query>>,
   id: string,
   latestTickByProvenance: Map<SourceId, number>,
@@ -50,7 +50,7 @@ export type DerivationInstance<T, Member, Finalization, Query> = {
   member: Option<Member>
 }
 
-export type GenericEmitterInstance<T, MemberOrReferences, Finalization, Query> = SourceInstance<T, MemberOrReferences, Finalization, Query> | DerivationInstance<T, MemberOrReferences, Finalization, Query>
+export type GenericEmitterInstance<T, MemberOrReferences, Finalization, Query> = SourceInstance<T, MemberOrReferences, Finalization, Query> | DerivationInstance<any, T, MemberOrReferences, Finalization, Query>
 
 type SourceId = string
 export type SinkInstance<T, References, Finalization, Query> = {

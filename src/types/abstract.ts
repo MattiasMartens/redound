@@ -117,11 +117,11 @@ export type Source<T, References, Finalization, Query> = GenericEmitter<T, Refer
   push?: (e: Event<T, never>) => Promise<Event<T, never>>
 }
 
-export type Derivation<T, Member, Finalization, Query> = GenericEmitter<T, Member, Finalization, Query> & {
+export type Derivation<SourceType, T, Member, Finalization, Query> = GenericEmitter<T, Member, Finalization, Query> & {
   graphComponentType: "Derivation",
   unroll: (member: Member, emit: (e: BareSourceEmitted<T>) => void | Promise<void>) => Promise<void>,
   consumes: Set<EventSpec<T>>,
-  consume: <SourceType>(
+  consume: (
     params: {
       event: Event<SourceType, any>,
       emit: (e: BareSourceEmitted<T>) => void | Promise<void>,

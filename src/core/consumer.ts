@@ -24,7 +24,7 @@ export function consume<T, MemberOrReferences, Finalization, Query>(
   } else {
     return derivationConsume(
       emitter,
-      consumer as DerivationInstance<T, MemberOrReferences, Finalization, Query>,
+      consumer as DerivationInstance<T, any, MemberOrReferences, Finalization, Query>,
       event
     )
   }
@@ -43,7 +43,7 @@ export function close<T, MemberOrReferences, Finalization, Query>(
     )
   } else {
     derivationClose(
-      source as DerivationInstance<any, any, any, any>,
+      source as DerivationInstance<T, any, MemberOrReferences, Finalization, Query>,
       outcome
     )
   }

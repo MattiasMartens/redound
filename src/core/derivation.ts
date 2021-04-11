@@ -24,7 +24,7 @@ import { getSome } from '@/patterns/options'
 import { mapCollectInto, reconcileFold } from 'big-m'
 import { identity } from '@/patterns/functions'
 
-export function* allSources(sourcesByRole: DerivationInstance<any, any, any, any>["sourcesByRole"]) {
+export function* allSources(sourcesByRole: DerivationInstance<any, any, any, any, any>["sourcesByRole"]) {
   for (const [source] of sourcesByRole.named) {
     yield source
   }
@@ -37,17 +37,17 @@ export function* allSources(sourcesByRole: DerivationInstance<any, any, any, any
  * types, so this allows a simpler type declaration for a
  * Source.
  */
-export function declareSimpleDerivation<T, References>(derivation: Omit<Derivation<T, References, never, never>, "graphComponentType" | "sourceCapability">) {
+export function declareSimpleDerivation<SourceType, T, References>(derivation: Omit<Derivation<SourceType, T, References, never, never>, "graphComponentType" | "sourceCapability">) {
   return Object.assign(
     derivation,
     {
       sourceCapability: none,
       graphComponentType: "Derivation"
     }
-  ) as Derivation<T, References, never, never>
+  ) as Derivation<SourceType, T, References, never, never>
 }
 
-export function initializeDerivationInstance<T, Member, Finalization, Query>(derivation: Derivation<T, Member, Finalization, Query>, sources: DerivationInstance<any, any, any, any>["sourcesByRole"], { id }: { id?: string } = {}): DerivationInstance<T, Member, Finalization, Query> {
+export function initializeDerivationInstance<SourceType, T, Member, Finalization, Query>(derivation: Derivation<SourceType, T, Member, Finalization, Query>, sources: DerivationInstance<any, any, any, any, any>["sourcesByRole"], { id }: { id?: string } = {}): DerivationInstance<SourceType, T, Member, Finalization, Query> {
   const tag = initializeTag(
     derivation.name,
     id
@@ -76,7 +76,7 @@ export function initializeDerivationInstance<T, Member, Finalization, Query>(der
 
 // TODO Some of this logic may be mergeable with a source's emit()
 export async function emit<T, References, Finalization, Query>(
-  derivation: DerivationInstance<T, References, Finalization, Query>,
+  derivation: DerivationInstance<any, T, References, Finalization, Query>,
   event: Event<T, Query> | MetaEvent<Query>
 ) {
   if (derivation.lifecycle.state === "ACTIVE") {
@@ -99,8 +99,8 @@ export async function emit<T, References, Finalization, Query>(
   }
 }
 
-export function open<T, Member, Finalization, Query>(
-  derivation: DerivationInstance<T, Member, Finalization, Query>
+export function open<SourceType, T, Member, Finalization, Query>(
+  derivation: DerivationInstance<SourceType, T, Member, Finalization, Query>
 ) {
   if (derivation.lifecycle.state === "READY") {
     derivation.lifecycle.state = "ACTIVE"
@@ -112,7 +112,7 @@ export function open<T, Member, Finalization, Query>(
 }
 
 export function subscribe<T, Finalization, Query>(
-  derivation: DerivationInstance<T, any, Finalization, Query>,
+  derivation: DerivationInstance<any, T, any, Finalization, Query>,
   consumer: GenericConsumerInstance<T, any, Finalization, Query>,
   openSource: (s: SourceInstance<any, any, any, any>) => void
 ) {
@@ -134,13 +134,13 @@ export function subscribe<T, Finalization, Query>(
   }
 }
 
-export function siphon(derivation: DerivationInstance<any, any, any, any>, openSource: (source: SourceInstance<any, any, any, any>) => void) {
+export function siphon(derivation: DerivationInstance<any, any, any, any, any>, openSource: (source: SourceInstance<any, any, any, any>) => void) {
   forEachIterable(
     allSources(derivation.sourcesByRole),
     genericEmitter => {
       if (genericEmitter.prototype.graphComponentType === "Derivation" && genericEmitter.lifecycle.state === "READY") {
         open(derivation)
-        siphon(genericEmitter as DerivationInstance<any, any, any, any>, openSource)
+        siphon(genericEmitter as DerivationInstance<any, any, any, any, any>, openSource)
       } else if (genericEmitter.prototype.graphComponentType === "Source" && genericEmitter.lifecycle.state === "READY") {
         openSource(genericEmitter as SourceInstance<any, any, any, any>)
       }
@@ -166,8 +166,8 @@ export function unsubscribe<T, Finalization, Query>(
   source.consumers.delete(consumer)
 }
 
-export function seal<T, Member, Finalization, Query>(
-  derivation: DerivationInstance<T, Member, Finalization, Query>,
+export function seal<Member, Finalization, Query>(
+  derivation: DerivationInstance<any, any, Member, Finalization, Query>,
   event: MetaEvent<Query>
 ) {
   if (derivation.lifecycle.state === "ACTIVE") {
@@ -188,9 +188,9 @@ export function seal<T, Member, Finalization, Query>(
   }
 }
 
-export function close<T, References, Finalization, Query>(
-  derivation: DerivationInstance<T, References, Finalization, Query>,
-  outcome: Outcome<T, Finalization, Query>
+export function close<References, Finalization, Query>(
+  derivation: DerivationInstance<any, any, References, Finalization, Query>,
+  outcome: Outcome<any, Finalization, Query>
 ) {
   if (derivation.lifecycle.state !== "ENDED" && derivation.lifecycle.state !== "READY") {
     derivation.lifecycle = {
@@ -226,7 +226,7 @@ function genericConsume<T, MemberOrReferences, Finalization, Query>(
   } else {
     return consume(
       emitter,
-      consumer as DerivationInstance<T, MemberOrReferences, Finalization, Query>,
+      consumer as DerivationInstance<T, any, MemberOrReferences, Finalization, Query>,
       event
     )
   }
@@ -234,7 +234,7 @@ function genericConsume<T, MemberOrReferences, Finalization, Query>(
 
 export async function consume<T, MemberOrReferences, Finalization, Query>(
   source: GenericEmitterInstance<T, MemberOrReferences, Finalization, Query>,
-  derivation: DerivationInstance<T, any, Finalization, Query>,
+  derivation: DerivationInstance<T, any, any, Finalization, Query>,
   e: BroadEvent<T, Query>
 ) {
   if (derivation.lifecycle.state === "ACTIVE") {
