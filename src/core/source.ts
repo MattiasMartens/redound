@@ -70,17 +70,11 @@ export async function emit<T, References, Finalization, Query>(
   event: CoreEvent<T, Query> | MetaEvent<Query>
 ) {
   if (source.lifecycle.state === "ACTIVE") {
-    if (isSome(source.backpressure)) {
-      await source.backpressure.value
-    }
-
-    source.backpressure = some(
-      voidPromiseIterable(
-        mapIterable(
-          source.consumers,
-          async c => consume(source, c, event)
-        )
-      ).then(() => void (source.backpressure = none))
+    voidPromiseIterable(
+      mapIterable(
+        source.consumers,
+        async c => consume(source, c, event)
+      )
     )
   } else {
     throw new Error(`Attempted action emit() on source ${source.id} in incompatible lifecycle state: ${source.lifecycle.state}`)
@@ -93,7 +87,7 @@ export function open<T, References, Finalization, Query>(
   if (source.lifecycle.state === "READY") {
     const sourceEmit = (e: SourceEvent<T>) => {
       tick(source.clock)
-      emit(
+      return emit(
         source,
         bareSourceEmittedToEvent(
           e,

@@ -9,7 +9,7 @@ import {
   Outcome,
   QueryState
 } from '@/types/abstract'
-import { SourceInstance, GenericConsumerInstance, DerivationInstance, GenericEmitterInstance, SinkInstance } from '@/types/instances'
+import { SourceInstance, GenericConsumerInstance, DerivationInstance, GenericEmitterInstance, SinkInstance, EmitterInstanceAlias } from '@/types/instances'
 import { isSome, some } from 'fp-ts/lib/Option'
 import { none } from 'fp-ts/lib/Option'
 import { close as consumerClose } from './consumer'
@@ -24,12 +24,10 @@ import { getSome } from '@/patterns/options'
 import { mapCollectInto, reconcileFold } from 'big-m'
 import { identity } from '@/patterns/functions'
 
-export function* allSources(sourcesByRole: DerivationInstance<any, any, any, any, any>["sourcesByRole"]) {
-  for (const [source] of sourcesByRole.named) {
-    yield source
+export function* allSources(derivation: Record<string, EmitterInstanceAlias<any>>) {
+  for (const role in derivation) {
+    yield derivation[role]
   }
-
-  yield* sourcesByRole.numbered
 }
 
 /**
@@ -37,7 +35,7 @@ export function* allSources(sourcesByRole: DerivationInstance<any, any, any, any
  * types, so this allows a simpler type declaration for a
  * Source.
  */
-export function declareSimpleDerivation<SourceType, T, References>(derivation: Omit<Derivation<SourceType, T, References, never, never>, "graphComponentType" | "sourceCapability">) {
+export function declareSimpleDerivation<SourceType extends Record<string, EmitterInstanceAlias<any>>, T, References>(derivation: Omit<Derivation<SourceType, T, References, never, never>, "graphComponentType" | "sourceCapability">) {
   return Object.assign(
     derivation,
     {
@@ -47,7 +45,7 @@ export function declareSimpleDerivation<SourceType, T, References>(derivation: O
   ) as Derivation<SourceType, T, References, never, never>
 }
 
-export function initializeDerivationInstance<SourceType, T, Member, Finalization, Query>(derivation: Derivation<SourceType, T, Member, Finalization, Query>, sources: DerivationInstance<any, any, any, any, any>["sourcesByRole"], { id }: { id?: string } = {}): DerivationInstance<SourceType, T, Member, Finalization, Query> {
+export function initializeDerivationInstance<SourceType extends Record<string, EmitterInstanceAlias<any>>, T, Member, Finalization, Query>(derivation: Derivation<any, T, Member, Finalization, Query>, sources: SourceType, { id }: { id?: string } = {}): DerivationInstance<SourceType, T, Member, Finalization, Query> {
   const tag = initializeTag(
     derivation.name,
     id
@@ -67,7 +65,7 @@ export function initializeDerivationInstance<SourceType, T, Member, Finalization
     sealedSources: new Set(
       filterIterable(
         allSources(sources),
-        s => !["SEALED", "ENDED"].includes(s.lifecycle.state)
+        s => ["SEALED", "ENDED"].includes(s.lifecycle.state)
       )
     ),
     id: tag
@@ -99,7 +97,7 @@ export async function emit<T, References, Finalization, Query>(
   }
 }
 
-export function open<SourceType, T, Member, Finalization, Query>(
+export function open<SourceType extends Record<string, EmitterInstanceAlias<any>>, T, Member, Finalization, Query>(
   derivation: DerivationInstance<SourceType, T, Member, Finalization, Query>
 ) {
   if (derivation.lifecycle.state === "READY") {
@@ -114,35 +112,37 @@ export function open<SourceType, T, Member, Finalization, Query>(
 export function subscribe<T, Finalization, Query>(
   derivation: DerivationInstance<any, T, any, Finalization, Query>,
   consumer: GenericConsumerInstance<T, any, Finalization, Query>,
-  openSource: (s: SourceInstance<any, any, any, any>) => void
+  sourceSubscribe: (source: SourceInstance<any, any, any, any>, derivation: DerivationInstance<any, any, any, any, any>) => void
 ) {
   if (derivation.lifecycle.state !== "ENDED") {
-    if (derivation.lifecycle.state === "READY") {
-      siphon(derivation, openSource)
-    }
-
     derivation.consumers.add(consumer)
 
-    if (isSome(derivation.controller)) {
-      propagateController(
-        consumer,
-        derivation.controller.value
-      )
+    if (derivation.lifecycle.state === "READY") {
+      if (isSome(derivation.controller)) {
+        propagateController(
+          consumer,
+          derivation.controller.value
+        )
+      }
+
+      siphon(derivation, sourceSubscribe)
     }
   } else {
     throw new Error(`Attempted action subscribe() on derivation ${derivation.id} in incompatible lifecycle state: ${derivation.lifecycle.state}`)
   }
 }
 
-export function siphon(derivation: DerivationInstance<any, any, any, any, any>, openSource: (source: SourceInstance<any, any, any, any>) => void) {
+export function siphon(derivation: DerivationInstance<any, any, any, any, any>, sourceSubscribe: (source: SourceInstance<any, any, any, any>, derivation: DerivationInstance<any, any, any, any, any>) => void) {
+  open(derivation)
+
   forEachIterable(
     allSources(derivation.sourcesByRole),
     genericEmitter => {
       if (genericEmitter.prototype.graphComponentType === "Derivation" && genericEmitter.lifecycle.state === "READY") {
-        open(derivation)
-        siphon(genericEmitter as DerivationInstance<any, any, any, any, any>, openSource)
+        subscribe(genericEmitter as DerivationInstance<any, any, any, any, any>, derivation, sourceSubscribe)
+        siphon(genericEmitter as DerivationInstance<any, any, any, any, any>, sourceSubscribe)
       } else if (genericEmitter.prototype.graphComponentType === "Source" && genericEmitter.lifecycle.state === "READY") {
-        openSource(genericEmitter as SourceInstance<any, any, any, any>)
+        sourceSubscribe(genericEmitter as SourceInstance<any, any, any, any>, derivation)
       }
     }
   )
@@ -226,15 +226,26 @@ function genericConsume<T, MemberOrReferences, Finalization, Query>(
   } else {
     return consume(
       emitter,
-      consumer as DerivationInstance<T, any, MemberOrReferences, Finalization, Query>,
+      consumer as DerivationInstance<any, any, MemberOrReferences, Finalization, Query>,
       event
     )
   }
 }
 
+function getSourceRole<SourceType extends Record<string, EmitterInstanceAlias<any>>>(derivation: DerivationInstance<SourceType, any, any, any, any>, source: GenericEmitterInstance<any, any, any, any>) {
+  for (const role in derivation.sourcesByRole) {
+    if (derivation.sourcesByRole[role] === source) {
+      return role
+    }
+  }
+
+  throw new Error(`Emitter ${source.id} yielded event to derivation ${derivation.id} but no role had been registered for that emitter`)
+}
+
+
 export async function consume<T, MemberOrReferences, Finalization, Query>(
   source: GenericEmitterInstance<T, MemberOrReferences, Finalization, Query>,
-  derivation: DerivationInstance<T, any, any, Finalization, Query>,
+  derivation: DerivationInstance<any, any, any, Finalization, Query>,
   e: BroadEvent<T, Query>
 ) {
   if (derivation.lifecycle.state === "ACTIVE") {
@@ -278,11 +289,17 @@ export async function consume<T, MemberOrReferences, Finalization, Query>(
         )
       }
 
+      const role = getSourceRole(
+        derivation,
+        source
+      )
+
       await derivation.prototype.consume({
-        event: e as CoreEvent<T, Query>,
+        event: e as CoreEvent<any, Query>,
         emit: derivationEmit,
         member,
-        source
+        source,
+        role
       })
     }
 

@@ -4,3 +4,8 @@ export function identity<T>(t: T) {
 
 export const noop = () => { }
 export const noopAsync = async () => { }
+
+export function mutate<T>(item: T, mutation: (item: T) => any) {
+  mutation(item)
+  return item
+}

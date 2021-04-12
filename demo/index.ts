@@ -1,5 +1,6 @@
 import { makeSource } from "@/core";
-import { makeSink } from "@/core/orchestrate";
+import { makeDerivation, makeSink, makeUnaryDerivation } from "@/core/orchestrate";
+import { mappedDerivationPrototype } from "@/derivations/map";
 import { getSome } from "@/patterns/options";
 import { consoleLogSinkPrototype } from "@/sinks/console-logger";
 import { iterableSourcePrototype } from "@/sources/iterable";
@@ -11,8 +12,8 @@ export function mainA() {
   )
 
   makeSink(
-    consoleLogSinkPrototype(),
-    sourceInstance
+    sourceInstance,
+    consoleLogSinkPrototype()
   )
 
   const { set } = getSome(
@@ -24,13 +25,31 @@ export function mainA() {
   )
 }
 
-export function main() {
+export function mainB() {
   const sourceInstance = makeSource(
-    iterableSourcePrototype(["Hello world!"])
+    iterableSourcePrototype(["Hello world B!"])
   )
 
   makeSink(
+    sourceInstance,
+    consoleLogSinkPrototype()
+  )
+}
+
+export function mainC() {
+  const sourceInstance = makeSource(
+    iterableSourcePrototype([5, 8, 13])
+  )
+
+  const derivationInstance = makeUnaryDerivation(
+    sourceInstance,
+    mappedDerivationPrototype(
+      x => `Hello world C-${x}!`
+    )
+  )
+
+  makeSink(
+    derivationInstance,
     consoleLogSinkPrototype(),
-    sourceInstance
   )
 }

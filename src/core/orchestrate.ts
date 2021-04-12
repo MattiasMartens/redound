@@ -1,15 +1,13 @@
 import { Derivation, Sink } from "@/types/abstract";
-import { Controller, DerivationInstance, GenericConsumerInstance, GenericEmitterInstance, SinkInstance, SourceInstance } from "@/types/instances";
-import { allSources, initializeDerivationInstance } from "./derivation";
+import { Controller, DerivationInstance, EmitterInstanceAlias, GenericConsumerInstance, GenericEmitterInstance, SinkInstance, SourceInstance } from "@/types/instances";
+import { initializeDerivationInstance as makeDerivation } from "./derivation";
 import { initializeSinkInstance } from "./sink";
-import { open as sourceOpen } from "./source";
 import { subscribe as sourceSubscribe } from "./source";
 import {
   subscribe as derivationSubscribeCore
 } from "./derivation";
-import { mapIterable } from "@/patterns/iterables";
 
-export function makeSink<T, References, Finalization, Query>(sink: Sink<T, References, Finalization, Query>, sourceInstance: GenericEmitterInstance<T, any, Finalization, Query>, params: { id?: string, controller?: Controller<Finalization, Query> } = {}): SinkInstance<T, References, Finalization, Query> {
+export function makeSink<T, References, Finalization, Query>(sourceInstance: GenericEmitterInstance<T, any, Finalization, Query>, sink: Sink<T, References, Finalization, Query>, params: { id?: string, controller?: Controller<Finalization, Query> } = {}): SinkInstance<T, References, Finalization, Query> {
   const sinkInstance = initializeSinkInstance(
     sink,
     sourceInstance,
@@ -38,35 +36,14 @@ export function derivationSubscribe<T, Finalization, Query>(
   return derivationSubscribeCore(
     derivation,
     consumer,
-    sourceOpen
+    sourceSubscribe
   )
 }
 
-export function makeDerivation<SourceType, T, Member, Finalization, Query>(derivation: Derivation<SourceType, T, Member, Finalization, Query>, sources: DerivationInstance<any, any, any, any, any>["sourcesByRole"], params: { id?: string } = {}): DerivationInstance<SourceType, T, Member, Finalization, Query> {
-  const derivationInstance = initializeDerivationInstance(
-    derivation,
-    sources,
-    params
-  )
+export { makeDerivation }
 
-  mapIterable(
-    allSources(derivationInstance.sourcesByRole),
-    emitter => {
-      if (!["SEALED", "ENDED"].includes(emitter.lifecycle.state)) {
-        if (emitter.prototype.graphComponentType === "Derivation") {
-          derivationSubscribe(
-            emitter as DerivationInstance<any, any, any, any, any>,
-            derivationInstance
-          )
-        } else {
-          sourceSubscribe(
-            emitter as SourceInstance<any, any, any, any>,
-            derivationInstance
-          )
-        }
-      }
-    }
-  )
-
-  return derivationInstance
+export function makeUnaryDerivation<U, T>(
+  source: EmitterInstanceAlias<U>,
+  derivation: Derivation<{ main: EmitterInstanceAlias<U> }, T, any, any, any>, params: { id?: string } = {}): DerivationInstance<{ main: EmitterInstanceAlias<U> }, T, any, any, any> {
+  return makeDerivation(derivation, { main: source }, params)
 }

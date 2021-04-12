@@ -1,5 +1,5 @@
-import { CoreEvent, GenericEmitter, MetaEvent, Outcome } from "@/types/abstract"
-import { DerivationInstance, GenericConsumerInstance, GenericEmitterInstance, SinkInstance, SourceInstance } from "@/types/instances"
+import { CoreEvent, MetaEvent, Outcome } from "@/types/abstract"
+import { DerivationInstance, GenericConsumerInstance, GenericEmitterInstance, SinkInstance } from "@/types/instances"
 import {
   consume as sinkConsume,
   close as sinkClose
@@ -21,12 +21,14 @@ export function consume<T, MemberOrReferences, Finalization, Query>(
       consumer as SinkInstance<T, MemberOrReferences, Finalization, Query>,
       event
     )
-  } else {
+  } else if (consumer.prototype.graphComponentType === "Derivation") {
     return derivationConsume(
       emitter,
-      consumer as DerivationInstance<T, any, MemberOrReferences, Finalization, Query>,
+      consumer as DerivationInstance<any, any, MemberOrReferences, Finalization, Query>,
       event
     )
+  } else {
+    throw new Error(`Attempted consume on illegal graph component with ID ${consumer.id} and type ${(consumer.prototype as any).graphComponentType}`)
   }
 }
 
@@ -43,7 +45,7 @@ export function close<T, MemberOrReferences, Finalization, Query>(
     )
   } else {
     derivationClose(
-      source as DerivationInstance<T, any, MemberOrReferences, Finalization, Query>,
+      source as DerivationInstance<any, any, MemberOrReferences, Finalization, Query>,
       outcome
     )
   }

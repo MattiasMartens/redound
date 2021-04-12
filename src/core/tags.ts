@@ -3,7 +3,7 @@ import {
   v4 as uuid
 } from 'uuid'
 
-const SEPARATOR = '--'
+const SEPARATOR = '::'
 
 export function initializeTag(
   prefix?: string,

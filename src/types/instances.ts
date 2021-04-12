@@ -18,7 +18,7 @@ export type Controller<Finalization, Query> = {
   id: string
 }
 
-export type GenericConsumerInstance<T, MemberOrReferences, Finalization, Query> = SinkInstance<T, MemberOrReferences, Finalization, Query> | DerivationInstance<T, any, MemberOrReferences, Finalization, Query>
+export type GenericConsumerInstance<T, MemberOrReferences, Finalization, Query> = SinkInstance<T, MemberOrReferences, Finalization, Query> | DerivationInstance<any, any, MemberOrReferences, Finalization, Query>
 
 export type SourceInstance<T, References, Finalization, Query> = {
   prototype: Source<T, References, Finalization, Query>,
@@ -26,26 +26,25 @@ export type SourceInstance<T, References, Finalization, Query> = {
   id: string
   clock: Clock,
   consumers: Set<GenericConsumerInstance<T, any, Finalization, Query>>,
-  backpressure: Option<Promise<void>>,
+  backpressure: Promise<void>[],
   lifecycle: { state: "READY" | "ACTIVE" | "SEALED" } | { state: "ENDED", outcome: Outcome<T, Finalization, Query> },
   // Initialized to 'Some' on first subscription event,
   // reverted to 'None' once closed.
   references: Option<References>
 }
 
-type DerivationRole = string
-export type DerivationInstance<SourceType, T, Member, Finalization, Query> = {
-  prototype: Derivation<SourceType, T, Member, Finalization, Query>,
+export type EmitterInstanceAlias<T> = SourceInstance<T, any, any, any> | DerivationInstance<any, T, any, any, any>
+export type PayloadTypeOf<X> = X extends EmitterInstanceAlias<infer T> ? T : never
+
+export type DerivationInstance<DerivationSourceType extends Record<string, EmitterInstanceAlias<any>>, T, Member, Finalization, Query> = {
+  prototype: Derivation<DerivationSourceType, T, Member, Finalization, Query>,
   controller: Option<Controller<Finalization, Query>>,
   id: string,
   latestTickByProvenance: Map<SourceId, number>,
-  sourcesByRole: {
-    numbered: GenericEmitterInstance<any, any, any, any>[],
-    named: Map<GenericEmitterInstance<any, any, any, any>, DerivationRole>
-  },
+  sourcesByRole: DerivationSourceType,
   sealedSources: Set<GenericEmitterInstance<any, any, any, any>>,
   consumers: Set<GenericConsumerInstance<T, any, Finalization, Query>>,
-  backpressure: Option<Promise<void>>,
+  backpressure: Promise<void>[],
   lifecycle: { state: "READY" | "ACTIVE" | "SEALED" } | { state: "ENDED", outcome: Outcome<T, Finalization, Query> },
   member: Option<Member>
 }

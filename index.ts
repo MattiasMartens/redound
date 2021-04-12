@@ -1,4 +1,4 @@
 import 'module-alias/register'
-import { main } from './demo'
+import { mainC as main } from './demo'
 
 main()

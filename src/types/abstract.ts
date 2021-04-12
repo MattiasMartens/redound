@@ -4,7 +4,7 @@ import {
 import {
   Option
 } from 'fp-ts/lib/Option'
-import { GenericEmitterInstance } from './instances'
+import { GenericEmitterInstance, PayloadTypeOf, SourceInstance, EmitterInstanceAlias } from './instances'
 import { Possible } from './patterns'
 
 export type CoreEventType = "ADD" | "REMOVE" | "UPDATE"
@@ -117,21 +117,29 @@ export type Source<T, References, Finalization, Query> = GenericEmitter<T, Refer
   push?: (e: CoreEvent<T, never>) => Promise<CoreEvent<T, never>>
 }
 
-export type Derivation<SourceType, T, Member, Finalization, Query> = GenericEmitter<T, Member, Finalization, Query> & {
+type DerivationRole = string
+export type SourceInstanceAbbreviated<T> = SourceInstance<T, any, any, any>
+export type SourceType = {
+  numbered: GenericEmitterInstance<any, any, any, any>[],
+  named: Map<DerivationRole, GenericEmitterInstance<any, any, any, any>>
+}
+
+export type Derivation<DerivationSourceType extends Record<string, EmitterInstanceAlias<any>>, T, Member, Finalization, Query> = GenericEmitter<T, Member, Finalization, Query> & {
   graphComponentType: "Derivation",
-  unroll: (member: Member, emit: (e: SourceEvent<T>) => void | Promise<void>) => Promise<void>,
+  unroll: (member: Member, emit: (e: SourceEvent<T>) => void | Promise<void>) => void | Promise<void>,
   consumes: Set<EventSpec<T>>,
-  consume: (
+  consume: <K extends keyof DerivationSourceType>(
     params: {
-      event: CoreEvent<SourceType, any>,
+      event: CoreEvent<PayloadTypeOf<DerivationSourceType[K]>, any>,
       emit: (e: SourceEvent<T>) => void | Promise<void>,
       member: Member,
-      source: GenericEmitterInstance<SourceType, unknown, Finalization, Query>
+      source: GenericEmitterInstance<any, unknown, Finalization, Query>,
+      role: K
     }
   ) => Promise<Member>,
   open: () => Member,
-  seal: (params: { member: Member, emit: (e: SourceEvent<T>) => void | Promise<void>, remainingUnsealedSources: Set<GenericEmitterInstance<any, any, any, any>> }) => Promise<Possible<"SEAL">>,
-  close: (m: Member, o: Outcome<any, Finalization, Query>) => Promise<void>,
+  seal: (params: { member: Member, emit: (e: SourceEvent<T>) => void | Promise<void>, remainingUnsealedSources: Set<GenericEmitterInstance<any, any, any, any>> }) => void | Possible<"SEAL"> | Promise<void | Possible<"SEAL">>,
+  close: (m: Member, o: Outcome<any, Finalization, Query>) => void | Promise<void>,
   sourceCapability: Option<{
     pull: (emit: (e: SourceEvent<T>) => void | Promise<void>, query: Query, r: Member) => Promise<FinalQueryState<Query>>
   }>

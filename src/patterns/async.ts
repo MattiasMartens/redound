@@ -19,6 +19,30 @@ export function encapsulatePromise<T>(promise: Promise<T>) {
   }
 }
 
+export function defer(): {
+  promise: Promise<void>,
+  resolve: () => void,
+  reject: (error: any) => void
+}
+export function defer<T>(): {
+  promise: Promise<T>,
+  resolve: (value: T) => void,
+  reject: (error: any) => void
+}
+export function defer() {
+  let resolve: any, reject: any
+
+  const promise = new Promise((_resolve, _reject) => {
+    resolve = _resolve, reject = _reject
+  })
+
+  return {
+    promise,
+    resolve,
+    reject
+  } as any
+}
+
 const neverPromise = new Promise(() => { }) as Promise<never>
 export function never(): Promise<never> {
   return neverPromise
