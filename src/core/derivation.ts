@@ -45,7 +45,7 @@ export function declareSimpleDerivation<SourceType extends Record<string, Emitte
   ) as Derivation<SourceType, T, References, never, never>
 }
 
-export function initializeDerivationInstance<SourceType extends Record<string, EmitterInstanceAlias<any>>, T, Member, Finalization, Query>(derivation: Derivation<any, T, Member, Finalization, Query>, sources: SourceType, { id }: { id?: string } = {}): DerivationInstance<SourceType, T, Member, Finalization, Query> {
+export function initializeDerivationInstance<SourceType extends Record<string, EmitterInstanceAlias<any>>, T, Aggregate, Finalization, Query>(derivation: Derivation<any, T, Aggregate, Finalization, Query>, sources: SourceType, { id }: { id?: string } = {}): DerivationInstance<SourceType, T, Aggregate, Finalization, Query> {
   const tag = initializeTag(
     derivation.name,
     id
@@ -56,7 +56,7 @@ export function initializeDerivationInstance<SourceType extends Record<string, E
     lifecycle: {
       state: "READY"
     },
-    member: none,
+    aggregate: none,
     consumers: new Set(),
     backpressure: none,
     controller: none,
@@ -77,7 +77,11 @@ export async function emit<T, References, Finalization, Query>(
   derivation: DerivationInstance<any, T, References, Finalization, Query>,
   event: CoreEvent<T, Query> | MetaEvent<Query>
 ) {
-  if (derivation.lifecycle.state === "ACTIVE") {
+  // Note that Derivations *can* emit events after they have
+  // been sealed! New consumers can still query the Derivation's
+  // existing aggregated data, unless and until the graph is
+  // finally closed.
+  if (derivation.lifecycle.state === "ACTIVE" || derivation.lifecycle.state === "SEALED") {
     if (isSome(derivation.backpressure)) {
       await derivation.backpressure.value
     }
@@ -97,13 +101,13 @@ export async function emit<T, References, Finalization, Query>(
   }
 }
 
-export function open<SourceType extends Record<string, EmitterInstanceAlias<any>>, T, Member, Finalization, Query>(
-  derivation: DerivationInstance<SourceType, T, Member, Finalization, Query>
+export function open<SourceType extends Record<string, EmitterInstanceAlias<any>>, T, Aggregate, Finalization, Query>(
+  derivation: DerivationInstance<SourceType, T, Aggregate, Finalization, Query>
 ) {
   if (derivation.lifecycle.state === "READY") {
     derivation.lifecycle.state = "ACTIVE"
-    const member = derivation.prototype.open()
-    derivation.member = some(member)
+    const aggregate = derivation.prototype.open()
+    derivation.aggregate = some(aggregate)
   } else {
     throw new Error(`Attempted action open() on derivation ${derivation.id} in incompatible lifecycle state: ${derivation.lifecycle.state}`)
   }
@@ -166,8 +170,8 @@ export function unsubscribe<T, Finalization, Query>(
   source.consumers.delete(consumer)
 }
 
-export function seal<Member, Finalization, Query>(
-  derivation: DerivationInstance<any, any, Member, Finalization, Query>,
+export function seal<Aggregate, Finalization, Query>(
+  derivation: DerivationInstance<any, any, Aggregate, Finalization, Query>,
   event: MetaEvent<Query>
 ) {
   if (derivation.lifecycle.state === "ACTIVE") {
@@ -264,7 +268,7 @@ export async function consume<T, MemberOrReferences, Finalization, Query>(
       }
 
       const willSeal = await derivation.prototype.seal({
-        member: getSome(derivation.member),
+        aggregate: getSome(derivation.aggregate),
         emit: derivationEmit,
         remainingUnsealedSources: new Set(
           without(
@@ -278,7 +282,7 @@ export async function consume<T, MemberOrReferences, Finalization, Query>(
         seal(derivation, e)
       }
     } else {
-      const member = getSome(derivation.member)
+      const aggregate = getSome(derivation.aggregate)
 
       const derivationEmit = (e: DerivationEvent<T>) => {
         emit(
@@ -297,7 +301,7 @@ export async function consume<T, MemberOrReferences, Finalization, Query>(
       await derivation.prototype.consume({
         event: e as CoreEvent<any, Query>,
         emit: derivationEmit,
-        member,
+        aggregate,
         source,
         role
       })

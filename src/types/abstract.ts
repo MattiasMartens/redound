@@ -51,6 +51,10 @@ export type CoreEvent<T, Query> = {
   // Number is max tick received from source that was involved in producing
   // this event.
   provenance: Map<SourceId, number>,
+  // Indicates, given the specified provenance, which
+  // upstreams have yielded their last event derived from
+  // the respective Source tick.
+  lastIncited: Set<SourceId>,
   cause: Set<QueryState<Query>>
 }
 
@@ -71,7 +75,8 @@ export type DerivationEvent<T> = Omit<
   CoreEvent<T, never>,
   'provenance' | 'cause'
 > & {
-  incitingEvents?: Set<CoreEvent<any, any>>
+  incitingEvents?: Set<CoreEvent<any, any>>,
+  lastIncited?: Set<CoreEvent<any, any>>
 }
 
 export type Outcome<T, Finalization, Query> = Either<{
@@ -124,25 +129,29 @@ export type SourceType = {
   named: Map<DerivationRole, GenericEmitterInstance<any, any, any, any>>
 }
 
-export type Derivation<DerivationSourceType extends Record<string, EmitterInstanceAlias<any>>, T, Member, Finalization, Query> = GenericEmitter<T, Member, Finalization, Query> & {
+export type DerivationEmission<T> = CoreEvent<T, any> | Promise<CoreEvent<T, any>> | Iterable<CoreEvent<T, any> | Promise<CoreEvent<T, any>>> | Promise<Iterable<CoreEvent<T, any> | Promise<CoreEvent<T, any>>>>
+
+export type Derivation<DerivationSourceType extends Record<string, EmitterInstanceAlias<any>>, T, Aggregate, Finalization, Query> = GenericEmitter<T, Aggregate, Finalization, Query> & {
   graphComponentType: "Derivation",
-  unroll: (member: Member, emit: (e: SourceEvent<T>) => void | Promise<void>) => void | Promise<void>,
+  unroll: (aggregate: Aggregate) => DerivationEmission<T>,
   consumes: Set<EventSpec<T>>,
   consume: <K extends keyof DerivationSourceType>(
     params: {
       event: CoreEvent<PayloadTypeOf<DerivationSourceType[K]>, any>,
-      emit: (e: SourceEvent<T>) => void | Promise<void>,
-      member: Member,
+      aggregate: Aggregate,
       source: GenericEmitterInstance<any, unknown, Finalization, Query>,
       role: K
     }
-  ) => Promise<Member>,
-  open: () => Member,
-  seal: (params: { member: Member, emit: (e: SourceEvent<T>) => void | Promise<void>, remainingUnsealedSources: Set<GenericEmitterInstance<any, any, any, any>> }) => void | Possible<"SEAL"> | Promise<void | Possible<"SEAL">>,
-  close: (m: Member, o: Outcome<any, Finalization, Query>) => void | Promise<void>,
-  sourceCapability: Option<{
-    pull: (emit: (e: SourceEvent<T>) => void | Promise<void>, query: Query, r: Member) => Promise<FinalQueryState<Query>>
-  }>
+  ) => {
+    aggregate: Aggregate,
+    output: DerivationEmission<T>
+  },
+  open: () => Aggregate,
+  seal: (params: { aggregate: Aggregate, remainingUnsealedSources: Set<GenericEmitterInstance<any, any, any, any>> }) => {
+    seal: boolean,
+    output: DerivationEmission<T>
+  },
+  close: (m: Aggregate, o: Outcome<any, Finalization, Query>) => void | Promise<void>
 }
 
 export type Sink<T, References, Finalization, Query> = {

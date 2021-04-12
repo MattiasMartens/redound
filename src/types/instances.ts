@@ -36,8 +36,8 @@ export type SourceInstance<T, References, Finalization, Query> = {
 export type EmitterInstanceAlias<T> = SourceInstance<T, any, any, any> | DerivationInstance<any, T, any, any, any>
 export type PayloadTypeOf<X> = X extends EmitterInstanceAlias<infer T> ? T : never
 
-export type DerivationInstance<DerivationSourceType extends Record<string, EmitterInstanceAlias<any>>, T, Member, Finalization, Query> = {
-  prototype: Derivation<DerivationSourceType, T, Member, Finalization, Query>,
+export type DerivationInstance<DerivationSourceType extends Record<string, EmitterInstanceAlias<any>>, T, Aggregate, Finalization, Query> = {
+  prototype: Derivation<DerivationSourceType, T, Aggregate, Finalization, Query>,
   controller: Option<Controller<Finalization, Query>>,
   id: string,
   latestTickByProvenance: Map<SourceId, number>,
@@ -46,7 +46,7 @@ export type DerivationInstance<DerivationSourceType extends Record<string, Emitt
   consumers: Set<GenericConsumerInstance<T, any, Finalization, Query>>,
   backpressure: Promise<void>[],
   lifecycle: { state: "READY" | "ACTIVE" | "SEALED" } | { state: "ENDED", outcome: Outcome<T, Finalization, Query> },
-  member: Option<Member>
+  aggregate: Option<Aggregate>
 }
 
 export type GenericEmitterInstance<T, MemberOrReferences, Finalization, Query> = SourceInstance<T, MemberOrReferences, Finalization, Query> | DerivationInstance<any, T, MemberOrReferences, Finalization, Query>

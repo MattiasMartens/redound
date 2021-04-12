@@ -5,27 +5,27 @@ export const defaultDerivationSeal = (
   { remainingUnsealedSources }: { remainingUnsealedSources: Set<any> }
 ) => remainingUnsealedSources.size ? undefined : "SEAL"
 
-export const unaryDerivationConsumer = <In, Out, Member>(mapper: (i: In, m: Member) => Out) => (
-  { event, emit, member }: {
+export const unaryDerivationConsumer = <In, Out, Aggregate>(mapper: (i: In, m: Aggregate) => Out) => (
+  { event, emit, aggregate }: {
     event: SourceEvent<In>,
-    member: Member,
+    aggregate: Aggregate,
     emit: (e: SourceEvent<Out>) => void | Promise<void>,
   }
 ) => emit({
-  payload: mapper(event.payload, member),
+  payload: mapper(event.payload, aggregate),
   eventScope: event.eventScope,
   type: event.type,
   species: event.species
 })
 
-export const unaryDerivationConsumerAsync = <In, Out, Member>(mapper: (i: In, m: Member) => Out | Promise<Out>) => async (
-  { event, emit, member }: {
+export const unaryDerivationConsumerAsync = <In, Out, Aggregate>(mapper: (i: In, m: Aggregate) => Out | Promise<Out>) => async (
+  { event, emit, aggregate }: {
     event: SourceEvent<In>,
-    member: Member,
+    aggregate: Aggregate,
     emit: (e: SourceEvent<Out>) => void | Promise<void>,
   }
 ) => {
-  const payload = await mapper(event.payload, member)
+  const payload = await mapper(event.payload, aggregate)
 
   emit({
     payload,
@@ -35,14 +35,14 @@ export const unaryDerivationConsumerAsync = <In, Out, Member>(mapper: (i: In, m:
   })
 }
 
-export const unaryDerivationConsumerFlatten = <In, Out, Member>(mapper: (i: In, m: Member) => Iterable<Out>) => (
-  { event, emit, member }: {
+export const unaryDerivationConsumerFlatten = <In, Out, Aggregate>(mapper: (i: In, m: Aggregate) => Iterable<Out>) => (
+  { event, emit, aggregate }: {
     event: SourceEvent<In>,
-    member: Member,
+    aggregate: Aggregate,
     emit: (e: SourceEvent<Out>) => void | Promise<void>,
   }
 ) => forEachIterable(
-  mapper(event.payload, member),
+  mapper(event.payload, aggregate),
   payload => emit({
     payload,
     eventScope: event.eventScope,
@@ -51,16 +51,16 @@ export const unaryDerivationConsumerFlatten = <In, Out, Member>(mapper: (i: In, 
   })
 )
 
-export const unaryDerivationConsumerFlattenAsync = <In, Out, Member>(mapper: (i: In, m: Member) => Promise<
+export const unaryDerivationConsumerFlattenAsync = <In, Out, Aggregate>(mapper: (i: In, m: Aggregate) => Promise<
   Iterable<Out | Promise<Out>>
 >) => async (
-  { event, emit, member }: {
+  { event, emit, aggregate }: {
     event: SourceEvent<In>,
-    member: Member,
+    aggregate: Aggregate,
     emit: (e: SourceEvent<Out>) => void | Promise<void>,
   }
 ) => {
-    const iterable = await mapper(event.payload, member)
+  const iterable = await mapper(event.payload, aggregate)
     for await (const payload of iterable) {
       emit({
         payload,
