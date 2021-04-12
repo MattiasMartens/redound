@@ -1,3 +1,5 @@
+import { isIterable } from "./iterables"
+
 export async function end(promise: Promise<any>) {
   try {
     await promise
@@ -56,4 +58,70 @@ export function ms(milliseconds = 0) {
   return new Promise((resolve) => {
     setTimeout(resolve, milliseconds)
   })
+}
+
+export type PossiblyAsyncResult<T> = void | T | Promise<void | T> | Iterable<T | Promise<T>> | Promise<Iterable<T | Promise<T>>> | AsyncIterable<T> | Promise<AsyncIterable<T>>
+
+export function isPromise(p: any): p is Promise<any> {
+  if (p === null || p === undefined) {
+    return false
+  } else {
+    return ("then" in p) && (typeof p === "function")
+  }
+}
+
+/**
+ * @param result A value, Iterable of values, mixed Iterable of values and Promises of values, Async Iterable, or Promise wrapping any of the above.
+ * @param primaryConsumer The async function to be called for every value yielded within the span of the result's returned Promise
+ * @param secondaryConsumer The async function to be called for every value yielded after the returned Promise ends
+ * @returns A Promise with an optional embedded Promise 'deepPromise' that resolves when all secondaryConsumer invocations are finished.
+ */
+export async function twoStepIterateOverAsyncResult<T>(
+  result: PossiblyAsyncResult<T>,
+  primaryConsumer: (t: T) => Promise<void>,
+  secondaryConsumer: (t: T) => Promise<void>
+): Promise<{
+  deepPromise?: Promise<void>
+}> {
+  const awaited = await result
+  if (awaited !== undefined) {
+    if (Symbol.asyncIterator in awaited) {
+      return {
+        deepPromise: (async () => {
+          for await (const t of awaited as AsyncIterable<T>) {
+            await secondaryConsumer(t)
+          }
+        })()
+      }
+    } else if (Symbol.iterator in awaited) {
+      const iterator = awaited[Symbol.iterator]() as Iterator<T | Promise<T>>
+      let iteratorResult: IteratorResult<T | Promise<T>>
+
+      while (!(iteratorResult = iterator.next()).done) {
+        const value = iteratorResult.value
+
+        if (isPromise(value)) {
+          return {
+            deepPromise: (async () => {
+              const triggeringValue = await value
+              await secondaryConsumer(triggeringValue)
+
+              let secondaryIteratorResult: IteratorResult<T | Promise<T>>
+              while (!(secondaryIteratorResult = iterator.next()).done) {
+                const secondaryValue = await secondaryIteratorResult.value
+                await secondaryConsumer(secondaryValue)
+              }
+            })()
+          }
+        }
+      }
+
+      return {}
+    } else {
+      await primaryConsumer(awaited as T)
+      return {}
+    }
+  } else {
+    return {}
+  }
 }

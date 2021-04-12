@@ -129,7 +129,7 @@ export type SourceType = {
   named: Map<DerivationRole, GenericEmitterInstance<any, any, any, any>>
 }
 
-export type DerivationEmission<T> = CoreEvent<T, any> | Promise<CoreEvent<T, any>> | Iterable<CoreEvent<T, any> | Promise<CoreEvent<T, any>>> | Promise<Iterable<CoreEvent<T, any> | Promise<CoreEvent<T, any>>>>
+export type DerivationEmission<T> = void | CoreEvent<T, any> | Promise<CoreEvent<T, any>> | Iterable<CoreEvent<T, any> | Promise<CoreEvent<T, any>>> | Promise<Iterable<CoreEvent<T, any> | Promise<CoreEvent<T, any>>>>
 
 export type Derivation<DerivationSourceType extends Record<string, EmitterInstanceAlias<any>>, T, Aggregate, Finalization, Query> = GenericEmitter<T, Aggregate, Finalization, Query> & {
   graphComponentType: "Derivation",
