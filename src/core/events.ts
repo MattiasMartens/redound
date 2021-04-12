@@ -1,13 +1,12 @@
 import { identity } from "@/patterns/functions"
-import { flatMap, mapIterable } from "@/patterns/iterables"
+import { flatMap } from "@/patterns/iterables"
 import { createSetFromNullable } from "@/patterns/sets"
-import { BareDerivationEmitted, BareSourceEmitted, BroadEvent, CoreEvent, QueryState } from "@/types/abstract"
+import { DerivationEvent, SourceEvent, BroadEvent, QueryState } from "@/types/abstract"
 import { SourceInstance } from "@/types/instances"
-import { Possible } from "@/types/patterns"
 import { mapCollect, reconcileFold } from "big-m"
 
 export function bareSourceEmittedToEvent<T, Query>(
-  bareSourceEmitted: BareSourceEmitted<T>,
+  bareSourceEmitted: SourceEvent<T>,
   sourceInstance: SourceInstance<T, any, any, Query>,
   query?: QueryState<Query>
 ): BroadEvent<T, Query> {
@@ -25,7 +24,7 @@ const reconcileLarger = <K>() => reconcileFold<K, number, number>(
   (colliding, incoming) => Math.max(colliding, incoming)
 )
 
-export function bareDerivationEmittedToEvent<T, Query>(bareDerivationEmitted: BareDerivationEmitted<T>): BroadEvent<T, Query> {
+export function bareDerivationEmittedToEvent<T, Query>(bareDerivationEmitted: DerivationEvent<T>): BroadEvent<T, Query> {
   const {
     incitingEvents,
     ...toReEmit

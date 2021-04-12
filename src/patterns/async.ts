@@ -7,7 +7,7 @@ export async function end(promise: Promise<any>) {
 }
 
 export async function voidPromiseIterable(iterable: Iterable<Promise<void>>) {
-  for await (const i of iterable) { i }
+  for await (const i of iterable) { console.log(i) }
 }
 
 export function encapsulatePromise<T>(promise: Promise<T>) {

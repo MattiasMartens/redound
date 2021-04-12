@@ -1,7 +1,7 @@
 import { voidPromiseIterable } from '@/patterns/async'
 import { filterIterable, forEachIterable, mapIterable, tapIterable, without } from '@/patterns/iterables'
 import {
-  BareDerivationEmitted,
+  DerivationEvent,
   BroadEvent,
   Derivation,
   CoreEvent,
@@ -243,7 +243,7 @@ export async function consume<T, MemberOrReferences, Finalization, Query>(
     } else if (e.type === "SEAL") {
       derivation.sealedSources.add(source)
 
-      const derivationEmit = (e: BareDerivationEmitted<T>) => {
+      const derivationEmit = (e: DerivationEvent<T>) => {
         emit(
           derivation,
           bareDerivationEmittedToEvent(
@@ -269,7 +269,7 @@ export async function consume<T, MemberOrReferences, Finalization, Query>(
     } else {
       const member = getSome(derivation.member)
 
-      const derivationEmit = (e: BareDerivationEmitted<T>) => {
+      const derivationEmit = (e: DerivationEvent<T>) => {
         emit(
           derivation,
           bareDerivationEmittedToEvent(

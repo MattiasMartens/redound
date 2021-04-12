@@ -1,7 +1,7 @@
 import { voidPromiseIterable, wrapAsync } from '@/patterns/async'
 import { forEachIterable, mapIterable } from '@/patterns/iterables'
 import {
-  BareSourceEmitted,
+  SourceEvent,
   CoreEvent,
   MetaEvent,
   Outcome,
@@ -91,7 +91,7 @@ export function open<T, References, Finalization, Query>(
   source: SourceInstance<T, References, Finalization, Query>
 ) {
   if (source.lifecycle.state === "READY") {
-    const sourceEmit = (e: BareSourceEmitted<T>) => {
+    const sourceEmit = (e: SourceEvent<T>) => {
       tick(source.clock)
       emit(
         source,
@@ -125,10 +125,6 @@ export function subscribe<T, Finalization, Query>(
   consumer: GenericConsumerInstance<T, any, Finalization, Query>
 ) {
   if (source.lifecycle.state !== "ENDED") {
-    if (source.lifecycle.state === "READY") {
-      open(source)
-    }
-
     source.consumers.add(consumer)
 
     if (isSome(source.controller)) {
@@ -136,6 +132,10 @@ export function subscribe<T, Finalization, Query>(
         consumer,
         source.controller.value
       )
+    }
+
+    if (source.lifecycle.state === "READY") {
+      open(source)
     }
   } else {
     throw new Error(`Attempted action subscribe() on source ${source.id} in incompatible lifecycle state: ${source.lifecycle.state}`)
