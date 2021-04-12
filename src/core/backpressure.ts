@@ -8,6 +8,15 @@ export function backpressure() {
 }
 export type Backpressure = ReturnType<typeof backpressure>
 
+function cycleBackpressure(backpressure: Backpressure) {
+  if (backpressure.queue.length) {
+    const promiseFn = backpressure.queue.shift()!
+    backpressure.holder = promiseFn()
+  } else {
+    backpressure.holder = undefined
+  }
+}
+
 export async function applyToBackpressure<T>(fn: () => Promise<T>, backpressure: Backpressure) {
   if (backpressure.holder) {
     return new Promise<any>(
@@ -15,14 +24,9 @@ export async function applyToBackpressure<T>(fn: () => Promise<T>, backpressure:
         const promise = fn()
         resolve(promise)
 
-        promise.finally(() => {
-          if (backpressure.queue.length) {
-            const promiseFn = backpressure.queue.pop()!
-            backpressure.holder = promiseFn()
-          } else {
-            backpressure.holder = undefined
-          }
-        })
+        promise.finally(
+          () => cycleBackpressure(backpressure)
+        )
 
         return promise
       })
@@ -30,6 +34,7 @@ export async function applyToBackpressure<T>(fn: () => Promise<T>, backpressure:
   } else {
     const promise = fn()
     backpressure.holder = promise
+    promise.finally(() => cycleBackpressure(backpressure))
     const retVal = await promise
     return retVal
   }

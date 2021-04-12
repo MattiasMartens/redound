@@ -1,4 +1,4 @@
 import 'module-alias/register'
-import { mainC as main } from './demo'
+import { mainBackpressure as main } from './demo'
 
 main()

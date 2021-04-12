@@ -51,3 +51,9 @@ export function never(): Promise<never> {
 export async function wrapAsync<T>(fn: () => T | Promise<T>) {
   return await fn()
 }
+
+export function ms(milliseconds = 0) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, milliseconds)
+  })
+}
