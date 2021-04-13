@@ -89,9 +89,7 @@ export async function emit<T, References, Finalization, Query>(
       () => voidPromiseIterable(
         mapIterable(
           derivation.consumers,
-          async c => {
-            return genericConsume(derivation, c, event)
-          }
+          async c => genericConsume(derivation, c, event)
         )
       )
     )
@@ -219,6 +217,27 @@ export function unsubscribe<T, Finalization, Query>(
   source.consumers.delete(consumer)
 }
 
+// Copied from consumer.ts to avoid a dependency loop.
+function genericConsume<T, MemberOrReferences, Finalization, Query>(
+  emitter: GenericEmitterInstance<T, MemberOrReferences, Finalization, Query>,
+  consumer: GenericConsumerInstance<T, any, Finalization, Query>,
+  event: CoreEvent<T, Query> | MetaEvent<Query>
+) {
+  if (consumer.prototype.graphComponentType === "Sink") {
+    return sinkConsume(
+      emitter,
+      consumer as SinkInstance<T, MemberOrReferences, Finalization, Query>,
+      event
+    )
+  } else {
+    return consume(
+      emitter,
+      consumer as DerivationInstance<any, any, MemberOrReferences, Finalization, Query>,
+      event
+    )
+  }
+}
+
 export function seal<Aggregate, Finalization, Query>(
   derivation: DerivationInstance<any, any, Aggregate, Finalization, Query>,
   event: MetaEvent<Query>
@@ -226,12 +245,18 @@ export function seal<Aggregate, Finalization, Query>(
   if (derivation.lifecycle.state === "ACTIVE") {
     derivation.lifecycle.state = "SEALED"
 
-    forEachIterable(
-      derivation.consumers,
-      consumer => genericConsume(
-        derivation,
-        consumer,
-        event
+
+    applyToBackpressure(
+      derivation.innerBackpressure,
+      () => voidPromiseIterable(
+        mapIterable(
+          derivation.consumers,
+          consumer => genericConsume(
+            derivation,
+            consumer,
+            event
+          )
+        )
       )
     )
   } else if (derivation.lifecycle.state === "ENDED") {
@@ -261,27 +286,6 @@ export function close<References, Finalization, Query>(
     )
   } else {
     throw new Error(`Attempted action close() on derivation ${derivation.id} in incompatible lifecycle state: ${derivation.lifecycle.state}`)
-  }
-}
-
-// Copied from consumer.ts to avoid a dependency loop.
-function genericConsume<T, MemberOrReferences, Finalization, Query>(
-  emitter: GenericEmitterInstance<T, MemberOrReferences, Finalization, Query>,
-  consumer: GenericConsumerInstance<T, any, Finalization, Query>,
-  event: CoreEvent<T, Query> | MetaEvent<Query>
-) {
-  if (consumer.prototype.graphComponentType === "Sink") {
-    return sinkConsume(
-      emitter,
-      consumer as SinkInstance<T, MemberOrReferences, Finalization, Query>,
-      event
-    )
-  } else {
-    return consume(
-      emitter,
-      consumer as DerivationInstance<any, any, MemberOrReferences, Finalization, Query>,
-      event
-    )
   }
 }
 
@@ -316,33 +320,42 @@ export async function consume<T, MemberOrReferences, Finalization, Query>(
         )
       })
 
+      derivation.aggregate = some(sealResult.aggregate)
+
+      await scheduleEmissions(
+        derivation,
+        sealResult.output
+      )
+
       if (sealResult.seal) {
         seal(derivation, e)
       }
     } else {
-      const aggregate = getSome(derivation.aggregate)
-
-      const derivationEmit = (e: DerivationEvent<T>) => {
-        emit(
-          derivation,
-          bareDerivationEmittedToEvent(
-            e
-          )
-        )
-      }
+      const inAggregate = getSome(derivation.aggregate)
 
       const role = getSourceRole(
         derivation,
         source
       )
 
-      await derivation.prototype.consume({
+      const {
+        aggregate: outAggregate,
+        output
+      } = derivation.prototype.consume({
         event: e as CoreEvent<any, Query>,
-        emit: derivationEmit,
-        aggregate,
+        aggregate: inAggregate,
         source,
         role
       })
+
+      derivation.aggregate = some(
+        outAggregate
+      )
+
+      await scheduleEmissions(
+        derivation,
+        output
+      )
     }
 
     mapCollectInto(
