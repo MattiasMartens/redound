@@ -1,5 +1,4 @@
-import { forEachIterable } from "@/patterns/iterables"
-import { CoreEvent, SourceEvent } from "@/types/abstract"
+import { CoreEvent } from "@/types/abstract"
 
 export const defaultDerivationSeal = (
   { remainingUnsealedSources, aggregate }: { remainingUnsealedSources: Set<any>, aggregate: any }
@@ -11,7 +10,7 @@ export const defaultDerivationSeal = (
 
 export const unaryDerivationConsumer = <In, Out, Aggregate>(mapper: (i: In, m: Aggregate) => Out) => (
   { event, aggregate }: {
-    event: CoreEvent<In, any>,
+    event: CoreEvent<In>,
     aggregate: Aggregate
   }
 ) => ({
@@ -20,7 +19,6 @@ export const unaryDerivationConsumer = <In, Out, Aggregate>(mapper: (i: In, m: A
     payload: mapper(event.payload, aggregate),
     eventScope: event.eventScope,
     type: event.type,
-    species: event.species,
-    lastOfProvenance: event.lastOfProvenance
+    species: event.species
   }
 })

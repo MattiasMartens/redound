@@ -1,11 +1,10 @@
 import { voidPromiseIterable, wrapAsync } from '@/patterns/async'
 import { forEachIterable, mapIterable } from '@/patterns/iterables'
 import {
-  SourceEvent,
   CoreEvent,
+  Event,
   MetaEvent,
   Outcome,
-  QueryState,
   Source
 } from '@/types/abstract'
 import { SourceInstance, GenericConsumerInstance, Controller } from '@/types/instances'
@@ -16,10 +15,8 @@ import { isSome, some } from 'fp-ts/lib/Option'
 import { fromNullable, none } from 'fp-ts/lib/Option'
 import { clock, tick } from './clock'
 import { consume, close as consumerClose } from './consumer'
-import { bareSourceEmittedToEvent } from './events'
 import { initializeTag } from './tags'
 import { propagateController } from './controller'
-import { createSetFromNullable } from '@/patterns/sets'
 import { backpressure } from './backpressure'
 
 // Dependency Map:
@@ -36,17 +33,17 @@ import { backpressure } from './backpressure'
  * types, so this allows a simpler type declaration for a
  * Source.
  */
-export function declareSimpleSource<T, References>(source: Omit<Source<T, References, never, never>, "graphComponentType" | "pull">) {
+export function declareSimpleSource<T, References>(source: Omit<Source<T, References, never>, "graphComponentType" | "pull">) {
   return Object.assign(
     source,
     {
       graphComponentType: "Source",
       pull: noop
     }
-  ) as Source<T, References, never, never>
+  ) as Source<T, References, never>
 }
 
-export function initializeSourceInstance<T, References, Finalization, Query>(source: Source<T, References, Finalization, Query>, { id, tick, controller }: { id?: string, tick?: number, controller?: Controller<Finalization, Query> } = {}): SourceInstance<T, References, Finalization, Query> {
+export function initializeSourceInstance<T, References, Finalization>(source: Source<T, References, Finalization>, { id, tick, controller }: { id?: string, tick?: number, controller?: Controller<Finalization> } = {}): SourceInstance<T, References, Finalization> {
   const tag = initializeTag(
     source.name,
     id
@@ -66,9 +63,9 @@ export function initializeSourceInstance<T, References, Finalization, Query>(sou
   }
 }
 
-export async function emit<T, References, Finalization, Query>(
-  source: SourceInstance<T, References, Finalization, Query>,
-  event: CoreEvent<T, Query> | MetaEvent<Query>
+export async function emit<T, References, Finalization>(
+  source: SourceInstance<T, References, Finalization>,
+  event: CoreEvent<T> | MetaEvent
 ) {
   if (source.lifecycle.state === "ACTIVE") {
     voidPromiseIterable(
@@ -82,18 +79,15 @@ export async function emit<T, References, Finalization, Query>(
   }
 }
 
-export function open<T, References, Finalization, Query>(
-  source: SourceInstance<T, References, Finalization, Query>
+export function open<T, References, Finalization>(
+  source: SourceInstance<T, References, Finalization>
 ) {
   if (source.lifecycle.state === "READY") {
-    const sourceEmit = (e: SourceEvent<T>) => {
+    const sourceEmit = (e: Event<T>) => {
       tick(source.clock)
       return emit(
         source,
-        bareSourceEmittedToEvent(
-          e,
-          source
-        )
+        e
       )
     }
 
@@ -115,9 +109,9 @@ export function open<T, References, Finalization, Query>(
   }
 }
 
-export function subscribe<T, Finalization, Query>(
-  source: SourceInstance<T, any, Finalization, Query>,
-  consumer: GenericConsumerInstance<T, any, Finalization, Query>
+export function subscribe<T, Finalization>(
+  source: SourceInstance<T, any, Finalization>,
+  consumer: GenericConsumerInstance<T, any, Finalization>
 ) {
   if (source.lifecycle.state !== "ENDED") {
     source.consumers.add(consumer)
@@ -138,35 +132,27 @@ export function subscribe<T, Finalization, Query>(
   }
 }
 
-export function sealEvent<Query>(
-  source: SourceInstance<any, any, any, Query>,
-  q?: QueryState<Query>
-): MetaEvent<Query> {
+export function sealEvent() {
   return {
-    type: "SEAL",
-    cause: createSetFromNullable(q),
-    provenance: new Map([
-      [source.id, source.clock.tick]
-    ])
+    type: "SEAL" as "SEAL"
   }
 }
 
-export function unsubscribe<T, Finalization, Query>(
-  source: SourceInstance<T, any, Finalization, Query>,
-  consumer: GenericConsumerInstance<T, any, Finalization, Query>
+export function unsubscribe<T, Finalization>(
+  source: SourceInstance<T, any, Finalization>,
+  consumer: GenericConsumerInstance<T, any, Finalization>
 ) {
   source.consumers.delete(consumer)
 }
 
-export function seal<T, References, Finalization, Query>(
-  source: SourceInstance<T, References, Finalization, Query>,
-  query?: QueryState<Query>
+export function seal<T, References, Finalization>(
+  source: SourceInstance<T, References, Finalization>,
 ) {
   if (source.lifecycle.state === "ACTIVE") {
     source.lifecycle.state = "SEALED"
 
     tick(source.clock)
-    const e = sealEvent(source, query)
+    const e = sealEvent()
 
     forEachIterable(
       source.consumers,
@@ -183,9 +169,9 @@ export function seal<T, References, Finalization, Query>(
   }
 }
 
-export function close<T, References, Finalization, Query>(
-  source: SourceInstance<T, References, Finalization, Query>,
-  outcome: Outcome<T, Finalization, Query>
+export function close<T, References, Finalization>(
+  source: SourceInstance<T, References, Finalization>,
+  outcome: Outcome<T, Finalization>
 ) {
   if (source.lifecycle.state !== "ENDED" && source.lifecycle.state !== "READY") {
     source.lifecycle = {

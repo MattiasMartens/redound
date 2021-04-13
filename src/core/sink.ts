@@ -18,7 +18,7 @@ import { identity } from '@/patterns/functions'
  * types, so this allows a simpler type declaration for a
  * Source.
  */
-export function declareSimpleSink<T, References>(sink: Omit<Sink<T, References, never, never>, 'graphComponentType'>) {
+export function declareSimpleSink<T, References>(sink: Omit<Sink<T, References, never>, 'graphComponentType'>) {
   // @ts-ignore
   sink.graphComponentType = "Sink"
   return Object.assign(
@@ -26,10 +26,10 @@ export function declareSimpleSink<T, References>(sink: Omit<Sink<T, References, 
     {
       graphComponentType: "Sink"
     }
-  ) as Sink<T, References, never, never>
+  ) as Sink<T, References, never>
 }
 
-export function initializeSinkInstance<T, References, Finalization, Query>(sink: Sink<T, References, Finalization, Query>, emitterInstance: GenericEmitterInstance<T, any, Finalization, Query>, { id }: { id?: string } = {}): SinkInstance<T, References, Finalization, Query> {
+export function initializeSinkInstance<T, References, Finalization>(sink: Sink<T, References, Finalization>, emitterInstance: GenericEmitterInstance<T, any, Finalization>, { id }: { id?: string } = {}): SinkInstance<T, References, Finalization> {
   const tag = initializeTag(
     sink.name,
     id
@@ -50,10 +50,10 @@ export function initializeSinkInstance<T, References, Finalization, Query>(sink:
   }
 }
 
-export async function consume<T, MemberOrReferences, Finalization, Query>(
-  source: GenericEmitterInstance<T, MemberOrReferences, Finalization, Query>,
-  sink: SinkInstance<T, any, Finalization, Query>,
-  e: BroadEvent<T, Query>
+export async function consume<T, MemberOrReferences, Finalization>(
+  source: GenericEmitterInstance<T, MemberOrReferences, Finalization>,
+  sink: SinkInstance<T, any, Finalization>,
+  e: BroadEvent<T>
 ) {
   if (sink.lifecycle.state === "ACTIVE") {
     if (e.type === "VOID") {
@@ -63,32 +63,17 @@ export async function consume<T, MemberOrReferences, Finalization, Query>(
       // the controller to close it.
     } else {
       const references = getSome(sink.references)
-      await sink.prototype.consume(e as CoreEvent<T, Query>, references)
+      await sink.prototype.consume(e as CoreEvent<T>, references)
     }
-
-    mapCollectInto(
-      e.provenance,
-      sink.latestTickByProvenance,
-      reconcileFold(
-        identity,
-        (currentLatestTick, incomingTick) => {
-          if (incomingTick >= currentLatestTick) {
-            return incomingTick
-          } else {
-            throw new Error(`Events may not arrive to a sink out of order`)
-          }
-        }
-      )
-    )
   } else {
     throw new Error(`Attempted action consume() on sink ${sink.id} in incompatible lifecycle state: ${source.lifecycle.state}`)
   }
 }
 
-export async function close<T, References, Finalization, Query>(
-  source: GenericEmitterInstance<T, References, Finalization, Query>,
-  sink: SinkInstance<T, References, Finalization, Query>,
-  outcome: Outcome<T, Finalization, Query>
+export async function close<T, References, Finalization>(
+  source: GenericEmitterInstance<T, References, Finalization>,
+  sink: SinkInstance<T, References, Finalization>,
+  outcome: Outcome<T, Finalization>
 ) {
   if (sink.lifecycle.state === "ACTIVE") {
     const references = getSome(sink.references)

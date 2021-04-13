@@ -1,20 +1,18 @@
 import { twoStepIterateOverAsyncResult, voidPromiseIterable } from '@/patterns/async'
 import { filterIterable, forEachIterable, mapIterable, tapIterable, without } from '@/patterns/iterables'
 import {
-  DerivationEvent,
   BroadEvent,
   Derivation,
   CoreEvent,
   MetaEvent,
   Outcome,
-  QueryState,
-  DerivationEmission
+  DerivationEmission,
+  Event
 } from '@/types/abstract'
 import { SourceInstance, GenericConsumerInstance, DerivationInstance, GenericEmitterInstance, SinkInstance, EmitterInstanceAlias } from '@/types/instances'
 import { isSome, some } from 'fp-ts/lib/Option'
 import { none } from 'fp-ts/lib/Option'
 import { close as consumerClose } from './consumer'
-import { bareDerivationEmittedToEvent } from './events'
 import {
   consume as sinkConsume
 } from './sink'
@@ -37,17 +35,17 @@ export function* allSources(derivation: Record<string, EmitterInstanceAlias<any>
  * types, so this allows a simpler type declaration for a
  * Source.
  */
-export function declareSimpleDerivation<SourceType extends Record<string, EmitterInstanceAlias<any>>, T, References>(derivation: Omit<Derivation<SourceType, T, References, never, never>, "graphComponentType" | "sourceCapability">) {
+export function declareSimpleDerivation<SourceType extends Record<string, EmitterInstanceAlias<any>>, T, References>(derivation: Omit<Derivation<SourceType, T, References, never>, "graphComponentType" | "sourceCapability">) {
   return Object.assign(
     derivation,
     {
       sourceCapability: none,
       graphComponentType: "Derivation"
     }
-  ) as Derivation<SourceType, T, References, never, never>
+  ) as Derivation<SourceType, T, References, never>
 }
 
-export function initializeDerivationInstance<SourceType extends Record<string, EmitterInstanceAlias<any>>, T, Aggregate, Finalization, Query>(derivation: Derivation<any, T, Aggregate, Finalization, Query>, sources: SourceType, { id }: { id?: string } = {}): DerivationInstance<SourceType, T, Aggregate, Finalization, Query> {
+export function initializeDerivationInstance<SourceType extends Record<string, EmitterInstanceAlias<any>>, T, Aggregate, Finalization>(derivation: Derivation<any, T, Aggregate, Finalization>, sources: SourceType, { id }: { id?: string } = {}): DerivationInstance<SourceType, T, Aggregate, Finalization> {
   const tag = initializeTag(
     derivation.name,
     id
@@ -75,9 +73,9 @@ export function initializeDerivationInstance<SourceType extends Record<string, E
   }
 }
 
-export async function emit<T, References, Finalization, Query>(
-  derivation: DerivationInstance<any, T, References, Finalization, Query>,
-  event: CoreEvent<T, Query> | MetaEvent<Query>
+export async function emit<T, References, Finalization>(
+  derivation: DerivationInstance<any, T, References, Finalization>,
+  event: CoreEvent<T> | MetaEvent
 ) {
   // Derivations *can* emit events after they have
   // been sealed! New consumers can still query the Derivation's
@@ -98,15 +96,16 @@ export async function emit<T, References, Finalization, Query>(
   }
 }
 
-export async function scheduleEmissions<T, References, Finalization, Query>(
-  derivation: DerivationInstance<any, T, References, Finalization, Query>,
-  result: DerivationEmission<T>
+export async function scheduleEmissions<T, References, Finalization>(
+  derivation: DerivationInstance<any, T, References, Finalization>,
+  result: DerivationEmission<T>,
+  sourceEvent?: BroadEvent<T>
 ) {
   if (derivation.lifecycle.state === "ACTIVE" || derivation.lifecycle.state === "SEALED") {
     applyToBackpressure(
       derivation.downstreamBackpressure,
       async () => {
-        const primaryEvents: DerivationEvent<T>[] = []
+        const primaryEvents: Event<T>[] = []
         const {
           secondaryConsume
         } = await twoStepIterateOverAsyncResult(
@@ -122,7 +121,7 @@ export async function scheduleEmissions<T, References, Finalization, Query>(
           // on the emission queue and resolve.
           applyToBackpressure(
             derivation.innerBackpressure,
-            () => Promise.all(primaryEvents.map(e => emit(derivation, bareDerivationEmittedToEvent(e))))
+            () => Promise.all(primaryEvents.map(e => emit(derivation, e)))
           )
         } else {
           // If secondary generation is not occurring, apply
@@ -130,13 +129,12 @@ export async function scheduleEmissions<T, References, Finalization, Query>(
           await applyToBackpressure(
             derivation.innerBackpressure,
             () => Promise.all(primaryEvents.map(e => {
-              const event = bareDerivationEmittedToEvent(e)
               // Skip emit() to avoid deadlock from waiting for
               // own Promise to resolve
               return voidPromiseIterable(
                 mapIterable(
                   derivation.consumers,
-                  async c => genericConsume(derivation, c, event)
+                  async c => genericConsume(derivation, c, e)
                 )
               )
             }))
@@ -147,7 +145,7 @@ export async function scheduleEmissions<T, References, Finalization, Query>(
           applyToBackpressure(
             derivation.innerBackpressure,
             () => secondaryConsume(
-              e => emit(derivation, bareDerivationEmittedToEvent(e))
+              e => emit(derivation, e)
             )
           )
         }
@@ -158,8 +156,8 @@ export async function scheduleEmissions<T, References, Finalization, Query>(
   }
 }
 
-export function open<SourceType extends Record<string, EmitterInstanceAlias<any>>, T, Aggregate, Finalization, Query>(
-  derivation: DerivationInstance<SourceType, T, Aggregate, Finalization, Query>
+export function open<SourceType extends Record<string, EmitterInstanceAlias<any>>, T, Aggregate, Finalization>(
+  derivation: DerivationInstance<SourceType, T, Aggregate, Finalization>
 ) {
   if (derivation.lifecycle.state === "READY") {
     derivation.lifecycle.state = "ACTIVE"
@@ -170,10 +168,10 @@ export function open<SourceType extends Record<string, EmitterInstanceAlias<any>
   }
 }
 
-export function subscribe<T, Finalization, Query>(
-  derivation: DerivationInstance<any, T, any, Finalization, Query>,
-  consumer: GenericConsumerInstance<T, any, Finalization, Query>,
-  sourceSubscribe: (source: SourceInstance<any, any, any, any>, derivation: DerivationInstance<any, any, any, any, any>) => void
+export function subscribe<T, Finalization>(
+  derivation: DerivationInstance<any, T, any, Finalization>,
+  consumer: GenericConsumerInstance<T, any, Finalization>,
+  sourceSubscribe: (source: SourceInstance<any, any, any>, derivation: DerivationInstance<any, any, any, any>) => void
 ) {
   if (derivation.lifecycle.state !== "ENDED") {
     derivation.consumers.add(consumer)
@@ -193,64 +191,61 @@ export function subscribe<T, Finalization, Query>(
   }
 }
 
-export function siphon(derivation: DerivationInstance<any, any, any, any, any>, sourceSubscribe: (source: SourceInstance<any, any, any, any>, derivation: DerivationInstance<any, any, any, any, any>) => void) {
+export function siphon(derivation: DerivationInstance<any, any, any, any>, sourceSubscribe: (source: SourceInstance<any, any, any>, derivation: DerivationInstance<any, any, any, any>) => void) {
   open(derivation)
 
   forEachIterable(
     allSources(derivation.sourcesByRole),
     genericEmitter => {
       if (genericEmitter.prototype.graphComponentType === "Derivation" && genericEmitter.lifecycle.state === "READY") {
-        subscribe(genericEmitter as DerivationInstance<any, any, any, any, any>, derivation, sourceSubscribe)
-        siphon(genericEmitter as DerivationInstance<any, any, any, any, any>, sourceSubscribe)
+        subscribe(genericEmitter as DerivationInstance<any, any, any, any>, derivation, sourceSubscribe)
+        siphon(genericEmitter as DerivationInstance<any, any, any, any>, sourceSubscribe)
       } else if (genericEmitter.prototype.graphComponentType === "Source" && genericEmitter.lifecycle.state === "READY") {
-        sourceSubscribe(genericEmitter as SourceInstance<any, any, any, any>, derivation)
+        sourceSubscribe(genericEmitter as SourceInstance<any, any, any>, derivation)
       }
     }
   )
 }
 
-export function sealEvent<Query>(
-  sourceEvent: MetaEvent<Query>,
-  q?: QueryState<Query>
-): MetaEvent<Query> {
+export function sealEvent(
+  sourceEvent: MetaEvent
+): MetaEvent {
   return {
-    type: "SEAL",
-    cause: createSetFromNullable(q),
-    provenance: sourceEvent.provenance
+    type: "SEAL"
   }
 }
 
-export function unsubscribe<T, Finalization, Query>(
-  source: SourceInstance<T, any, Finalization, Query>,
-  consumer: GenericConsumerInstance<T, any, Finalization, Query>
+export function unsubscribe<T, Finalization>(
+  source: SourceInstance<T, any, Finalization>,
+  consumer: GenericConsumerInstance<T, any, Finalization>
 ) {
   source.consumers.delete(consumer)
 }
 
 // Copied from consumer.ts to avoid a dependency loop.
-function genericConsume<T, MemberOrReferences, Finalization, Query>(
-  emitter: GenericEmitterInstance<T, MemberOrReferences, Finalization, Query>,
-  consumer: GenericConsumerInstance<T, any, Finalization, Query>,
-  event: CoreEvent<T, Query> | MetaEvent<Query>
+function genericConsume<T, MemberOrReferences, Finalization>(
+  emitter: GenericEmitterInstance<T, MemberOrReferences, Finalization>,
+  consumer: GenericConsumerInstance<T, any, Finalization>,
+  event: CoreEvent<T> | MetaEvent
 ) {
   if (consumer.prototype.graphComponentType === "Sink") {
     return sinkConsume(
       emitter,
-      consumer as SinkInstance<T, MemberOrReferences, Finalization, Query>,
+      consumer as SinkInstance<T, MemberOrReferences, Finalization>,
       event
     )
   } else {
     return consume(
       emitter,
-      consumer as DerivationInstance<any, any, MemberOrReferences, Finalization, Query>,
+      consumer as DerivationInstance<any, any, MemberOrReferences, Finalization>,
       event
     )
   }
 }
 
-export function seal<Aggregate, Finalization, Query>(
-  derivation: DerivationInstance<any, any, Aggregate, Finalization, Query>,
-  event: MetaEvent<Query>
+export function seal<Aggregate, Finalization>(
+  derivation: DerivationInstance<any, any, Aggregate, Finalization>,
+  event: MetaEvent
 ) {
   if (derivation.lifecycle.state === "ACTIVE") {
     derivation.lifecycle.state = "SEALED"
@@ -276,9 +271,9 @@ export function seal<Aggregate, Finalization, Query>(
   }
 }
 
-export function close<References, Finalization, Query>(
-  derivation: DerivationInstance<any, any, References, Finalization, Query>,
-  outcome: Outcome<any, Finalization, Query>
+export function close<References, Finalization>(
+  derivation: DerivationInstance<any, any, References, Finalization>,
+  outcome: Outcome<any, Finalization>
 ) {
   if (derivation.lifecycle.state !== "ENDED" && derivation.lifecycle.state !== "READY") {
     derivation.lifecycle = {
@@ -299,7 +294,7 @@ export function close<References, Finalization, Query>(
   }
 }
 
-function getSourceRole<SourceType extends Record<string, EmitterInstanceAlias<any>>>(derivation: DerivationInstance<SourceType, any, any, any, any>, source: GenericEmitterInstance<any, any, any, any>) {
+function getSourceRole<SourceType extends Record<string, EmitterInstanceAlias<any>>>(derivation: DerivationInstance<SourceType, any, any, any>, source: GenericEmitterInstance<any, any, any>) {
   for (const role in derivation.sourcesByRole) {
     if (derivation.sourcesByRole[role] === source) {
       return role
@@ -310,10 +305,10 @@ function getSourceRole<SourceType extends Record<string, EmitterInstanceAlias<an
 }
 
 
-export async function consume<T, MemberOrReferences, Finalization, Query>(
-  source: GenericEmitterInstance<T, MemberOrReferences, Finalization, Query>,
-  derivation: DerivationInstance<any, any, any, Finalization, Query>,
-  e: BroadEvent<T, Query>
+export async function consume<T, MemberOrReferences, Finalization>(
+  source: GenericEmitterInstance<T, MemberOrReferences, Finalization>,
+  derivation: DerivationInstance<any, any, any, Finalization>,
+  e: BroadEvent<T>
 ) {
   if (derivation.lifecycle.state === "ACTIVE") {
     if (e.type === "VOID") {
@@ -352,7 +347,7 @@ export async function consume<T, MemberOrReferences, Finalization, Query>(
         aggregate: outAggregate,
         output
       } = derivation.prototype.consume({
-        event: e as CoreEvent<any, Query>,
+        event: e as CoreEvent<any>,
         aggregate: inAggregate,
         source,
         role
@@ -367,21 +362,6 @@ export async function consume<T, MemberOrReferences, Finalization, Query>(
         output
       )
     }
-
-    mapCollectInto(
-      e.provenance,
-      derivation.latestTickByProvenance,
-      reconcileFold(
-        identity,
-        (currentLatestTick, incomingTick) => {
-          if (incomingTick >= currentLatestTick) {
-            return incomingTick
-          } else {
-            throw new Error(`Events may not arrive to a consumer out of order`)
-          }
-        }
-      )
-    )
   } else {
     throw new Error(`Attempted action consume() on derivation ${derivation.id} in incompatible lifecycle state: ${derivation.lifecycle.state}`)
   }

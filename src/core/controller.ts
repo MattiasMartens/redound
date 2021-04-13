@@ -2,15 +2,15 @@ import { forEachIterable } from "@/patterns/iterables"
 import { Controller } from "@/types/instances"
 import { isNone, Option, some } from "fp-ts/lib/Option"
 
-type ControllerReceiver<Finalization, Query> = {
-  controller: Option<Controller<Finalization, Query>>
-  consumers?: Set<ControllerReceiver<Finalization, Query>>,
+type ControllerReceiver<Finalization> = {
+  controller: Option<Controller<Finalization>>
+  consumers?: Set<ControllerReceiver<Finalization>>,
   id: string
 }
 
-export async function propagateController<Finalization, Query>(
-  component: ControllerReceiver<Finalization, Query>,
-  controller: Controller<Finalization, Query>
+export async function propagateController<Finalization>(
+  component: ControllerReceiver<Finalization>,
+  controller: Controller<Finalization>
 ) {
   if (isNone(component.controller)) {
     component.controller = some(controller)

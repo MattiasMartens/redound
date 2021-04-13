@@ -15,7 +15,7 @@ export function iterableSourcePrototype<T>(
   }: {
     name?: string
   } = {}
-): Source<T, void, any, void> {
+): Source<T, void, any> {
   return declareSimpleSource({
     close: noop,
     name,
@@ -42,7 +42,7 @@ export function asyncIterableSourcePrototype<T>(
   }: {
     name?: string
   } = {}
-): Source<T, void, any, void> {
+): Source<T, void, any> {
   return declareSimpleSource({
     close: noop,
     name,

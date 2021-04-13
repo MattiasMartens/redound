@@ -10,21 +10,21 @@ import {
   close as derivationClose
 } from "./derivation"
 
-export function consume<T, MemberOrReferences, Finalization, Query>(
-  emitter: GenericEmitterInstance<T, MemberOrReferences, Finalization, Query>,
-  consumer: GenericConsumerInstance<T, any, Finalization, Query>,
-  event: CoreEvent<T, Query> | MetaEvent<Query>
+export function consume<T, MemberOrReferences, Finalization>(
+  emitter: GenericEmitterInstance<T, MemberOrReferences, Finalization>,
+  consumer: GenericConsumerInstance<T, any, Finalization>,
+  event: CoreEvent<T> | MetaEvent
 ) {
   if (consumer.prototype.graphComponentType === "Sink") {
     return sinkConsume(
       emitter,
-      consumer as SinkInstance<T, MemberOrReferences, Finalization, Query>,
+      consumer as SinkInstance<T, MemberOrReferences, Finalization>,
       event
     )
   } else if (consumer.prototype.graphComponentType === "Derivation") {
     return derivationConsume(
       emitter,
-      consumer as DerivationInstance<any, any, MemberOrReferences, Finalization, Query>,
+      consumer as DerivationInstance<any, any, MemberOrReferences, Finalization>,
       event
     )
   } else {
@@ -32,20 +32,20 @@ export function consume<T, MemberOrReferences, Finalization, Query>(
   }
 }
 
-export function close<T, MemberOrReferences, Finalization, Query>(
-  source: GenericEmitterInstance<T, MemberOrReferences, Finalization, Query>,
-  consumer: GenericConsumerInstance<T, MemberOrReferences, Finalization, Query>,
-  outcome: Outcome<T, Finalization, Query>
+export function close<T, MemberOrReferences, Finalization>(
+  source: GenericEmitterInstance<T, MemberOrReferences, Finalization>,
+  consumer: GenericConsumerInstance<T, MemberOrReferences, Finalization>,
+  outcome: Outcome<T, Finalization>
 ) {
   if (consumer.prototype.graphComponentType === "Sink") {
     sinkClose(
       source,
-      consumer as SinkInstance<T, MemberOrReferences, Finalization, Query>,
+      consumer as SinkInstance<T, MemberOrReferences, Finalization>,
       outcome
     )
   } else {
     derivationClose(
-      source as DerivationInstance<any, any, MemberOrReferences, Finalization, Query>,
+      source as DerivationInstance<any, any, MemberOrReferences, Finalization>,
       outcome
     )
   }

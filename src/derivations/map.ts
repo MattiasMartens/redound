@@ -13,7 +13,7 @@ export function mappedDerivationPrototype<In, Out>(
   } = {}
 ): Derivation<{
   main: EmitterInstanceAlias<In>
-}, Out, void, any, any> {
+}, Out, void, any> {
   return declareSimpleDerivation({
     consume: unaryDerivationConsumer(
       mapper

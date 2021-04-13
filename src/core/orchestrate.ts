@@ -7,7 +7,7 @@ import {
   subscribe as derivationSubscribeCore
 } from "./derivation";
 
-export function makeSink<T, References, Finalization, Query>(sourceInstance: GenericEmitterInstance<T, any, Finalization, Query>, sink: Sink<T, References, Finalization, Query>, params: { id?: string, controller?: Controller<Finalization, Query> } = {}): SinkInstance<T, References, Finalization, Query> {
+export function makeSink<T, References, Finalization>(sourceInstance: GenericEmitterInstance<T, any, Finalization>, sink: Sink<T, References, Finalization>, params: { id?: string, controller?: Controller<Finalization> } = {}): SinkInstance<T, References, Finalization> {
   const sinkInstance = initializeSinkInstance(
     sink,
     sourceInstance,
@@ -16,12 +16,12 @@ export function makeSink<T, References, Finalization, Query>(sourceInstance: Gen
 
   if (sourceInstance.prototype.graphComponentType === "Source") {
     sourceSubscribe(
-      sourceInstance as SourceInstance<any, any, any, any>,
+      sourceInstance as SourceInstance<any, any, any>,
       sinkInstance
     )
   } else {
     derivationSubscribe(
-      sourceInstance as DerivationInstance<any, any, any, any, any>,
+      sourceInstance as DerivationInstance<any, any, any, any>,
       sinkInstance
     )
   }
@@ -29,9 +29,9 @@ export function makeSink<T, References, Finalization, Query>(sourceInstance: Gen
   return sinkInstance
 }
 
-export function derivationSubscribe<T, Finalization, Query>(
-  derivation: DerivationInstance<any, T, any, Finalization, Query>,
-  consumer: GenericConsumerInstance<T, any, Finalization, Query>
+export function derivationSubscribe<T, Finalization>(
+  derivation: DerivationInstance<any, T, any, Finalization>,
+  consumer: GenericConsumerInstance<T, any, Finalization>
 ) {
   return derivationSubscribeCore(
     derivation,
@@ -44,6 +44,6 @@ export { makeDerivation }
 
 export function makeUnaryDerivation<U, T>(
   source: EmitterInstanceAlias<U>,
-  derivation: Derivation<{ main: EmitterInstanceAlias<U> }, T, any, any, any>, params: { id?: string } = {}): DerivationInstance<{ main: EmitterInstanceAlias<U> }, T, any, any, any> {
+  derivation: Derivation<{ main: EmitterInstanceAlias<U> }, T, any, any>, params: { id?: string } = {}): DerivationInstance<{ main: EmitterInstanceAlias<U> }, T, any, any> {
   return makeDerivation(derivation, { main: source }, params)
 }

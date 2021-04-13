@@ -5,7 +5,7 @@ import { Sink } from "@/types/abstract"
 export function forEachPrototype<T>(
   forEach: (t: T) => void | Promise<void>,
   name?: string
-): Sink<T, void, any, void> {
+): Sink<T, void, any> {
   return declareSimpleSink({
     open: noop,
     close: noop,
