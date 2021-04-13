@@ -1,4 +1,4 @@
-import { voidPromiseIterable } from '@/patterns/async'
+import { twoStepIterateOverAsyncResult, voidPromiseIterable } from '@/patterns/async'
 import { filterIterable, forEachIterable, mapIterable, tapIterable, without } from '@/patterns/iterables'
 import {
   DerivationEvent,
@@ -7,7 +7,8 @@ import {
   CoreEvent,
   MetaEvent,
   Outcome,
-  QueryState
+  QueryState,
+  DerivationEmission
 } from '@/types/abstract'
 import { SourceInstance, GenericConsumerInstance, DerivationInstance, GenericEmitterInstance, SinkInstance, EmitterInstanceAlias } from '@/types/instances'
 import { isSome, some } from 'fp-ts/lib/Option'
@@ -23,6 +24,7 @@ import { createSetFromNullable } from '@/patterns/sets'
 import { getSome } from '@/patterns/options'
 import { mapCollectInto, reconcileFold } from 'big-m'
 import { identity } from '@/patterns/functions'
+import { applyToBackpressure, backpressure } from './backpressure'
 
 export function* allSources(derivation: Record<string, EmitterInstanceAlias<any>>) {
   for (const role in derivation) {
@@ -58,7 +60,8 @@ export function initializeDerivationInstance<SourceType extends Record<string, E
     },
     aggregate: none,
     consumers: new Set(),
-    backpressure: none,
+    downstreamBackpressure: backpressure(),
+    innerBackpressure: backpressure(),
     controller: none,
     latestTickByProvenance: new Map(),
     sourcesByRole: sources,
@@ -72,7 +75,6 @@ export function initializeDerivationInstance<SourceType extends Record<string, E
   }
 }
 
-// TODO Some of this logic may be mergeable with a source's emit()
 export async function emit<T, References, Finalization, Query>(
   derivation: DerivationInstance<any, T, References, Finalization, Query>,
   event: CoreEvent<T, Query> | MetaEvent<Query>
@@ -82,22 +84,69 @@ export async function emit<T, References, Finalization, Query>(
   // existing aggregated data, unless and until the graph is
   // finally closed.
   if (derivation.lifecycle.state === "ACTIVE" || derivation.lifecycle.state === "SEALED") {
-    if (isSome(derivation.backpressure)) {
-      await derivation.backpressure.value
-    }
-
-    derivation.backpressure = some(
-      voidPromiseIterable(
+    return applyToBackpressure(
+      derivation.downstreamBackpressure,
+      () => voidPromiseIterable(
         mapIterable(
           derivation.consumers,
           async c => {
             return genericConsume(derivation, c, event)
           }
         )
-      ).then(() => void (derivation.backpressure = none))
+      )
     )
   } else {
     throw new Error(`Attempted action emit() on derivation ${derivation.id} in incompatible lifecycle state: ${derivation.lifecycle.state}`)
+  }
+}
+
+export async function scheduleEmissions<T, References, Finalization, Query>(
+  derivation: DerivationInstance<any, T, References, Finalization, Query>,
+  result: DerivationEmission<T>
+) {
+  if (derivation.lifecycle.state === "ACTIVE" || derivation.lifecycle.state === "SEALED") {
+    applyToBackpressure(
+      derivation.downstreamBackpressure,
+      async () => {
+        const primaryEvents: DerivationEvent<T>[] = []
+        const {
+          secondaryConsume
+        } = await twoStepIterateOverAsyncResult(
+          result,
+          e => {
+            primaryEvents.push(e)
+          }
+        )
+
+        if (derivation.innerBackpressure.holder) {
+          // If secondary generation is occurring, don't wait
+          // for it to finish; just deposit the next events
+          // on the emission queue and resolve.
+          applyToBackpressure(
+            derivation.innerBackpressure,
+            () => Promise.all(primaryEvents.map(e => emit(derivation, bareDerivationEmittedToEvent(e))))
+          )
+        } else {
+          // If secondary generation is not occurring, apply
+          // backpressure on emissions as one normally would.
+          await applyToBackpressure(
+            derivation.innerBackpressure,
+            () => Promise.all(primaryEvents.map(e => emit(derivation, bareDerivationEmittedToEvent(e))))
+          )
+        }
+
+        if (secondaryConsume) {
+          applyToBackpressure(
+            derivation.innerBackpressure,
+            () => secondaryConsume(
+              e => emit(derivation, bareDerivationEmittedToEvent(e))
+            )
+          )
+        }
+      }
+    )
+  } else {
+    throw new Error(`Attempted action scheduleEmissions() on derivation ${derivation.id} in incompatible lifecycle state: ${derivation.lifecycle.state}`)
   }
 }
 
@@ -257,19 +306,8 @@ export async function consume<T, MemberOrReferences, Finalization, Query>(
       // no-op: just update the sink's provenance clock.
     } else if (e.type === "SEAL") {
       derivation.sealedSources.add(source)
-
-      const derivationEmit = (e: DerivationEvent<T>) => {
-        emit(
-          derivation,
-          bareDerivationEmittedToEvent(
-            e
-          )
-        )
-      }
-
-      const willSeal = await derivation.prototype.seal({
+      const sealResult = derivation.prototype.seal({
         aggregate: getSome(derivation.aggregate),
-        emit: derivationEmit,
         remainingUnsealedSources: new Set(
           without(
             allSources(derivation.sourcesByRole),
@@ -278,7 +316,7 @@ export async function consume<T, MemberOrReferences, Finalization, Query>(
         )
       })
 
-      if (willSeal) {
+      if (sealResult.seal) {
         seal(derivation, e)
       }
     } else {

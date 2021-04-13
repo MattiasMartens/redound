@@ -1,6 +1,7 @@
 import { Option } from "fp-ts/lib/Option";
 import { Derivation, CoreEvent, Outcome, Sink, Source } from "./abstract";
 import { Clock } from '@/core/clock'
+import { Backpressure } from "@/core/backpressure";
 
 /**
  * 1. A graph component can only have one Controller.
@@ -26,7 +27,7 @@ export type SourceInstance<T, References, Finalization, Query> = {
   id: string
   clock: Clock,
   consumers: Set<GenericConsumerInstance<T, any, Finalization, Query>>,
-  backpressure: Promise<void>[],
+  backpressure: Backpressure,
   lifecycle: { state: "READY" | "ACTIVE" | "SEALED" } | { state: "ENDED", outcome: Outcome<T, Finalization, Query> },
   // Initialized to 'Some' on first subscription event,
   // reverted to 'None' once closed.
@@ -44,7 +45,8 @@ export type DerivationInstance<DerivationSourceType extends Record<string, Emitt
   sourcesByRole: DerivationSourceType,
   sealedSources: Set<GenericEmitterInstance<any, any, any, any>>,
   consumers: Set<GenericConsumerInstance<T, any, Finalization, Query>>,
-  backpressure: Promise<void>[],
+  innerBackpressure: Backpressure,
+  downstreamBackpressure: Backpressure,
   lifecycle: { state: "READY" | "ACTIVE" | "SEALED" } | { state: "ENDED", outcome: Outcome<T, Finalization, Query> },
   aggregate: Option<Aggregate>
 }

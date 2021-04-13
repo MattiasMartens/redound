@@ -17,9 +17,9 @@ function cycleBackpressure(backpressure: Backpressure) {
   }
 }
 
-export async function applyToBackpressure<T>(fn: () => Promise<T>, backpressure: Backpressure) {
+export async function applyToBackpressure<T>(backpressure: Backpressure, fn: () => Promise<T>): Promise<T> {
   if (backpressure.holder) {
-    return new Promise<any>(
+    return new Promise<T>(
       resolve => backpressure.queue.push(() => {
         const promise = fn()
         resolve(promise)

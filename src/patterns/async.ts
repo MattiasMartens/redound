@@ -74,24 +74,25 @@ export function isPromise(p: any): p is Promise<any> {
  * @param result A value, Iterable of values, mixed Iterable of values and Promises of values, Async Iterable, or Promise wrapping any of the above.
  * @param primaryConsumer The async function to be called for every value yielded within the span of the result's returned Promise
  * @param secondaryConsumer The async function to be called for every value yielded after the returned Promise ends
- * @returns A Promise with an optional embedded Promise 'deepPromise' that resolves when all secondaryConsumer invocations are finished.
+ * @returns A Promise with an optional embedded function 'secondaryConsume'. When called, this function will resume iterating over async values. It resolves when all secondaryConsumer invocations are finished.
  */
 export async function twoStepIterateOverAsyncResult<T>(
   result: PossiblyAsyncResult<T>,
-  primaryConsumer: (t: T) => Promise<void>,
-  secondaryConsumer: (t: T) => Promise<void>
+  primaryConsumer: (t: T) => void | Promise<void>
 ): Promise<{
-  deepPromise?: Promise<void>
+  secondaryConsume?: (
+    secondaryConsumer: (t: T) => void | Promise<void>
+  ) => Promise<void>
 }> {
   const awaited = await result
   if (awaited !== undefined) {
     if (Symbol.asyncIterator in awaited) {
       return {
-        deepPromise: (async () => {
+        secondaryConsume: async (secondaryConsumer: (t: T) => Promise<void>) => {
           for await (const t of awaited as AsyncIterable<T>) {
             await secondaryConsumer(t)
           }
-        })()
+        }
       }
     } else if (Symbol.iterator in awaited) {
       const iterator = awaited[Symbol.iterator]() as Iterator<T | Promise<T>>
@@ -102,7 +103,7 @@ export async function twoStepIterateOverAsyncResult<T>(
 
         if (isPromise(value)) {
           return {
-            deepPromise: (async () => {
+            secondaryConsume: async (secondaryConsumer: (t: T) => Promise<void>) => {
               const triggeringValue = await value
               await secondaryConsumer(triggeringValue)
 
@@ -111,7 +112,7 @@ export async function twoStepIterateOverAsyncResult<T>(
                 const secondaryValue = await secondaryIteratorResult.value
                 await secondaryConsumer(secondaryValue)
               }
-            })()
+            }
           }
         }
       }
