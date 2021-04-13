@@ -83,8 +83,8 @@ export async function mainBackpressure() {
   for (let i = 0; i < 10; i++) {
     await ms(Math.random() * 1250)
     applyToBackpressure(
-      makeBackpressurableFunction(),
-      backpressureInstance
+      backpressureInstance,
+      makeBackpressurableFunction()
     )
   }
 }

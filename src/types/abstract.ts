@@ -54,7 +54,7 @@ export type CoreEvent<T, Query> = {
   // Indicates, given the specified provenance, which
   // upstreams have yielded their last event derived from
   // the respective Source tick.
-  lastIncited: Set<SourceId>,
+  lastOfProvenance: Set<SourceId>,
   cause: Set<QueryState<Query>>
 }
 
@@ -68,7 +68,7 @@ export type BroadEvent<T, Query> = CoreEvent<T, Query> | MetaEvent<Query>
 
 export type SourceEvent<T> = Omit<
   CoreEvent<T, never>,
-  'provenance' | 'cause'
+  'provenance' | 'cause' | 'lastOfProvenance'
 >
 
 export type DerivationEvent<T> = Omit<
@@ -76,7 +76,7 @@ export type DerivationEvent<T> = Omit<
   'provenance' | 'cause'
 > & {
   incitingEvents?: Set<CoreEvent<any, any>>,
-  lastIncited?: Set<CoreEvent<any, any>>
+  lastOfProvenance?: Set<string>
 }
 
 export type Outcome<T, Finalization, Query> = Either<{

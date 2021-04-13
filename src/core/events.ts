@@ -15,7 +15,8 @@ export function bareSourceEmittedToEvent<T, Query>(
     ...bareSourceEmitted,
     provenance: new Map([
       [sourceInstance.id, sourceInstance.clock.tick]
-    ])
+    ]),
+    lastOfProvenance: new Set([sourceInstance.id])
   }
 }
 

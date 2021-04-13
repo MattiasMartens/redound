@@ -1,5 +1,5 @@
 import { noop } from "@/patterns/functions"
-import { Source } from "@/types/abstract"
+import { Source, SourceEvent } from "@/types/abstract"
 import { pipe } from "fp-ts/lib/function"
 import { map, none, some, None, Some } from "fp-ts/lib/Option"
 import {
@@ -22,7 +22,7 @@ export function manualSourcePrototype<T>(
       const initialValueExists = "initialValue" in params
       let state = initialValueExists ? some<T>(params.initialValue as any) : none
 
-      let emit: any
+      let emit: (e: SourceEvent<T>) => void
 
       return {
         get: () => state,
@@ -36,7 +36,7 @@ export function manualSourcePrototype<T>(
           })
           return t
         },
-        registerEmit: (_emit: any) => {
+        registerEmit: (_emit: (e: SourceEvent<T>) => void) => {
           emit = _emit
 
           pipe(

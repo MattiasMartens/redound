@@ -20,6 +20,7 @@ import { bareSourceEmittedToEvent } from './events'
 import { initializeTag } from './tags'
 import { propagateController } from './controller'
 import { createSetFromNullable } from '@/patterns/sets'
+import { backpressure } from './backpressure'
 
 // Dependency Map:
 // source imports sink
@@ -59,7 +60,7 @@ export function initializeSourceInstance<T, References, Finalization, Query>(sou
     },
     consumers: new Set(),
     references: none,
-    backpressure: none,
+    backpressure: backpressure(),
     controller: fromNullable(controller),
     id: tag
   }
