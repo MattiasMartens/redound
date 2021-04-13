@@ -79,7 +79,7 @@ export async function emit<T, References, Finalization, Query>(
   derivation: DerivationInstance<any, T, References, Finalization, Query>,
   event: CoreEvent<T, Query> | MetaEvent<Query>
 ) {
-  // Note that Derivations *can* emit events after they have
+  // Derivations *can* emit events after they have
   // been sealed! New consumers can still query the Derivation's
   // existing aggregated data, unless and until the graph is
   // finally closed.
@@ -129,7 +129,17 @@ export async function scheduleEmissions<T, References, Finalization, Query>(
           // backpressure on emissions as one normally would.
           await applyToBackpressure(
             derivation.innerBackpressure,
-            () => Promise.all(primaryEvents.map(e => emit(derivation, bareDerivationEmittedToEvent(e))))
+            () => Promise.all(primaryEvents.map(e => {
+              const event = bareDerivationEmittedToEvent(e)
+              // Skip emit() to avoid deadlock from waiting for
+              // own Promise to resolve
+              return voidPromiseIterable(
+                mapIterable(
+                  derivation.consumers,
+                  async c => genericConsume(derivation, c, event)
+                )
+              )
+            }))
           )
         }
 

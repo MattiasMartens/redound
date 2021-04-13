@@ -130,6 +130,7 @@ export function subscribe<T, Finalization, Query>(
     }
 
     if (source.lifecycle.state === "READY") {
+      console.log('opening')
       open(source)
     }
   } else {
