@@ -8,17 +8,24 @@ export const defaultDerivationSeal = (
   aggregate
 })
 
-export const unaryDerivationConsumer = <In, Out, Aggregate>(mapper: (i: In, m: Aggregate) => Out) => (
+export const unaryDerivationConsumer = <In, Out, Aggregate>(mapper: (i: In, m: Aggregate) => { payload: Out, aggregate: Aggregate }) => (
   { event, aggregate }: {
     event: CoreEvent<In>,
     aggregate: Aggregate
   }
-) => ({
-  aggregate,
-  output: {
-    payload: mapper(event.payload, aggregate),
-    eventScope: event.eventScope,
-    type: event.type,
-    species: event.species
+) => {
+  const {
+    payload,
+    aggregate: newAggregate
+  } = mapper(event.payload, aggregate)
+
+  return {
+    aggregate: newAggregate,
+    output: {
+      payload,
+      eventScope: event.eventScope,
+      type: event.type,
+      species: event.species
+    }
   }
-})
+}

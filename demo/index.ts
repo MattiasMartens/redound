@@ -1,13 +1,12 @@
-import { makeSource } from "@/core";
-import { applyToBackpressure, backpressure } from "@/core/backpressure";
-import { makeDerivation, makeSink, makeUnaryDerivation } from "@/core/orchestrate";
-import { mappedDerivationPrototype } from "@/derivations/map";
-import { ms } from "@/patterns/async";
-import { getSome } from "@/patterns/options";
-import { consoleLogSinkPrototype } from "@/sinks/console-logger";
-import { iterableSourcePrototype } from "@/sources/iterable";
-import { manualSourcePrototype } from "@/sources/manual";
-import { v4 as uuid } from "uuid";
+import { makeSource } from "@/core"
+import { applyToBackpressure, backpressure } from "@/core/backpressure"
+import { makeSink, makeUnaryDerivation } from "@/core/orchestrate"
+import { mappedDerivationPrototype } from "@/derivations/map"
+import { ms } from "@/patterns/async"
+import { getSome } from "@/patterns/options"
+import { consoleLogSinkPrototype } from "@/sinks/console-logger"
+import { iterableSourcePrototype } from "@/sources/iterable"
+import { manualSourcePrototype } from "@/sources/manual"
 
 export function mainA() {
   const sourceInstance = makeSource(
