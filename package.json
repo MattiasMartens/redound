@@ -8,5 +8,6 @@
   },
   "_moduleAliases": {
     "@": "dist/src"
-  }
+  },
+  "main": "dist/src"
 }

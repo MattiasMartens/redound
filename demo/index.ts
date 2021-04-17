@@ -1,7 +1,7 @@
 import { makeSource } from "@/core"
 import { applyToBackpressure, backpressure } from "@/core/backpressure"
 import { makeSink, makeUnaryDerivation } from "@/core/orchestrate"
-import { mappedDerivationPrototype } from "@/derivations/map"
+import { mappedDerivationPrototype } from "@/derivations"
 import { ms } from "@/patterns/async"
 import { getSome } from "@/patterns/options"
 import { consoleLogSinkPrototype } from "@/sinks/console-logger"
