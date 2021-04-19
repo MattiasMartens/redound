@@ -16,7 +16,7 @@ export function mappedDerivationPrototype<In, Out>(
 }, Out, void, any> {
   return declareSimpleDerivation({
     consume: unaryDerivationConsumer(
-      i => ({ payload: mapper(i), aggregate: undefined })
+      i => ({ payload: [mapper(i)], aggregate: undefined })
     ),
     seal: defaultDerivationSeal,
     close: noop,
@@ -29,16 +29,18 @@ export function mappedDerivationPrototype<In, Out>(
 }
 
 export function statefulDerivationPrototype<In, State, Out>(
-  transformer: (i: In, s: State) => { state: State, payload: Out },
+  transformer: (i: In, s: State) => { state: State, payload: Out[] },
   initial: () => State,
   {
-    name = "Reduced"
+    name = "Reduced",
+    seal
   }: {
-    name?: string
+    name?: string,
+    seal?: (s: State) => Out[]
   } = {}
 ): Derivation<{
   main: EmitterInstanceAlias<In>
-}, Out, void, any> {
+}, Out, State, any> {
   return declareSimpleDerivation({
     consume: unaryDerivationConsumer(
       (i, acc) => {
@@ -51,8 +53,18 @@ export function statefulDerivationPrototype<In, State, Out>(
       }
     ),
     open: initial,
-    seal: defaultDerivationSeal,
     close: noop,
+    seal: (params) => ({
+      ...defaultDerivationSeal(params),
+      ...seal && {
+        output: seal(params.aggregate).map(payload => ({
+          payload,
+          type: "ADD",
+          species: "Seal",
+          eventScope: "ROOT"
+        }))
+      }
+    }),
     name,
     emits: new Set(/** TODO */),
     consumes: new Set(/** TODO */),
@@ -77,7 +89,7 @@ export function reducedDerivationPrototype<In, Out>(
         const reduced = reducer(acc, i)
 
         return {
-          payload: reduced,
+          payload: [reduced],
           aggregate: reduced
         }
       }

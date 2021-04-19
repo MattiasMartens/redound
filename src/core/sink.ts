@@ -1,7 +1,4 @@
 import {
-  mapCollectInto, reconcileFold
-} from 'big-m'
-import {
   BroadEvent,
   CoreEvent,
   Outcome,
@@ -11,7 +8,6 @@ import { SinkInstance, GenericEmitterInstance } from '@/types/instances'
 import { getSome } from '@/patterns/options'
 import { none, some } from 'fp-ts/lib/Option'
 import { initializeTag } from './tags'
-import { identity } from '@/patterns/functions'
 
 /**
  * TypeScript doesn't allow mixing inferred with optional

@@ -1,17 +1,20 @@
 {
   "compilerOptions": {
+    "declaration": true,
     "moduleResolution": "node",
+    "module": "CommonJS",
     "downlevelIteration": true,
     "strictNullChecks": true,
     "lib": [
       "ESNext"
     ],
+    "target": "ES2018",
     "baseUrl": ".",
     "paths": {
       "@/*": [
-        "src/*"
+        "./*"
       ]
     },
-    "outDir": "dist"
+    "outDir": "../dist"
   }
 }
