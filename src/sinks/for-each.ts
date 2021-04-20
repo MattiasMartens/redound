@@ -5,10 +5,11 @@ import { Sink } from "@/types/abstract"
 export function forEachPrototype<T>(
   forEach: (t: T) => void | Promise<void>,
   name?: string
-): Sink<T, void, any> {
+): Sink<T, void> {
   return declareSimpleSink({
     open: noop,
     close: noop,
+    seal: noop,
     consumes: new Set(/** TODO */),
     name: name ?? "ForEach",
     consume: (e) => {

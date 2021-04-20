@@ -63,7 +63,7 @@ export type EventSpec<T> = {
   payload: T
 }
 
-export type GenericEmitter<T, References, Finalization> = {
+export type GenericEmitter<T, References> = {
   /** In general, it should be enforced that the type of instances of Event<T> is confined to the subtypes specified in `emits`. In TypeScript it is best to offer the ability to enforce it at runtime. */
   emits: Set<EventSpec<T>>,
   open: () => References,
@@ -76,7 +76,7 @@ export type GenericEmitter<T, References, Finalization> = {
 // emitted in any other way.)
 type NotSealed = "NOT_SEALED"
 
-export type Source<T, References, Finalization> = GenericEmitter<T, References, Finalization> & {
+export type Source<T, References> = GenericEmitter<T, References> & {
   graphComponentType: "Source",
   generate: (
     emit: (e: Event<T>) => void | Promise<void>,
@@ -92,15 +92,15 @@ export type Source<T, References, Finalization> = GenericEmitter<T, References, 
 }
 
 type DerivationRole = string
-export type SourceInstanceAbbreviated<T> = SourceInstance<T, any, any>
+export type SourceInstanceAbbreviated<T> = SourceInstance<T, any>
 export type SourceType = {
-  numbered: GenericEmitterInstance<any, any, any>[],
-  named: Map<DerivationRole, GenericEmitterInstance<any, any, any>>
+  numbered: GenericEmitterInstance<any, any>[],
+  named: Map<DerivationRole, GenericEmitterInstance<any, any>>
 }
 
 export type DerivationEmission<T> = void | Event<T> | Promise<Event<T>> | Iterable<Event<T> | Promise<Event<T>>> | Promise<Iterable<Event<T> | Promise<Event<T>>>>
 
-export type Derivation<DerivationSourceType extends Record<string, EmitterInstanceAlias<any>>, T, Aggregate, Finalization> = GenericEmitter<T, Aggregate, Finalization> & {
+export type Derivation<DerivationSourceType extends Record<string, EmitterInstanceAlias<any>>, T, Aggregate> = GenericEmitter<T, Aggregate> & {
   graphComponentType: "Derivation",
   unroll: (aggregate: Aggregate) => DerivationEmission<T>,
   consumes: Set<EventSpec<T>>,
@@ -108,7 +108,7 @@ export type Derivation<DerivationSourceType extends Record<string, EmitterInstan
     params: {
       event: CoreEvent<PayloadTypeOf<DerivationSourceType[K]>>,
       aggregate: Aggregate,
-      source: GenericEmitterInstance<any, unknown, Finalization>,
+      source: GenericEmitterInstance<any, unknown>,
       role: K
     }
   ) => {
@@ -116,7 +116,7 @@ export type Derivation<DerivationSourceType extends Record<string, EmitterInstan
     output: DerivationEmission<T>
   },
   open: () => Aggregate,
-  seal: (params: { aggregate: Aggregate, remainingUnsealedSources: Set<GenericEmitterInstance<any, any, any>> }) => {
+  seal: (params: { aggregate: Aggregate, remainingUnsealedSources: Set<GenericEmitterInstance<any, any>> }) => {
     seal: boolean,
     output: DerivationEmission<T>,
     aggregate: Aggregate
@@ -124,11 +124,14 @@ export type Derivation<DerivationSourceType extends Record<string, EmitterInstan
   close: (m: Aggregate, o: Outcome<any, Finalization>) => void | Promise<void>
 }
 
-export type Sink<T, References, Finalization> = {
+type Finalization = any
+type SinkOutput = any
+export type Sink<T, References> = {
   graphComponentType: "Sink",
   consumes: Set<EventSpec<T>>,
   consume: (e: CoreEvent<T>, r: References) => void | Promise<void>,
   open: () => References,
+  seal: (r: References) => SinkOutput | Promise<SinkOutput>,
   close: (r: References, o: Outcome<any, Finalization>) => void | Promise<void>,
   name: string
 }

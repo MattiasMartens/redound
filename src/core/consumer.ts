@@ -11,20 +11,20 @@ import {
 } from "./derivation"
 
 export function consume<T, MemberOrReferences, Finalization>(
-  emitter: GenericEmitterInstance<T, MemberOrReferences, Finalization>,
-  consumer: GenericConsumerInstance<T, any, Finalization>,
+  emitter: GenericEmitterInstance<T, MemberOrReferences>,
+  consumer: GenericConsumerInstance<T, any>,
   event: CoreEvent<T> | MetaEvent
 ) {
   if (consumer.prototype.graphComponentType === "Sink") {
     return sinkConsume(
       emitter,
-      consumer as SinkInstance<T, MemberOrReferences, Finalization>,
+      consumer as SinkInstance<T, MemberOrReferences>,
       event
     )
   } else if (consumer.prototype.graphComponentType === "Derivation") {
     return derivationConsume(
       emitter,
-      consumer as DerivationInstance<any, any, MemberOrReferences, Finalization>,
+      consumer as DerivationInstance<any, any, MemberOrReferences>,
       event
     )
   } else {
@@ -32,20 +32,21 @@ export function consume<T, MemberOrReferences, Finalization>(
   }
 }
 
-export function close<T, MemberOrReferences, Finalization>(
-  source: GenericEmitterInstance<T, MemberOrReferences, Finalization>,
-  consumer: GenericConsumerInstance<T, MemberOrReferences, Finalization>,
+type Finalization = any
+export function close<T, MemberOrReferences>(
+  source: GenericEmitterInstance<T, MemberOrReferences>,
+  consumer: GenericConsumerInstance<T, MemberOrReferences>,
   outcome: Outcome<T, Finalization>
 ) {
   if (consumer.prototype.graphComponentType === "Sink") {
     sinkClose(
       source,
-      consumer as SinkInstance<T, MemberOrReferences, Finalization>,
+      consumer as SinkInstance<T, MemberOrReferences>,
       outcome
     )
   } else {
     derivationClose(
-      source as DerivationInstance<any, any, MemberOrReferences, Finalization>,
+      source as DerivationInstance<any, any, MemberOrReferences>,
       outcome
     )
   }

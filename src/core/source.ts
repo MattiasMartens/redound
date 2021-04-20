@@ -33,17 +33,17 @@ import { backpressure } from './backpressure'
  * types, so this allows a simpler type declaration for a
  * Source.
  */
-export function declareSimpleSource<T, References>(source: Omit<Source<T, References, never>, "graphComponentType" | "pull">) {
+export function declareSimpleSource<T, References>(source: Omit<Source<T, References>, "graphComponentType" | "pull">) {
   return Object.assign(
     source,
     {
       graphComponentType: "Source",
       pull: noop
     }
-  ) as Source<T, References, never>
+  ) as Source<T, References>
 }
 
-export function initializeSourceInstance<T, References, Finalization>(source: Source<T, References, Finalization>, { id, tick, controller }: { id?: string, tick?: number, controller?: Controller<Finalization> } = {}): SourceInstance<T, References, Finalization> {
+export function initializeSourceInstance<T, References, Finalization>(source: Source<T, References>, { id, tick, controller }: { id?: string, tick?: number, controller?: Controller<Finalization> } = {}): SourceInstance<T, References> {
   const tag = initializeTag(
     source.name,
     id
@@ -63,8 +63,8 @@ export function initializeSourceInstance<T, References, Finalization>(source: So
   }
 }
 
-export async function emit<T, References, Finalization>(
-  source: SourceInstance<T, References, Finalization>,
+export async function emit<T, References>(
+  source: SourceInstance<T, References>,
   event: CoreEvent<T> | MetaEvent
 ) {
   if (source.lifecycle.state === "ACTIVE") {
@@ -79,8 +79,8 @@ export async function emit<T, References, Finalization>(
   }
 }
 
-export function open<T, References, Finalization>(
-  source: SourceInstance<T, References, Finalization>
+export function open<T, References>(
+  source: SourceInstance<T, References>
 ) {
   if (source.lifecycle.state === "READY") {
     const sourceEmit = (e: Event<T>) => {
@@ -110,8 +110,8 @@ export function open<T, References, Finalization>(
 }
 
 export function subscribe<T, Finalization>(
-  source: SourceInstance<T, any, Finalization>,
-  consumer: GenericConsumerInstance<T, any, Finalization>
+  source: SourceInstance<T, any>,
+  consumer: GenericConsumerInstance<T, any>
 ) {
   if (source.lifecycle.state !== "ENDED") {
     source.consumers.add(consumer)
@@ -138,15 +138,15 @@ export function sealEvent() {
   }
 }
 
-export function unsubscribe<T, Finalization>(
-  source: SourceInstance<T, any, Finalization>,
-  consumer: GenericConsumerInstance<T, any, Finalization>
+export function unsubscribe<T>(
+  source: SourceInstance<T, any>,
+  consumer: GenericConsumerInstance<T, any>
 ) {
   source.consumers.delete(consumer)
 }
 
-export function seal<T, References, Finalization>(
-  source: SourceInstance<T, References, Finalization>,
+export function seal<T, References>(
+  source: SourceInstance<T, References>,
 ) {
   if (source.lifecycle.state === "ACTIVE") {
     source.lifecycle.state = "SEALED"
@@ -169,8 +169,9 @@ export function seal<T, References, Finalization>(
   }
 }
 
-export function close<T, References, Finalization>(
-  source: SourceInstance<T, References, Finalization>,
+type Finalization = any
+export function close<T, References>(
+  source: SourceInstance<T, References>,
   outcome: Outcome<T, Finalization>
 ) {
   if (source.lifecycle.state !== "ENDED" && source.lifecycle.state !== "READY") {

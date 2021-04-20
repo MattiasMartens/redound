@@ -4,6 +4,8 @@ import { noop } from "@/patterns/functions"
 import { Derivation } from "@/types/abstract"
 import { EmitterInstanceAlias } from "@/types/instances"
 
+export type UnaryDerivation<I, O> = Derivation<{ main: EmitterInstanceAlias<I> }, O, any>
+
 export function mappedDerivationPrototype<In, Out>(
   mapper: (i: In) => Out,
   {
@@ -13,7 +15,7 @@ export function mappedDerivationPrototype<In, Out>(
   } = {}
 ): Derivation<{
   main: EmitterInstanceAlias<In>
-}, Out, void, any> {
+}, Out, void> {
   return declareSimpleDerivation({
     consume: unaryDerivationConsumer(
       i => ({ payload: [mapper(i)], aggregate: undefined })
@@ -40,7 +42,7 @@ export function statefulDerivationPrototype<In, State, Out>(
   } = {}
 ): Derivation<{
   main: EmitterInstanceAlias<In>
-}, Out, State, any> {
+}, Out, State> {
   return declareSimpleDerivation({
     consume: unaryDerivationConsumer(
       (i, acc) => {
@@ -82,7 +84,7 @@ export function reducedDerivationPrototype<In, Out>(
   } = {}
 ): Derivation<{
   main: EmitterInstanceAlias<In>
-}, Out, void, any> {
+}, Out, void> {
   return declareSimpleDerivation({
     consume: unaryDerivationConsumer(
       (i, acc) => {

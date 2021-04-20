@@ -11,7 +11,7 @@ export function manualSourcePrototype<T>(
     initialValue?: T,
     name?: string
   } = {}
-): Source<T, { get: () => None | Some<T>; set: (t: T) => T; }, any> {
+): Source<T, { get: () => None | Some<T>; set: (t: T) => T; }> {
   const { name = "Manual" } = params
 
   return declareSimpleSource({

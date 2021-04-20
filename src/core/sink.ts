@@ -14,7 +14,7 @@ import { initializeTag } from './tags'
  * types, so this allows a simpler type declaration for a
  * Source.
  */
-export function declareSimpleSink<T, References>(sink: Omit<Sink<T, References, never>, 'graphComponentType'>) {
+export function declareSimpleSink<T, References>(sink: Omit<Sink<T, References>, 'graphComponentType'>) {
   // @ts-ignore
   sink.graphComponentType = "Sink"
   return Object.assign(
@@ -22,10 +22,10 @@ export function declareSimpleSink<T, References>(sink: Omit<Sink<T, References, 
     {
       graphComponentType: "Sink"
     }
-  ) as Sink<T, References, never>
+  ) as Sink<T, References>
 }
 
-export function initializeSinkInstance<T, References, Finalization>(sink: Sink<T, References, Finalization>, emitterInstance: GenericEmitterInstance<T, any, Finalization>, { id }: { id?: string } = {}): SinkInstance<T, References, Finalization> {
+export function initializeSinkInstance<T, References,>(sink: Sink<T, References>, emitterInstance: GenericEmitterInstance<T, any>, { id }: { id?: string } = {}): SinkInstance<T, References> {
   const tag = initializeTag(
     sink.name,
     id
@@ -46,9 +46,9 @@ export function initializeSinkInstance<T, References, Finalization>(sink: Sink<T
   }
 }
 
-export async function consume<T, MemberOrReferences, Finalization>(
-  source: GenericEmitterInstance<T, MemberOrReferences, Finalization>,
-  sink: SinkInstance<T, any, Finalization>,
+export async function consume<T, MemberOrReferences>(
+  source: GenericEmitterInstance<T, MemberOrReferences>,
+  sink: SinkInstance<T, any>,
   e: BroadEvent<T>
 ) {
   if (sink.lifecycle.state === "ACTIVE") {
@@ -67,8 +67,8 @@ export async function consume<T, MemberOrReferences, Finalization>(
 }
 
 export async function close<T, References, Finalization>(
-  source: GenericEmitterInstance<T, References, Finalization>,
-  sink: SinkInstance<T, References, Finalization>,
+  source: GenericEmitterInstance<T, References>,
+  sink: SinkInstance<T, References>,
   outcome: Outcome<T, Finalization>
 ) {
   if (sink.lifecycle.state === "ACTIVE") {
