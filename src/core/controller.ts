@@ -1,9 +1,9 @@
 import { defer } from "@/patterns/async"
 import { forEachIterable } from "@/patterns/iterables"
-import { Controller, CoreEvent, Event, Outcome, SealEvent, Source } from "@/types/abstract"
+import { Controller, CoreEvent, Event, Outcome, SealEvent } from "@/types/abstract"
 import { ControllerInstance, DerivationInstance, SinkInstance, SourceInstance } from "@/types/instances"
 import { pipe } from "fp-ts/lib/function"
-import { isNone, isSome, map, none, Option, some } from "fp-ts/lib/Option"
+import { isNone, map, none, Option, some } from "fp-ts/lib/Option"
 import { close } from "./source"
 import { initializeTag } from "./tags"
 
