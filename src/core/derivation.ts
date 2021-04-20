@@ -45,7 +45,7 @@ export function declareSimpleDerivation<SourceType extends Record<string, Emitte
   ) as Derivation<SourceType, T, References>
 }
 
-export function initializeDerivationInstance<SourceType extends Record<string, EmitterInstanceAlias<any>>, T, Aggregate>(derivation: Derivation<any, T, Aggregate>, sources: SourceType, { id }: { id?: string } = {}): DerivationInstance<SourceType, T, Aggregate> {
+export function instantiateDerivation<SourceType extends Record<string, EmitterInstanceAlias<any>>, T, Aggregate>(derivation: Derivation<any, T, Aggregate>, sources: SourceType, { id }: { id?: string } = {}): DerivationInstance<SourceType, T, Aggregate> {
   const tag = initializeTag(
     derivation.name,
     id

@@ -7,17 +7,18 @@ import {
   Outcome,
   Source
 } from '@/types/abstract'
-import { SourceInstance, GenericConsumerInstance, Controller } from '@/types/instances'
+import { SourceInstance, GenericConsumerInstance, ControllerInstance } from '@/types/instances'
 import {
   noop
 } from '@/patterns/functions'
 import { isSome, some } from 'fp-ts/lib/Option'
 import { fromNullable, none } from 'fp-ts/lib/Option'
-import { clock, tick } from './clock'
 import { consume, close as consumerClose } from './consumer'
 import { initializeTag } from './tags'
 import { propagateController } from './controller'
 import { backpressure } from './backpressure'
+import { pipe } from 'fp-ts/lib/function'
+import { map } from 'fp-ts/lib/Option'
 
 // Dependency Map:
 // source imports sink
@@ -43,13 +44,15 @@ export function declareSimpleSource<T, References>(source: Omit<Source<T, Refere
   ) as Source<T, References>
 }
 
-export function initializeSourceInstance<T, References, Finalization>(source: Source<T, References>, { id, tick, controller }: { id?: string, tick?: number, controller?: Controller<Finalization> } = {}): SourceInstance<T, References> {
+export function instantiateSource<T, References>(source: Source<T, References>, { id, controller }: { id?: string, tick?: number, controller?: ControllerInstance<any> } = {}): SourceInstance<T, References> {
   const tag = initializeTag(
     source.name,
     id
   )
 
-  return {
+  const controllerOption = fromNullable(controller)
+
+  const sourceInstance = {
     prototype: source,
     lifecycle: {
       state: "READY"
@@ -57,9 +60,18 @@ export function initializeSourceInstance<T, References, Finalization>(source: So
     consumers: new Set(),
     references: none,
     backpressure: backpressure(),
-    controller: fromNullable(controller),
+    controller: controllerOption,
     id: tag
-  }
+  } as SourceInstance<T, References>
+
+  pipe(
+    controllerOption,
+    map(
+      controller => controller.registerSource(sourceInstance)
+    )
+  )
+
+  return sourceInstance
 }
 
 export async function emit<T, References>(

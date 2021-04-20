@@ -1,14 +1,14 @@
 import { Derivation, Sink } from "@/types/abstract";
-import { Controller, DerivationInstance, EmitterInstanceAlias, GenericConsumerInstance, GenericEmitterInstance, SinkInstance, SourceInstance } from "@/types/instances";
-import { initializeDerivationInstance as makeDerivation } from "./derivation";
-import { initializeSinkInstance } from "./sink";
+import { ControllerInstance, DerivationInstance, EmitterInstanceAlias, GenericConsumerInstance, GenericEmitterInstance, SinkInstance, SourceInstance } from "@/types/instances";
+import { instantiateDerivation as makeDerivation } from "./derivation";
+import { instantiateSink } from "./sink";
 import { subscribe as sourceSubscribe } from "./source";
 import {
   subscribe as derivationSubscribeCore
 } from "./derivation";
 
-export function makeSink<T, References, Finalization>(sourceInstance: GenericEmitterInstance<T, any>, sink: Sink<T, References>, params: { id?: string, controller?: Controller<Finalization> } = {}): SinkInstance<T, References> {
-  const sinkInstance = initializeSinkInstance(
+export function makeSink<T, References>(sourceInstance: GenericEmitterInstance<T, any>, sink: Sink<T, References>, params: { id?: string, controller?: ControllerInstance<any> } = {}): SinkInstance<T, References> {
+  const sinkInstance = instantiateSink(
     sink,
     sourceInstance,
     params

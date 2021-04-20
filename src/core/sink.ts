@@ -6,9 +6,10 @@ import {
 } from '@/types/abstract'
 import { SinkInstance, GenericEmitterInstance } from '@/types/instances'
 import { getSome } from '@/patterns/options'
-import { isSome, map, none, some } from 'fp-ts/lib/Option'
+import { fold, map, none, some } from 'fp-ts/lib/Option'
 import { initializeTag } from './tags'
 import { pipe } from 'fp-ts/lib/pipeable'
+import { identity, noop, noopAsync } from '@/patterns/functions'
 
 /**
  * TypeScript doesn't allow mixing inferred with optional
@@ -26,7 +27,7 @@ export function declareSimpleSink<T, References>(sink: Omit<Sink<T, References>,
   ) as Sink<T, References>
 }
 
-export function initializeSinkInstance<T, References,>(sink: Sink<T, References>, emitterInstance: GenericEmitterInstance<T, any>, { id }: { id?: string } = {}): SinkInstance<T, References> {
+export function instantiateSink<T, References,>(sink: Sink<T, References>, emitterInstance: GenericEmitterInstance<T, any>, { id }: { id?: string } = {}): SinkInstance<T, References> {
   const tag = initializeTag(
     sink.name,
     id
@@ -59,9 +60,10 @@ export async function consume<T, MemberOrReferences>(
       const result = await sink.prototype.seal(sink.references)
 
       // TODO Same logic in other graph components
-      pipe(
+      await pipe(
         sink.controller,
-        map(
+        fold(
+          noopAsync,
           controller => controller.seal({
             graphComponentType: sink.prototype.graphComponentType,
             instance: sink,

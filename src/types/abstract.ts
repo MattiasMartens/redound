@@ -5,7 +5,7 @@ import {
 import {
   Option
 } from 'fp-ts/lib/Option'
-import { GenericEmitterInstance, PayloadTypeOf, SourceInstance, EmitterInstanceAlias } from './instances'
+import { GenericEmitterInstance, PayloadTypeOf, SourceInstance, EmitterInstanceAlias, SinkInstance, DerivationInstance } from './instances'
 import { Possible } from './patterns'
 
 export type CoreEventType = "ADD" | "REMOVE" | "UPDATE"
@@ -33,7 +33,7 @@ export type CoreEvent<T> = {
   eventScope: EventScope,
   payload: T,
   tag?: EventTag
-  tagProvenance?: "FIRST"
+  tagProvenance?: "FIRST" | "LAST"
 }
 
 export type Event<T> = Omit<CoreEvent<T>, "tag" | "tagProvenance">
@@ -134,4 +134,47 @@ export type Sink<T, References> = {
   seal: (r: References) => SinkOutput | Promise<SinkOutput>,
   close: (r: References, o: Outcome<any, Finalization>) => void | Promise<void>,
   name: string
+}
+
+export type SealEvent = {
+  graphComponentType: "Source",
+  instance: SourceInstance<any, any>
+} | {
+  graphComponentType: "Derivation",
+  instance: DerivationInstance<any, any, any>,
+  member: any
+} | {
+  graphComponentType: "Sink",
+  instance: SinkInstance<any, any>,
+  result: any
+}
+
+/**
+ * 1. A graph component can only have one Controller.
+ * 2. If a Controller manages a Source, it also manages everything downstream
+ * of a Source.
+ */
+export type Controller<Finalization> = {
+  name: string,
+  seal: (
+    sealEvent: SealEvent,
+    domain: {
+      sources: Set<SourceInstance<any, any>>
+    }
+  ) => Promise<Option<Outcome<any, Finalization>>> | Option<Outcome<any, Finalization>>,
+  rescue: (
+    error: Error,
+    event: CoreEvent<any>,
+    notifyingComponent: SourceInstance<any, any> | DerivationInstance<any, any, any> | SinkInstance<any, any>,
+    domain: {
+      sources: Set<SourceInstance<any, any>>
+    }
+  ) => Promise<Option<Outcome<any, Finalization>>> | Outcome<any, Finalization>,
+  taggedEvent: (
+    event: CoreEvent<any>,
+    notifyingComponent: SourceInstance<any, any> | DerivationInstance<any, any, any> | SinkInstance<any, any>,
+    domain: {
+      sources: Set<SourceInstance<any, any>>
+    }
+  ) => Promise<Option<Outcome<any, Finalization>>> | Outcome<any, Finalization>
 }

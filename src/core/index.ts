@@ -4,5 +4,5 @@ export {
 } from './orchestrate'
 
 export {
-  initializeSourceInstance as makeSource
+  instantiateSource as makeSource
 } from './source'
