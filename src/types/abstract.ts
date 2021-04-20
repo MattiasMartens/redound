@@ -172,7 +172,6 @@ export type Controller<Finalization> = {
   ) => Promise<Option<Outcome<any, Finalization>>> | Outcome<any, Finalization>,
   taggedEvent: (
     event: CoreEvent<any>,
-    notifyingComponent: SourceInstance<any, any> | DerivationInstance<any, any, any> | SinkInstance<any, any>,
     domain: {
       sources: Set<SourceInstance<any, any>>
     }
