@@ -6,8 +6,9 @@ import {
 } from '@/types/abstract'
 import { SinkInstance, GenericEmitterInstance } from '@/types/instances'
 import { getSome } from '@/patterns/options'
-import { none, some } from 'fp-ts/lib/Option'
+import { isSome, map, none, some } from 'fp-ts/lib/Option'
 import { initializeTag } from './tags'
+import { pipe } from 'fp-ts/lib/pipeable'
 
 /**
  * TypeScript doesn't allow mixing inferred with optional
@@ -53,10 +54,21 @@ export async function consume<T, MemberOrReferences>(
 ) {
   if (sink.lifecycle.state === "ACTIVE") {
     if (e.type === "VOID") {
-      // no-op: just update the sink's provenance clock.
+      // no-op: just record the receipt of any event tags.
     } else if (e.type === "SEAL") {
-      // also no-op: The sink doesn't care about this, at least until it triggers
-      // the controller to close it.
+      const result = await sink.prototype.seal(sink.references)
+
+      // TODO Same logic in other graph components
+      pipe(
+        sink.controller,
+        map(
+          controller => controller.seal({
+            graphComponentType: sink.prototype.graphComponentType,
+            instance: sink,
+            result
+          })
+        )
+      )
     } else {
       const references = getSome(sink.references)
       await sink.prototype.consume(e as CoreEvent<T>, references)

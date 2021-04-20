@@ -9,7 +9,11 @@ export type SealEvent = {
 } | {
   graphComponentType: "Derivation",
   instance: DerivationInstance<any, any, any>,
-
+  member: any
+} | {
+  graphComponentType: "Sink",
+  instance: SinkInstance<any, any>,
+  result: any
 }
 
 /**
@@ -37,8 +41,7 @@ type Finalization = any
 export type SourceInstance<T, References> = {
   prototype: Source<T, References>,
   controller: Option<Controller<Finalization>>
-  id: string
-  clock: Clock,
+  id: string,
   consumers: Set<GenericConsumerInstance<T, any>>,
   backpressure: Backpressure,
   lifecycle: { state: "READY" | "ACTIVE" | "SEALED" } | { state: "ENDED", outcome: Outcome<T, Finalization> },

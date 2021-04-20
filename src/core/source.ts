@@ -50,7 +50,6 @@ export function initializeSourceInstance<T, References, Finalization>(source: So
   )
 
   return {
-    clock: clock(tick),
     prototype: source,
     lifecycle: {
       state: "READY"
@@ -84,7 +83,6 @@ export function open<T, References>(
 ) {
   if (source.lifecycle.state === "READY") {
     const sourceEmit = (e: Event<T>) => {
-      tick(source.clock)
       return emit(
         source,
         e
@@ -151,7 +149,6 @@ export function seal<T, References>(
   if (source.lifecycle.state === "ACTIVE") {
     source.lifecycle.state = "SEALED"
 
-    tick(source.clock)
     const e = sealEvent()
 
     forEachIterable(
