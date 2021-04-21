@@ -247,21 +247,21 @@ export function seal<Aggregate>(
   event: MetaEvent
 ) {
   if (derivation.lifecycle.state === "ACTIVE") {
-    derivation.lifecycle.state = "SEALED"
-
-
     applyToBackpressure(
       derivation.innerBackpressure,
-      () => voidPromiseIterable(
-        mapIterable(
-          derivation.consumers,
-          consumer => genericConsume(
-            derivation,
-            consumer,
-            event
+      () => {
+        derivation.lifecycle.state = "SEALED"
+        return voidPromiseIterable(
+          mapIterable(
+            derivation.consumers,
+            consumer => genericConsume(
+              derivation,
+              consumer,
+              event
+            )
           )
         )
-      )
+      }
     )
   } else if (derivation.lifecycle.state === "ENDED") {
     // no-op
@@ -284,7 +284,6 @@ export function close<References>(
     forEachIterable(
       derivation.consumers,
       consumer => consumerClose(
-        derivation,
         consumer,
         outcome
       )

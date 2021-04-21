@@ -134,7 +134,6 @@ export function subscribe<T, Finalization>(
     }
 
     if (source.lifecycle.state === "READY") {
-      console.log('opening')
       open(source)
     }
   } else {
@@ -192,7 +191,6 @@ export function close<T, References>(
     forEachIterable(
       source.consumers,
       consumer => consumerClose(
-        source,
         consumer,
         outcome
       )

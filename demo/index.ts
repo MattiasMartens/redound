@@ -1,6 +1,6 @@
 import { makeSource } from "@/core"
 import { applyToBackpressure, backpressure } from "@/core/backpressure"
-import { makeSink, makeUnaryDerivation } from "@/core/orchestrate"
+import { makeSink, makeUnaryDerivation } from "@/core"
 import { mappedDerivationPrototype } from "@/derivations"
 import { ms } from "@/patterns/async"
 import { getSome } from "@/patterns/options"
@@ -14,8 +14,8 @@ export function mainA() {
   )
 
   makeSink(
-    sourceInstance,
-    consoleLogSinkPrototype()
+    consoleLogSinkPrototype(),
+    sourceInstance
   )
 
   const { set } = getSome(
@@ -33,8 +33,8 @@ export function mainB() {
   )
 
   makeSink(
-    sourceInstance,
-    consoleLogSinkPrototype()
+    consoleLogSinkPrototype(),
+    sourceInstance
   )
 }
 
@@ -44,15 +44,15 @@ export function mainC() {
   )
 
   const derivationInstance = makeUnaryDerivation(
-    sourceInstance,
     mappedDerivationPrototype(
       x => `Hello world C-${x}!`
-    )
+    ),
+    sourceInstance
   )
 
   makeSink(
-    derivationInstance,
     consoleLogSinkPrototype(),
+    derivationInstance
   )
 }
 

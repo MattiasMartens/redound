@@ -8,8 +8,8 @@ import { SinkInstance, GenericEmitterInstance } from '@/types/instances'
 import { getSome } from '@/patterns/options'
 import { fold, map, none, some } from 'fp-ts/lib/Option'
 import { initializeTag } from './tags'
-import { pipe } from 'fp-ts/lib/pipeable'
 import { identity, noop, noopAsync } from '@/patterns/functions'
+import { pipe } from 'fp-ts/lib/function'
 
 /**
  * TypeScript doesn't allow mixing inferred with optional
@@ -57,7 +57,9 @@ export async function consume<T, MemberOrReferences>(
     if (e.type === "VOID") {
       // no-op: just record the receipt of any event tags.
     } else if (e.type === "SEAL") {
-      const result = await sink.prototype.seal(sink.references)
+      const result = await sink.prototype.seal(
+        getSome(sink.references)
+      )
       sink.lifecycle = { state: "SEALED" }
 
       // TODO Same logic in other graph components
@@ -82,7 +84,6 @@ export async function consume<T, MemberOrReferences>(
 }
 
 export async function close<T, References, Finalization>(
-  source: GenericEmitterInstance<T, References>,
   sink: SinkInstance<T, References>,
   outcome: Outcome<T, Finalization>
 ) {
@@ -92,6 +93,6 @@ export async function close<T, References, Finalization>(
     await sink.prototype.close(references, outcome)
     sink.references = none
   } else {
-    throw new Error(`Attempted action close() on sink ${sink.id} in incompatible lifecycle state: ${source.lifecycle.state}`)
+    throw new Error(`Attempted action close() on sink ${sink.id} in incompatible lifecycle state: ${sink.lifecycle.state}`)
   }
 }

@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "downlevelIteration": true,
+    "strictNullChecks": true,
+    "outDir": "compiled",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@test/*": ["./test/*"]
+    },
+    "target": "ES5"
+  },
+  "exclude": ["./build.ts", "./build.once.ts", "./build.work.ts"]
+}
