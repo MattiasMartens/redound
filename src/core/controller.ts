@@ -62,10 +62,14 @@ export function instantiateController<Finalization>(
       pipe(
         await controller.rescue(error, event, notifyingComponent, domain),
         map(
-          outcome => forEachIterable(
-            domain.sources,
-            sourceInstance => close(sourceInstance, outcome)
-          )
+          outcome => {
+            forEachIterable(
+              domain.sources,
+              sourceInstance => close(sourceInstance, outcome)
+            )
+
+            outcomePromise.resolve(outcome)
+          }
         )
       )
     },
@@ -73,10 +77,14 @@ export function instantiateController<Finalization>(
       pipe(
         await controller.seal(sealEvent, domain),
         map(
-          outcome => forEachIterable(
-            domain.sources,
-            sourceInstance => close(sourceInstance, outcome)
-          )
+          outcome => {
+            forEachIterable(
+              domain.sources,
+              sourceInstance => close(sourceInstance, outcome)
+            )
+
+            outcomePromise.resolve(outcome)
+          }
         )
       )
     },
@@ -92,10 +100,14 @@ export function instantiateController<Finalization>(
       pipe(
         controllerInstance.outcome,
         map(
-          outcome => close(
-            sourceInstance,
-            outcome
-          )
+          outcome => {
+            forEachIterable(
+              domain.sources,
+              sourceInstance => close(sourceInstance, outcome)
+            )
+
+            outcomePromise.resolve(outcome)
+          }
         )
       )
     },
@@ -105,10 +117,14 @@ export function instantiateController<Finalization>(
       pipe(
         await controller.taggedEvent(event, notifyingComponent, domain),
         map(
-          outcome => forEachIterable(
-            domain.sources,
-            sourceInstance => close(sourceInstance, outcome)
-          )
+          outcome => {
+            forEachIterable(
+              domain.sources,
+              sourceInstance => close(sourceInstance, outcome)
+            )
+
+            outcomePromise.resolve(outcome)
+          }
         )
       )
     }
