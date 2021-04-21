@@ -58,6 +58,7 @@ export async function consume<T, MemberOrReferences>(
       // no-op: just record the receipt of any event tags.
     } else if (e.type === "SEAL") {
       const result = await sink.prototype.seal(sink.references)
+      sink.lifecycle = { state: "SEALED" }
 
       // TODO Same logic in other graph components
       await pipe(

@@ -61,7 +61,6 @@ export function instantiateDerivation<SourceType extends Record<string, EmitterI
     downstreamBackpressure: backpressure(),
     innerBackpressure: backpressure(),
     controller: none,
-    latestTickByProvenance: new Map(),
     sourcesByRole: sources,
     sealedSources: new Set(
       filterIterable(

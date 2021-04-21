@@ -7,7 +7,7 @@ import {
   subscribe as derivationSubscribeCore
 } from "./derivation";
 
-export function makeSink<T, References>(sourceInstance: GenericEmitterInstance<T, any>, sink: Sink<T, References>, params: { id?: string, controller?: ControllerInstance<any> } = {}): SinkInstance<T, References> {
+export function makeSink<T, References>(sink: Sink<T, References>, sourceInstance: GenericEmitterInstance<T, any>, params: { id?: string, controller?: ControllerInstance<any> } = {}): SinkInstance<T, References> {
   const sinkInstance = instantiateSink(
     sink,
     sourceInstance,
@@ -42,8 +42,3 @@ export function derivationSubscribe<T>(
 
 export { makeDerivation }
 
-export function makeUnaryDerivation<U, T>(
-  source: EmitterInstanceAlias<U>,
-  derivation: Derivation<{ main: EmitterInstanceAlias<U> }, T, any>, params: { id?: string } = {}): DerivationInstance<{ main: EmitterInstanceAlias<U> }, T, any> {
-  return makeDerivation(derivation, { main: source }, params)
-}

@@ -24,7 +24,6 @@ export type DerivationInstance<DerivationSourceType extends Record<string, Emitt
   prototype: Derivation<DerivationSourceType, T, Aggregate>,
   controller: Option<ControllerInstance<any>>,
   id: string,
-  latestTickByProvenance: Map<SourceId, number>,
   sourcesByRole: DerivationSourceType,
   sealedSources: Set<GenericEmitterInstance<any, any>>,
   consumers: Set<GenericConsumerInstance<T, any>>,
@@ -43,7 +42,7 @@ export type SinkInstance<T, References> = {
   id: string,
   latestTickByProvenance: Map<SourceId, number>,
   source: GenericEmitterInstance<T, References>,
-  lifecycle: { state: "ACTIVE" } | { state: "ENDED", outcome: Outcome<T, Finalization> },
+  lifecycle: { state: "ACTIVE" } | { state: "SEALED" } | { state: "ENDED", outcome: Outcome<T, Finalization> },
   // Initialized to 'Some' on first subscription event,
   // reverted to 'None' once closed.
   references: Option<References>
@@ -51,12 +50,13 @@ export type SinkInstance<T, References> = {
 
 export type ControllerInstance<Finalization> = {
   sources: Set<SourceInstance<any, any>>,
+  sinks: Set<SinkInstance<any, any>>,
   seal: (
     sealEvent: SealEvent
   ) => Promise<void>,
   rescue: (
     error: Error,
-    event: CoreEvent<any>,
+    event: Option<CoreEvent<any>>,
     notifyingComponent: SourceInstance<any, any> | DerivationInstance<any, any, any> | SinkInstance<any, any>
   ) => Promise<void>,
   taggedEvent: (

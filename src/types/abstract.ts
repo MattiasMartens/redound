@@ -52,8 +52,7 @@ export type Outcome<T, Finalization> = Either<{
   error: Error,
   event: Option<CoreEvent<T>>
 }, {
-  finalization: Finalization,
-  lastTick: number
+  finalization: Finalization
 }>
 
 export type EventSpec<T> = {
@@ -159,22 +158,25 @@ export type Controller<Finalization> = {
   seal: (
     sealEvent: SealEvent,
     domain: {
-      sources: Set<SourceInstance<any, any>>
+      sources: Set<SourceInstance<any, any>>,
+      sinks: Set<SinkInstance<any, any>>
     }
   ) => Promise<Option<Outcome<any, Finalization>>> | Option<Outcome<any, Finalization>>,
   rescue: (
     error: Error,
-    event: CoreEvent<any>,
+    event: Option<CoreEvent<any>>,
     notifyingComponent: SourceInstance<any, any> | DerivationInstance<any, any, any> | SinkInstance<any, any>,
     domain: {
-      sources: Set<SourceInstance<any, any>>
+      sources: Set<SourceInstance<any, any>>,
+      sinks: Set<SinkInstance<any, any>>
     }
   ) => Promise<Option<Outcome<any, Finalization>>> | Outcome<any, Finalization>,
   taggedEvent: (
     event: CoreEvent<any>,
     notifyingComponent: SourceInstance<any, any> | DerivationInstance<any, any, any> | SinkInstance<any, any>,
     domain: {
-      sources: Set<SourceInstance<any, any>>
+      sources: Set<SourceInstance<any, any>>,
+      sinks: Set<SinkInstance<any, any>>
     }
-  ) => Promise<Option<Outcome<any, Finalization>>> | Outcome<any, Finalization>
+  ) => Promise<Option<Outcome<any, Finalization>>> | Option<Outcome<any, Finalization>>
 }

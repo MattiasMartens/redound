@@ -4,14 +4,11 @@ import { Controller, CoreEvent, Event, Outcome, SealEvent } from "@/types/abstra
 import { ControllerInstance, DerivationInstance, SinkInstance, SourceInstance } from "@/types/instances"
 import { pipe } from "fp-ts/lib/function"
 import { isNone, map, none, Option, some } from "fp-ts/lib/Option"
+import { defaultControllerRescue, defaultControllerSeal, defaultControllerTaggedEvent } from "./helpers"
 import { close } from "./source"
 import { initializeTag } from "./tags"
 
-type ControllerReceiver = {
-  controller: Option<ControllerInstance<any>>
-  consumers?: Set<ControllerReceiver>,
-  id: string
-}
+type ControllerReceiver = DerivationInstance<any, any, any> | SourceInstance<any, any> | SinkInstance<any, any>
 
 export async function propagateController(
   component: ControllerReceiver,
@@ -20,7 +17,7 @@ export async function propagateController(
   if (isNone(component.controller)) {
     component.controller = some(controller)
 
-    if (component.consumers) {
+    if ("consumers" in component) {
       forEachIterable(
         component.consumers,
         receiver => propagateController(
@@ -28,6 +25,8 @@ export async function propagateController(
           controller
         )
       )
+    } else {
+      controller.sinks.add(component)
     }
   } else {
     const existingController = component.controller.value
@@ -51,14 +50,15 @@ export function instantiateController<Finalization>(
 
   const outcomePromise = defer<Outcome<any, Finalization>>()
   const domain = {
-    sources: new Set(sources)
+    sources: new Set(sources),
+    sinks: new Set<SinkInstance<any, any>>()
   }
 
   const controllerInstance: ControllerInstance<Finalization> = {
     id: tag,
     outcome: none,
     awaitOutcome: () => outcomePromise.promise,
-    async rescue(error: Error, event: CoreEvent<any>, notifyingComponent: SourceInstance<any, any> | DerivationInstance<any, any, any> | SinkInstance<any, any>) {
+    async rescue(error: Error, event: Option<CoreEvent<any>>, notifyingComponent: SourceInstance<any, any> | DerivationInstance<any, any, any> | SinkInstance<any, any>) {
       pipe(
         await controller.rescue(error, event, notifyingComponent, domain),
         map(
@@ -100,6 +100,7 @@ export function instantiateController<Finalization>(
       )
     },
     sources: domain.sources,
+    sinks: domain.sinks,
     async taggedEvent(event, notifyingComponent) {
       pipe(
         await controller.taggedEvent(event, notifyingComponent, domain),
@@ -113,5 +114,35 @@ export function instantiateController<Finalization>(
     }
   }
 
+  forEachIterable(
+    domain.sources,
+    source => propagateController(
+      source,
+      controllerInstance
+    )
+  )
+
   return controllerInstance
+}
+
+export function controller<T>(
+  partialController: Partial<Controller<T>> = {}
+): Controller<T> {
+  return {
+    name: "Controller",
+    rescue: defaultControllerRescue,
+    seal: defaultControllerSeal,
+    taggedEvent: defaultControllerTaggedEvent,
+    ...partialController
+  }
+}
+
+export function makeController<T>(
+  partialController: Partial<Controller<T>> = {}
+) {
+  return instantiateController(
+    controller(
+      partialController
+    )
+  )
 }
