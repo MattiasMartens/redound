@@ -10,7 +10,7 @@
     "uuid": "^8.3.2"
   },
   "main": "dist",
-  "version": "1.0.21",
+  "version": "1.0.22",
   "name": "redound",
   "scripts": {
     "build": "tsc"
