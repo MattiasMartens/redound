@@ -101,6 +101,7 @@ export type DerivationEmission<T> = void | Event<T> | Promise<Event<T>> | Iterab
 
 export type Derivation<DerivationSourceType extends Record<string, EmitterInstanceAlias<any>>, T, Aggregate> = GenericEmitter<T, Aggregate> & {
   graphComponentType: "Derivation",
+  derivationSpecies: "Relay" | "Transform"
   unroll: (aggregate: Aggregate) => DerivationEmission<T>,
   consumes: Set<EventSpec<T>>,
   consume: <K extends keyof DerivationSourceType>(

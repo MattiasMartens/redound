@@ -1,4 +1,4 @@
-import { twoStepIterateOverAsyncResult, voidPromiseIterable } from '@/patterns/async'
+import { iterateOverAsyncResult, voidPromiseIterable } from '@/patterns/async'
 import { filterIterable, forEachIterable, mapIterable, tapIterable, without } from '@/patterns/iterables'
 import {
   BroadEvent,
@@ -35,10 +35,11 @@ export function* allSources(derivation: Record<string, EmitterInstanceAlias<any>
  * types, so this allows a simpler type declaration for a
  * Source.
  */
-export function declareSimpleDerivation<SourceType extends Record<string, EmitterInstanceAlias<any>>, T, References>(derivation: Omit<Derivation<SourceType, T, References>, "graphComponentType" | "sourceCapability">) {
+export function declareSimpleDerivation<SourceType extends Record<string, EmitterInstanceAlias<any>>, T, References>(derivation: Omit<Derivation<SourceType, T, References>, "graphComponentType" | "sourceCapability" | "derivationSpecies">) {
   return Object.assign(
     derivation,
     {
+      derivationSpecies: "Transform",
       sourceCapability: none,
       graphComponentType: "Derivation"
     }
@@ -51,15 +52,19 @@ export function instantiateDerivation<SourceType extends Record<string, EmitterI
     id
   )
 
+  if (derivation.derivationSpecies === "Relay") {
+    throw new Error("Not implemented")
+  }
+
   return {
     prototype: derivation,
+    derivationSpecies: derivation.derivationSpecies,
     lifecycle: {
       state: "READY"
     },
     aggregate: none,
     consumers: new Set(),
-    downstreamBackpressure: backpressure(),
-    innerBackpressure: backpressure(),
+    backpressure: backpressure(),
     controller: none,
     sourcesByRole: sources,
     sealedSources: new Set(
@@ -82,7 +87,7 @@ export async function emit<T, References>(
   // finally closed.
   if (derivation.lifecycle.state === "ACTIVE" || derivation.lifecycle.state === "SEALED") {
     return applyToBackpressure(
-      derivation.downstreamBackpressure,
+      derivation.backpressure,
       () => voidPromiseIterable(
         mapIterable(
           derivation.consumers,
@@ -97,58 +102,24 @@ export async function emit<T, References>(
 
 export async function scheduleEmissions<T, References>(
   derivation: DerivationInstance<any, T, References>,
-  result: DerivationEmission<T>,
-  sourceEvent?: BroadEvent<T>
+  result: DerivationEmission<T>
 ) {
   if (derivation.lifecycle.state === "ACTIVE" || derivation.lifecycle.state === "SEALED") {
-    applyToBackpressure(
-      derivation.downstreamBackpressure,
-      async () => {
-        const primaryEvents: Event<T>[] = []
-        const {
-          secondaryConsume
-        } = await twoStepIterateOverAsyncResult(
-          result,
-          e => {
-            primaryEvents.push(e)
-          }
+    if (derivation.prototype.derivationSpecies === "Relay") {
+      throw new Error("Not implemented")
+    }
+
+    return applyToBackpressure(
+      derivation.backpressure,
+      () => iterateOverAsyncResult(
+        result,
+        e => voidPromiseIterable(
+          mapIterable(
+            derivation.consumers,
+            async c => genericConsume(derivation, c, e)
+          )
         )
-
-        if (derivation.innerBackpressure.holder) {
-          // If secondary generation is occurring, don't wait
-          // for it to finish; just deposit the next events
-          // on the emission queue and resolve.
-          applyToBackpressure(
-            derivation.innerBackpressure,
-            () => Promise.all(primaryEvents.map(e => emit(derivation, e)))
-          )
-        } else {
-          // If secondary generation is not occurring, apply
-          // backpressure on emissions as one normally would.
-          await applyToBackpressure(
-            derivation.innerBackpressure,
-            () => Promise.all(primaryEvents.map(e => {
-              // Skip emit() to avoid deadlock from waiting for
-              // own Promise to resolve
-              return voidPromiseIterable(
-                mapIterable(
-                  derivation.consumers,
-                  async c => genericConsume(derivation, c, e)
-                )
-              )
-            }))
-          )
-        }
-
-        if (secondaryConsume) {
-          applyToBackpressure(
-            derivation.innerBackpressure,
-            () => secondaryConsume(
-              e => emit(derivation, e)
-            )
-          )
-        }
-      }
+      )
     )
   } else {
     throw new Error(`Attempted action scheduleEmissions() on derivation ${derivation.id} in incompatible lifecycle state: ${derivation.lifecycle.state}`)
@@ -206,9 +177,7 @@ export function siphon(derivation: DerivationInstance<any, any, any>, sourceSubs
   )
 }
 
-export function sealEvent(
-  sourceEvent: MetaEvent
-): MetaEvent {
+export function sealEvent(): MetaEvent {
   return {
     type: "SEAL"
   }
@@ -247,21 +216,20 @@ export function seal<Aggregate>(
   event: MetaEvent
 ) {
   if (derivation.lifecycle.state === "ACTIVE") {
-    applyToBackpressure(
-      derivation.innerBackpressure,
-      () => {
-        derivation.lifecycle.state = "SEALED"
-        return voidPromiseIterable(
-          mapIterable(
-            derivation.consumers,
-            consumer => genericConsume(
-              derivation,
-              consumer,
-              event
-            )
-          )
+    if (derivation.prototype.derivationSpecies === "Relay") {
+      throw new Error("Not implemented")
+    }
+
+    derivation.lifecycle.state = "SEALED"
+    return voidPromiseIterable(
+      mapIterable(
+        derivation.consumers,
+        consumer => genericConsume(
+          derivation,
+          consumer,
+          event
         )
-      }
+      )
     )
   } else if (derivation.lifecycle.state === "ENDED") {
     // no-op

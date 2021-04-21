@@ -1,5 +1,5 @@
 import { Option } from "fp-ts/lib/Option"
-import { Controller, CoreEvent, Derivation, Outcome, SealEvent, Sink, Source } from "./abstract"
+import { CoreEvent, Derivation, Outcome, SealEvent, Sink, Source } from "./abstract"
 import { Backpressure } from "@/core/backpressure"
 
 export type GenericConsumerInstance<T, MemberOrReferences> = SinkInstance<T, MemberOrReferences> | DerivationInstance<any, any, MemberOrReferences>
@@ -20,6 +20,17 @@ export type SourceInstance<T, References> = {
 export type EmitterInstanceAlias<T> = SourceInstance<T, any> | DerivationInstance<any, T, any>
 export type PayloadTypeOf<X> = X extends EmitterInstanceAlias<infer T> ? T : never
 
+type DerivationVariation<DerivationSourceType extends Record<string, EmitterInstanceAlias<any>>, Aggregate> = {
+  derivationSpecies: "Transform"
+} | {
+  derivationSpecies: "Relay",
+  relayQueue: Promise<void>[],
+  schedule: <K extends keyof DerivationSourceType>(event: CoreEvent<PayloadTypeOf<DerivationSourceType[K]>>,
+    aggregate: Aggregate,
+    source: GenericEmitterInstance<any, unknown>,
+    role: K) => Promise<void>
+}
+
 export type DerivationInstance<DerivationSourceType extends Record<string, EmitterInstanceAlias<any>>, T, Aggregate> = {
   prototype: Derivation<DerivationSourceType, T, Aggregate>,
   controller: Option<ControllerInstance<any>>,
@@ -27,11 +38,10 @@ export type DerivationInstance<DerivationSourceType extends Record<string, Emitt
   sourcesByRole: DerivationSourceType,
   sealedSources: Set<GenericEmitterInstance<any, any>>,
   consumers: Set<GenericConsumerInstance<T, any>>,
-  innerBackpressure: Backpressure,
-  downstreamBackpressure: Backpressure,
+  backpressure: Backpressure,
   lifecycle: { state: "READY" | "ACTIVE" | "SEALED" } | { state: "ENDED", outcome: Outcome<T, Finalization> },
   aggregate: Option<Aggregate>
-}
+} & DerivationVariation<DerivationSourceType, Aggregate>
 
 export type GenericEmitterInstance<T, MemberOrReferences> = SourceInstance<T, MemberOrReferences> | DerivationInstance<any, T, MemberOrReferences>
 

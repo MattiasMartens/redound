@@ -72,57 +72,24 @@ export function isPromise(p: any): p is Promise<any> {
 
 /**
  * @param result A value, Iterable of values, mixed Iterable of values and Promises of values, Async Iterable, or Promise wrapping any of the above.
- * @param primaryConsumer The async function to be called for every value yielded within the span of the result's returned Promise
- * @param secondaryConsumer The async function to be called for every value yielded after the returned Promise ends
- * @returns A Promise with an optional embedded function 'secondaryConsume'. When called, this function will resume iterating over async values. It resolves when all secondaryConsumer invocations are finished.
+ * @param consumer The async function to be called for every value yielded within the span of the result's returned Promise
  */
-export async function twoStepIterateOverAsyncResult<T>(
+export async function iterateOverAsyncResult<T>(
   result: PossiblyAsyncResult<T>,
-  primaryConsumer: (t: T) => void | Promise<void>
-): Promise<{
-  secondaryConsume?: (
-    secondaryConsumer: (t: T) => void | Promise<void>
-  ) => Promise<void>
-}> {
+  consumer: (t: T) => void | Promise<void>
+): Promise<void> {
   const awaited = await result
   if (awaited !== undefined) {
     if (Symbol.asyncIterator in awaited) {
-      return {
-        secondaryConsume: async (secondaryConsumer: (t: T) => Promise<void>) => {
-          for await (const t of awaited as AsyncIterable<T>) {
-            await secondaryConsumer(t)
-          }
-        }
+      for await (const t of awaited as AsyncIterable<T>) {
+        await consumer(t)
       }
     } else if (Symbol.iterator in awaited) {
-      const iterator = awaited[Symbol.iterator]() as Iterator<T | Promise<T>>
-      let iteratorResult: IteratorResult<T | Promise<T>>
-
-      while (!(iteratorResult = iterator.next()).done) {
-        const value = iteratorResult.value
-
-        if (isPromise(value)) {
-          return {
-            secondaryConsume: async (secondaryConsumer: (t: T) => Promise<void>) => {
-              const triggeringValue = await value
-              await secondaryConsumer(triggeringValue)
-
-              let secondaryIteratorResult: IteratorResult<T | Promise<T>>
-              while (!(secondaryIteratorResult = iterator.next()).done) {
-                const secondaryValue = await secondaryIteratorResult.value
-                await secondaryConsumer(secondaryValue)
-              }
-            }
-          }
-        }
+      for (const t of awaited as Iterable<T | Promise<T>>) {
+        await consumer(await t)
       }
-
-      return {}
     } else {
-      await primaryConsumer(awaited as T)
-      return {}
+      await consumer(awaited as T)
     }
-  } else {
-    return {}
   }
 }
