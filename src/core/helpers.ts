@@ -1,4 +1,4 @@
-import { CoreEvent, Derivation, Outcome, SealEvent } from "@/types/abstract"
+import { Derivation, Outcome, SealEvent } from "@/types/abstract"
 import { DerivationInstance, EmitterInstanceAlias, SinkInstance, SourceInstance } from "@/types/instances"
 import { none, Option, some } from "fp-ts/lib/Option"
 import { left, right } from "fp-ts/lib/Either"
@@ -14,23 +14,18 @@ export const defaultDerivationSeal = (
 
 export const unaryDerivationConsumer = <In, Out, Aggregate>(mapper: (i: In, m: Aggregate) => { payload: Out[], aggregate: Aggregate }) => (
   { event, aggregate }: {
-    event: CoreEvent<In>,
+    event: In,
     aggregate: Aggregate
   }
 ) => {
   const {
     payload,
     aggregate: newAggregate
-  } = mapper(event.payload, aggregate)
+  } = mapper(event, aggregate)
 
   return {
     aggregate: newAggregate,
-    output: payload.map(item => ({
-      payload: item,
-      eventScope: event.eventScope,
-      type: event.type,
-      species: event.species
-    }))
+    output: payload
   }
 }
 
@@ -42,7 +37,7 @@ export function makeUnaryDerivation<U, T>(
   return makeDerivation(derivation, { main: source }, params)
 }
 
-export function defaultControllerRescue(error: Error, event: Option<CoreEvent<any>>): Outcome<any, never> {
+export function defaultControllerRescue(error: Error, event: Option<any>): Outcome<any, never> {
   return left({
     error,
     event

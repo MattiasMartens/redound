@@ -1,60 +1,61 @@
+import { defer } from "@/patterns/async"
 import { noop } from "@/patterns/functions"
-import { Event, Source } from "@/types/abstract"
+import { Source } from "@/types/abstract"
 import { pipe } from "fp-ts/lib/function"
 import { map, none, some, None, Some } from "fp-ts/lib/Option"
 import {
   declareSimpleSource
 } from "../core/source"
 
+async function* innerManualGenerator<T>(
+  nextPromise: () => Promise<T>
+) {
+  while (true) {
+    yield nextPromise()
+  }
+}
+
+function manualAsyncGenerator<T>() {
+  let currentDeferredPromise = defer<T>()
+  const nextPromise = () => currentDeferredPromise.promise
+  const fulfillPromise = (t: T) => {
+    const toResolve = currentDeferredPromise
+    currentDeferredPromise = defer<T>()
+    toResolve.resolve(t)
+  }
+
+  return {
+    generator: innerManualGenerator(nextPromise),
+    setter: fulfillPromise
+  }
+}
+
 export function manualSourcePrototype<T>(
   params: {
     initialValue?: T,
     name?: string
   } = {}
-): Source<T, { get: () => None | Some<T>; set: (t: T) => T; }> {
+): Source<T, { set: (t: T) => T; }> {
   const { name = "Manual" } = params
 
   return declareSimpleSource({
     close: noop,
     name,
     emits: new Set(/** TODO */),
-    open: () => {
-      const initialValueExists = "initialValue" in params
-      let state = initialValueExists ? some<T>(params.initialValue as any) : none
+    generate: () => {
+      const {
+        setter,
+        generator
+      } = manualAsyncGenerator<T>()
 
-      let emit: (e: Event<T>) => void
+      if (params.initialValue !== undefined) {
+        setter(params.initialValue)
+      }
 
       return {
-        get: () => state,
-        set: (t: T) => {
-          state = some(t)
-          emit({
-            type: "UPDATE",
-            species: "UPDATE",
-            eventScope: "ROOT",
-            payload: t
-          })
-          return t
-        },
-        registerEmit: (_emit: (e: Event<T>) => void) => {
-          emit = _emit
-
-          pipe(
-            state,
-            map(
-              t => emit({
-                type: "ADD",
-                species: "INITIAL",
-                eventScope: "ROOT",
-                payload: t
-              })
-            )
-          )
-        }
+        output: generator,
+        references: { set: setter }
       }
-    },
-    generate(emit, references) {
-      references.registerEmit(emit)
     }
   })
 }

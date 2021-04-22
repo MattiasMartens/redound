@@ -1,9 +1,6 @@
-import { voidPromiseIterable, wrapAsync } from '@/patterns/async'
+import { iterateOverAsyncResult, voidPromiseIterable, wrapAsync } from '@/patterns/async'
 import { forEachIterable, mapIterable } from '@/patterns/iterables'
 import {
-  CoreEvent,
-  Event,
-  MetaEvent,
   Outcome,
   Source
 } from '@/types/abstract'
@@ -19,6 +16,7 @@ import { propagateController } from './controller'
 import { backpressure } from './backpressure'
 import { pipe } from 'fp-ts/lib/function'
 import { map } from 'fp-ts/lib/Option'
+import { ControlEvent, SealEvent, EndOfTagEvent } from '@/types/events'
 
 // Dependency Map:
 // source imports sink
@@ -76,7 +74,7 @@ export function instantiateSource<T, References>(source: Source<T, References>, 
 
 export async function emit<T, References>(
   source: SourceInstance<T, References>,
-  event: CoreEvent<T> | MetaEvent
+  event: T | ControlEvent
 ) {
   if (source.lifecycle.state === "ACTIVE") {
     voidPromiseIterable(
@@ -94,7 +92,7 @@ export function open<T, References>(
   source: SourceInstance<T, References>
 ) {
   if (source.lifecycle.state === "READY") {
-    const sourceEmit = (e: Event<T>) => {
+    const sourceEmit = (e: T | ControlEvent) => {
       return emit(
         source,
         e
@@ -102,24 +100,40 @@ export function open<T, References>(
     }
 
     source.lifecycle.state = "ACTIVE"
-    const references = source.prototype.open()
-    source.references = some(references)
+    const {
+      references,
+      output
+    } = source.prototype.generate()
+    source.references = some(references as References)
 
-    // TODO Pass failure here to controller if any
-    wrapAsync(
-      () => source.prototype.generate(
-        sourceEmit,
-        references
-      )
-    ).then(
-      (doNotSeal) => doNotSeal || seal(source)
-    )
+    void (async () => {
+      try {
+        await iterateOverAsyncResult(
+          output,
+          sourceEmit,
+          () => source.lifecycle.state === "ENDED"
+        )
+
+        if (!source.prototype.pull) {
+          seal(source)
+        }
+      } catch (e) {
+        pipe(
+          source.controller,
+          map(
+            /**  NOTE: This captures failures *only* from the generation of events;emitting to a consumer is a can't-fail operation because if there were an error, the consumer would send it to the controller directly. It would never return to the control of this function. */
+            c => c.rescue(e, none, source)
+          )
+        )
+      }
+
+    })()
   } else {
     throw new Error(`Attempted action open() on source ${source.id} in incompatible lifecycle state: ${source.lifecycle.state}`)
   }
 }
 
-export function subscribe<T, Finalization>(
+export function subscribe<T>(
   source: SourceInstance<T, any>,
   consumer: GenericConsumerInstance<T, any>
 ) {
@@ -141,12 +155,6 @@ export function subscribe<T, Finalization>(
   }
 }
 
-export function sealEvent() {
-  return {
-    type: "SEAL" as "SEAL"
-  }
-}
-
 export function unsubscribe<T>(
   source: SourceInstance<T, any>,
   consumer: GenericConsumerInstance<T, any>
@@ -160,14 +168,12 @@ export function seal<T, References>(
   if (source.lifecycle.state === "ACTIVE") {
     source.lifecycle.state = "SEALED"
 
-    const e = sealEvent()
-
     forEachIterable(
       source.consumers,
       consumer => consume(
         source,
         consumer,
-        e
+        SealEvent
       )
     )
   } else if (source.lifecycle.state === "ENDED") {

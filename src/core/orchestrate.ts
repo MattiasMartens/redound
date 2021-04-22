@@ -1,4 +1,4 @@
-import { Derivation, Sink } from "@/types/abstract";
+import { Sink } from "@/types/abstract";
 import { ControllerInstance, DerivationInstance, EmitterInstanceAlias, GenericConsumerInstance, GenericEmitterInstance, SinkInstance, SourceInstance } from "@/types/instances";
 import { instantiateDerivation as makeDerivation } from "./derivation";
 import { instantiateSink } from "./sink";

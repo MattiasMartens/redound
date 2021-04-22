@@ -13,9 +13,7 @@ export function forEachPrototype<T>(
     consumes: new Set(/** TODO */),
     name: name ?? "ForEach",
     consume: (e) => {
-      if (e.type === "ADD" || e.type === "UPDATE") {
-        return forEach(e.payload)
-      }
+      return forEach(e)
     }
   })
 }

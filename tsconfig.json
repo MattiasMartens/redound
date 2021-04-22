@@ -11,5 +11,5 @@
     },
     "target": "ES5"
   },
-  "exclude": ["./build.ts", "./build.once.ts", "./build.work.ts"]
+  "exclude": ["./build.ts", "./build.once.ts", "./build.work.ts", "./compiled"]
 }

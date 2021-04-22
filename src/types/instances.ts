@@ -1,5 +1,5 @@
 import { Option } from "fp-ts/lib/Option"
-import { CoreEvent, Derivation, Outcome, SealEvent, Sink, Source } from "./abstract"
+import { Derivation, Outcome, SealEvent, Sink, Source } from "./abstract"
 import { Backpressure } from "@/core/backpressure"
 
 export type GenericConsumerInstance<T, MemberOrReferences> = SinkInstance<T, MemberOrReferences> | DerivationInstance<any, any, MemberOrReferences>
@@ -25,7 +25,7 @@ type DerivationVariation<DerivationSourceType extends Record<string, EmitterInst
 } | {
   derivationSpecies: "Relay",
   relayQueue: Promise<void>[],
-  schedule: <K extends keyof DerivationSourceType>(event: CoreEvent<PayloadTypeOf<DerivationSourceType[K]>>,
+  schedule: <K extends keyof DerivationSourceType>(event: PayloadTypeOf<DerivationSourceType[K]>,
     aggregate: Aggregate,
     source: GenericEmitterInstance<any, unknown>,
     role: K) => Promise<void>
@@ -51,7 +51,6 @@ export type SinkInstance<T, References> = {
   controller: Option<ControllerInstance<any>>,
   id: string,
   latestTickByProvenance: Map<SourceId, number>,
-  source: GenericEmitterInstance<T, References>,
   lifecycle: { state: "ACTIVE" } | { state: "SEALED" } | { state: "ENDED", outcome: Outcome<T, Finalization> },
   // Initialized to 'Some' on first subscription event,
   // reverted to 'None' once closed.
@@ -66,15 +65,23 @@ export type ControllerInstance<Finalization> = {
   ) => Promise<void>,
   rescue: (
     error: Error,
-    event: Option<CoreEvent<any>>,
+    event: Option<any>,
     notifyingComponent: SourceInstance<any, any> | DerivationInstance<any, any, any> | SinkInstance<any, any>
   ) => Promise<void>,
   taggedEvent: (
-    event: CoreEvent<any>,
+    event: any,
     notifyingComponent: SourceInstance<any, any> | DerivationInstance<any, any, any> | SinkInstance<any, any>
   ) => Promise<void>,
   outcome: Option<Outcome<any, Finalization>>,
   awaitOutcome: () => Promise<Outcome<any, Finalization>>,
+  // A function, intended to be generic, that the controller uses to determine that all close events have propagated fully to all sinks.
+  close: (
+    notifyingComponent: SourceInstance<any, any> | DerivationInstance<any, any, any> | SinkInstance<any, any>
+  ) => void,
+  // A Promise that resolves only when all Sinks have closed.
+  // WARNING: This Promise will not wait for the closing of Derivations.
+  // TODO: Maybe it should?
+  allSinksClosed: () => Promise<void>,
   registerSource: (
     sourceInstance: SourceInstance<any, any>
   ) => void,

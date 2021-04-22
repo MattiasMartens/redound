@@ -1,4 +1,4 @@
-import { makeSource } from "@/core"
+import { makeController, makeSource } from "@/core"
 import { applyToBackpressure, backpressure } from "@/core/backpressure"
 import { makeSink, makeUnaryDerivation } from "@/core"
 import { mappedDerivationPrototype } from "@/derivations"
@@ -9,8 +9,11 @@ import { iterableSourcePrototype } from "@/sources/iterable"
 import { manualSourcePrototype } from "@/sources/manual"
 
 export function mainA() {
+  const controller = makeController()
+
   const sourceInstance = makeSource(
-    manualSourcePrototype()
+    manualSourcePrototype(),
+    { controller }
   )
 
   makeSink(
@@ -25,22 +28,34 @@ export function mainA() {
   set(
     "Hello world A!"
   )
+
+  return controller.allSinksClosed()
 }
 
 export function mainB() {
+  const controller = makeController()
+
   const sourceInstance = makeSource(
-    iterableSourcePrototype(["Hello world B!"])
+    iterableSourcePrototype(["Hello world B!"]),
+    { controller }
   )
 
   makeSink(
     consoleLogSinkPrototype(),
     sourceInstance
   )
+
+  return controller.allSinksClosed()
 }
 
 export function mainC() {
+  const controller = makeController()
+
   const sourceInstance = makeSource(
-    iterableSourcePrototype([5, 8, 13])
+    iterableSourcePrototype([5, 8, 13]),
+    {
+      controller
+    }
   )
 
   const derivationInstance = makeUnaryDerivation(
@@ -54,6 +69,8 @@ export function mainC() {
     consoleLogSinkPrototype(),
     derivationInstance
   )
+
+  return controller.allSinksClosed()
 }
 
 export async function mainBackpressure() {
@@ -86,4 +103,9 @@ export async function mainBackpressure() {
       makeBackpressurableFunction()
     )
   }
+
+  await applyToBackpressure(
+    backpressureInstance,
+    () => Promise.resolve()
+  )
 }

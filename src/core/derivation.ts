@@ -1,14 +1,10 @@
 import { iterateOverAsyncResult, voidPromiseIterable } from '@/patterns/async'
 import { filterIterable, forEachIterable, mapIterable, tapIterable, without } from '@/patterns/iterables'
 import {
-  BroadEvent,
   Derivation,
-  CoreEvent,
-  MetaEvent,
-  Outcome,
-  DerivationEmission,
-  Event
+  Outcome
 } from '@/types/abstract'
+import { PossiblyAsyncResult } from "@/patterns/async"
 import { SourceInstance, GenericConsumerInstance, DerivationInstance, GenericEmitterInstance, SinkInstance, EmitterInstanceAlias } from '@/types/instances'
 import { isSome, some } from 'fp-ts/lib/Option'
 import { none } from 'fp-ts/lib/Option'
@@ -18,11 +14,9 @@ import {
 } from './sink'
 import { initializeTag } from './tags'
 import { propagateController } from './controller'
-import { createSetFromNullable } from '@/patterns/sets'
 import { getSome } from '@/patterns/options'
-import { mapCollectInto, reconcileFold } from 'big-m'
-import { identity } from '@/patterns/functions'
 import { applyToBackpressure, backpressure } from './backpressure'
+import { ControlEvent, EndOfTagEvent, SealEvent } from '@/types/events'
 
 export function* allSources(derivation: Record<string, EmitterInstanceAlias<any>>) {
   for (const role in derivation) {
@@ -35,12 +29,11 @@ export function* allSources(derivation: Record<string, EmitterInstanceAlias<any>
  * types, so this allows a simpler type declaration for a
  * Source.
  */
-export function declareSimpleDerivation<SourceType extends Record<string, EmitterInstanceAlias<any>>, T, References>(derivation: Omit<Derivation<SourceType, T, References>, "graphComponentType" | "sourceCapability" | "derivationSpecies">) {
+export function declareSimpleDerivation<SourceType extends Record<string, EmitterInstanceAlias<any>>, T, References>(derivation: Omit<Derivation<SourceType, T, References>, "graphComponentType" | "derivationSpecies">) {
   return Object.assign(
     derivation,
     {
       derivationSpecies: "Transform",
-      sourceCapability: none,
       graphComponentType: "Derivation"
     }
   ) as Derivation<SourceType, T, References>
@@ -79,7 +72,7 @@ export function instantiateDerivation<SourceType extends Record<string, EmitterI
 
 export async function emit<T, References>(
   derivation: DerivationInstance<any, T, References>,
-  event: CoreEvent<T> | MetaEvent
+  event: T | ControlEvent
 ) {
   // Derivations *can* emit events after they have
   // been sealed! New consumers can still query the Derivation's
@@ -102,10 +95,11 @@ export async function emit<T, References>(
 
 export async function scheduleEmissions<T, References>(
   derivation: DerivationInstance<any, T, References>,
-  result: DerivationEmission<T>
+  result: PossiblyAsyncResult<T>
 ) {
   if (derivation.lifecycle.state === "ACTIVE" || derivation.lifecycle.state === "SEALED") {
     if (derivation.prototype.derivationSpecies === "Relay") {
+      // TODO
       throw new Error("Not implemented")
     }
 
@@ -116,9 +110,10 @@ export async function scheduleEmissions<T, References>(
         e => voidPromiseIterable(
           mapIterable(
             derivation.consumers,
-            async c => genericConsume(derivation, c, e)
+            async c => genericConsume(derivation, c, e),
           )
-        )
+        ),
+        () => derivation.lifecycle.state === "ENDED"
       )
     )
   } else {
@@ -177,12 +172,6 @@ export function siphon(derivation: DerivationInstance<any, any, any>, sourceSubs
   )
 }
 
-export function sealEvent(): MetaEvent {
-  return {
-    type: "SEAL"
-  }
-}
-
 export function unsubscribe<T>(
   source: SourceInstance<T, any>,
   consumer: GenericConsumerInstance<T, any>
@@ -194,7 +183,7 @@ export function unsubscribe<T>(
 function genericConsume<T, MemberOrReferences>(
   emitter: GenericEmitterInstance<T, MemberOrReferences>,
   consumer: GenericConsumerInstance<T, any>,
-  event: CoreEvent<T> | MetaEvent
+  event: T | ControlEvent
 ) {
   if (consumer.prototype.graphComponentType === "Sink") {
     return sinkConsume(
@@ -213,7 +202,7 @@ function genericConsume<T, MemberOrReferences>(
 
 export function seal<Aggregate>(
   derivation: DerivationInstance<any, any, Aggregate>,
-  event: MetaEvent
+  event: ControlEvent
 ) {
   if (derivation.lifecycle.state === "ACTIVE") {
     if (derivation.prototype.derivationSpecies === "Relay") {
@@ -275,12 +264,13 @@ function getSourceRole<SourceType extends Record<string, EmitterInstanceAlias<an
 export async function consume<T, MemberOrReferences>(
   source: GenericEmitterInstance<T, MemberOrReferences>,
   derivation: DerivationInstance<any, any, any>,
-  e: BroadEvent<T>
+  e: T | ControlEvent
 ) {
   if (derivation.lifecycle.state === "ACTIVE") {
-    if (e.type === "VOID") {
-      // no-op: just update the sink's provenance clock.
-    } else if (e.type === "SEAL") {
+    if (e === EndOfTagEvent) {
+      // TODO
+      throw new Error("Not implemented")
+    } else if (e === SealEvent) {
       derivation.sealedSources.add(source)
       const sealResult = derivation.prototype.seal({
         aggregate: getSome(derivation.aggregate),
@@ -314,7 +304,7 @@ export async function consume<T, MemberOrReferences>(
         aggregate: outAggregate,
         output
       } = derivation.prototype.consume({
-        event: e as CoreEvent<any>,
+        event: e,
         aggregate: inAggregate,
         source,
         role

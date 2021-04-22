@@ -1,12 +1,12 @@
 import { declareSimpleSink } from "@/core/index.author"
 import { noop } from "@/patterns/functions"
-import { CoreEvent, Sink } from "@/types/abstract"
+import { Sink } from "@/types/abstract"
 
 export function eventCollectorPrototype<T>(
   name?: string
-): Sink<T, CoreEvent<T>[]> {
+): Sink<T, T[]> {
   return declareSimpleSink({
-    open: () => [] as CoreEvent<T>[],
+    open: () => [] as T[],
     close: noop,
     seal: collected => collected,
     consumes: new Set(/** TODO */),

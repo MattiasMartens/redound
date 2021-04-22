@@ -1,6 +1,6 @@
 import { defer } from "@/patterns/async"
 import { forEachIterable } from "@/patterns/iterables"
-import { Controller, CoreEvent, Event, Outcome, SealEvent } from "@/types/abstract"
+import { Controller, Outcome, SealEvent } from "@/types/abstract"
 import { ControllerInstance, DerivationInstance, SinkInstance, SourceInstance } from "@/types/instances"
 import { pipe } from "fp-ts/lib/function"
 import { isNone, map, none, Option, some } from "fp-ts/lib/Option"
@@ -54,11 +54,13 @@ export function instantiateController<Finalization>(
     sinks: new Set<SinkInstance<any, any>>()
   }
 
+  const allSinksClosed = defer()
+
   const controllerInstance: ControllerInstance<Finalization> = {
     id: tag,
     outcome: none,
     awaitOutcome: () => outcomePromise.promise,
-    async rescue(error: Error, event: Option<CoreEvent<any>>, notifyingComponent: SourceInstance<any, any> | DerivationInstance<any, any, any> | SinkInstance<any, any>) {
+    async rescue(error: Error, event: Option<any>, notifyingComponent: SourceInstance<any, any> | DerivationInstance<any, any, any> | SinkInstance<any, any>) {
       pipe(
         await controller.rescue(error, event, notifyingComponent, domain),
         map(
@@ -113,21 +115,20 @@ export function instantiateController<Finalization>(
     },
     sources: domain.sources,
     sinks: domain.sinks,
-    async taggedEvent(event, notifyingComponent) {
-      pipe(
-        await controller.taggedEvent(event, notifyingComponent, domain),
-        map(
-          outcome => {
-            forEachIterable(
-              domain.sources,
-              sourceInstance => close(sourceInstance, outcome)
-            )
+    taggedEvent: () => {
+      // TODO
+      throw new Error("Not implemented")
+    },
+    close() {
+      for (const sink of domain.sinks) {
+        if (sink.lifecycle.state !== "ENDED") {
+          return
+        }
 
-            outcomePromise.resolve(outcome)
-          }
-        )
-      )
-    }
+        allSinksClosed.resolve()
+      }
+    },
+    allSinksClosed: () => allSinksClosed.promise
   }
 
   forEachIterable(

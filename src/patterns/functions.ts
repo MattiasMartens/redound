@@ -2,8 +2,8 @@ export function identity<T>(t: T) {
   return t
 }
 
-export const noop = () => { }
-export const noopAsync = async () => { }
+export const noop = (() => { }) as ((...args: any[]) => void)
+export const noopAsync = (async () => { }) as ((...args: any[]) => Promise<void>)
 
 export function mutate<T>(item: T, mutation: (item: T) => any) {
   mutation(item)

@@ -59,12 +59,7 @@ export function statefulDerivationPrototype<In, State, Out>(
     seal: (params) => ({
       ...defaultDerivationSeal(params),
       ...seal && {
-        output: seal(params.aggregate).map(payload => ({
-          payload,
-          type: "ADD",
-          species: "Seal",
-          eventScope: "ROOT"
-        }))
+        output: seal(params.aggregate)
       }
     }),
     name,

@@ -1,6 +1,6 @@
 import { noop } from "@/patterns/functions"
-import { forEachIterable } from "@/patterns/iterables"
 import { Source } from "@/types/abstract"
+import { PossiblyAsyncResult } from "@/patterns/async"
 import {
   declareSimpleSource
 } from "../core/source"
@@ -9,7 +9,7 @@ import {
 // Or to yield control to the event loop periodically. At the moment this
 // is a simple, uninterruptible, blocking generation.
 export function iterableSourcePrototype<T>(
-  iterable: Iterable<T>,
+  iterable: PossiblyAsyncResult<T>,
   {
     name = "Iterable"
   }: {
@@ -20,42 +20,9 @@ export function iterableSourcePrototype<T>(
     close: noop,
     name,
     emits: new Set(/** TODO */),
-    open: noop,
-    generate(emit) {
-      forEachIterable(
-        iterable,
-        payload => emit({
-          payload,
-          eventScope: "ROOT",
-          type: "ADD",
-          species: "ADD"
-        })
-      )
-    }
-  })
-}
-
-export function asyncIterableSourcePrototype<T>(
-  iterable: Iterable<Promise<T>>,
-  {
-    name = "Iterable"
-  }: {
-    name?: string
-  } = {}
-): Source<T, void> {
-  return declareSimpleSource({
-    close: noop,
-    name,
-    emits: new Set(/** TODO */),
-    open: noop,
-    async generate(emit) {
-      for await (const payload of iterable) {
-        emit({
-          payload,
-          eventScope: "ROOT",
-          type: "ADD",
-          species: "ADD"
-        })
+    generate() {
+      return {
+        output: iterable
       }
     }
   })

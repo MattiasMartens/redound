@@ -60,7 +60,7 @@ export function ms(milliseconds = 0) {
   })
 }
 
-export type PossiblyAsyncResult<T> = void | T | Promise<void | T> | Iterable<T | Promise<T>> | Promise<Iterable<T | Promise<T>>> | AsyncIterable<T> | Promise<AsyncIterable<T>>
+export type PossiblyAsyncResult<T> = undefined | void | T | Promise<void | T> | Iterable<T | Promise<T>> | Promise<Iterable<T | Promise<T>>> | AsyncIterable<T> | Promise<AsyncIterable<T>>
 
 export function isPromise(p: any): p is Promise<any> {
   if (p === null || p === undefined) {
@@ -73,20 +73,46 @@ export function isPromise(p: any): p is Promise<any> {
 /**
  * @param result A value, Iterable of values, mixed Iterable of values and Promises of values, Async Iterable, or Promise wrapping any of the above.
  * @param consumer The async function to be called for every value yielded within the span of the result's returned Promise
+ * @param interrupt A function that, if it returns true, will cause this function
+ * to finish iterating.
  */
 export async function iterateOverAsyncResult<T>(
   result: PossiblyAsyncResult<T>,
-  consumer: (t: T) => void | Promise<void>
+  consumer: (t: T) => void | Promise<void>,
+  interrupt: () => boolean
 ): Promise<void> {
   const awaited = await result
+
+  if (interrupt()) {
+    return
+  }
+
   if (awaited !== undefined) {
     if (Symbol.asyncIterator in awaited) {
       for await (const t of awaited as AsyncIterable<T>) {
+        if (interrupt()) {
+          return
+        }
+
         await consumer(t)
+
+        if (interrupt()) {
+          return
+        }
       }
     } else if (Symbol.iterator in awaited) {
       for (const t of awaited as Iterable<T | Promise<T>>) {
-        await consumer(await t)
+        const value = await t
+
+        if (interrupt()) {
+          return
+        }
+
+        await consumer(value)
+
+        if (interrupt()) {
+          return
+        }
       }
     } else {
       await consumer(awaited as T)
