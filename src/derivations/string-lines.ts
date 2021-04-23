@@ -9,14 +9,24 @@ function* yieldItemThenAllButFirstAndLastOfArray<T>(item: T, arr: T[]) {
   }
 }
 
+function* justYield<T>(arr: T[]) {
+  for (const item of arr) {
+    yield item
+  }
+}
+
 const newlineRegex = /\r?\n/g
 export const stringLinesDerivationPrototype = statefulDerivationPrototype<string, string, string[]>(
   (i, buffer) => {
     const incomingSplitIntoLines = i.split(newlineRegex)
 
-    if (!incomingSplitIntoLines.length) {
+    if (incomingSplitIntoLines.length <= 1) {
+      if (first(incomingSplitIntoLines) !== "" && first(incomingSplitIntoLines) !== undefined) {
+        buffer.push(first(incomingSplitIntoLines)!)
+      }
+
       return {
-        output: undefined,
+        output: [],
         state: buffer
       }
     } else {
@@ -41,7 +51,9 @@ export const stringLinesDerivationPrototype = statefulDerivationPrototype<string
     name: "StringLines",
     seal(buffer) {
       if (buffer.length) {
-        return buffer.join("")
+        return justYield([buffer.join("")])
+      } else {
+        return []
       }
     }
   }

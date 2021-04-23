@@ -3,6 +3,7 @@ import {
   deepStrictEqual
 } from "assert"
 import { iterableSourcePrototype, UnaryDerivation, makeUnaryDerivation, makeSource, makeSink, eventCollectorPrototype, makeController } from "@/index"
+import { PossiblyAsyncResult } from "@/patterns/async"
 
 export function expectationTest<T>(expectationsImport: any, scenarioKey: string, fn: () => T) {
   const generated = expectationsImport[scenarioKey] as Possible<T>
@@ -28,7 +29,7 @@ export async function expectationTestAsync(expectationsImport: any, scenarioKey:
 
 export function getDerivationEmitted<I, O>(
   derivation: UnaryDerivation<I, O>,
-  input: I[]
+  input: PossiblyAsyncResult<I>
 ) {
   const controllerInstance = makeController(
     {
@@ -42,10 +43,10 @@ export function getDerivationEmitted<I, O>(
     sourceInstance
   )
 
-  makeSink(
+  const sink = makeSink(
     eventCollectorPrototype(),
     derivationInstance
   )
 
-  return controllerInstance.awaitOutcome()
+  return sink.sinkResult()
 }

@@ -1,10 +1,7 @@
 import {
   mappedDerivationPrototype
 } from '@/derivations'
-import { getRight } from '@/patterns/either'
-import { pick } from '@/patterns/functions'
 import { expectationTestAsync, getDerivationEmitted } from '@test/helpers'
-import { flow } from 'fp-ts/lib/function'
 import * as expectations from './expectations.meta'
 
 describe('derivations', () => {
@@ -20,11 +17,6 @@ describe('derivations', () => {
           "AaA",
           "bBb"
         ]
-      ).then(
-        flow(
-          getRight,
-          pick("finalization")
-        )
       )
     ))
   })
