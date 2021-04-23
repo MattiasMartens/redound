@@ -31,7 +31,7 @@ function manualAsyncGenerator<T>() {
 
   const ender = () => {
     const toResolve = currentDeferredPromise
-    currentDeferredPromise = defer<Possible<T>>()
+    currentDeferredPromise = undefined as any
     toResolve.resolve(undefined)
   }
 

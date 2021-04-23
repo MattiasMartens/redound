@@ -17,6 +17,7 @@ import { backpressure } from './backpressure'
 import { pipe } from 'fp-ts/lib/function'
 import { map } from 'fp-ts/lib/Option'
 import { ControlEvent, SealEvent, EndOfTagEvent } from '@/types/events'
+import { v4 } from 'uuid'
 
 // Dependency Map:
 // source imports sink
@@ -36,8 +37,7 @@ export function declareSimpleSource<T, References>(source: Omit<Source<T, Refere
   return Object.assign(
     source,
     {
-      graphComponentType: "Source",
-      pull: noop
+      graphComponentType: "Source"
     }
   ) as Source<T, References>
 }

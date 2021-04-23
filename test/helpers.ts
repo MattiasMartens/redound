@@ -17,7 +17,7 @@ export function expectationTest<T>(expectationsImport: any, scenarioKey: string,
   }
 }
 
-export async function expectationTestAsync<T>(expectationsImport: any, scenarioKey: string, fn: () => Promise<T>) {
+export async function expectationTestAsync(expectationsImport: any, scenarioKey: string, fn: () => Promise<any>) {
   const result = await fn()
   return expectationTest(
     expectationsImport,

@@ -27,3 +27,7 @@ export function iterableSourcePrototype<T>(
     }
   })
 }
+
+export function tupleFirst<T>(tuple: [T, any]) {
+  return tuple[0]
+}

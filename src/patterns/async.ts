@@ -1,3 +1,4 @@
+import { v4 } from "uuid"
 import { isIterable } from "./iterables"
 
 export async function end(promise: Promise<any>) {
@@ -81,6 +82,20 @@ export async function iterateOverAsyncResult<T>(
   consumer: (t: T) => void | Promise<void>,
   interrupt: () => boolean
 ): Promise<void> {
+  if (result && Symbol.asyncIterator in result) {
+    for await (const t of result as AsyncIterable<T>) {
+      if (interrupt()) {
+        return
+      }
+
+      await consumer(t)
+
+      if (interrupt()) {
+        return
+      }
+    }
+  }
+
   const awaited = await result
 
   if (interrupt()) {
