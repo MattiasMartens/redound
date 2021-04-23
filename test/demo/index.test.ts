@@ -1,7 +1,6 @@
 import * as demo from '@test/../demo'
 import * as expectations from './expectations.meta'
 import { expectationTestAsync, getDerivationEmitted } from '@test/helpers'
-import { expectationTest } from 'compiled/test/helpers'
 
 async function captureLogOutput(fn: () => Promise<void>) {
   const originalConsoleLog = console.log

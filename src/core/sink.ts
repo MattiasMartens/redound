@@ -27,7 +27,7 @@ export function declareSimpleSink<T, References>(sink: Omit<Sink<T, References>,
   ) as Sink<T, References>
 }
 
-export function instantiateSink<T, References,>(sink: Sink<T, References>, emitterInstance: GenericEmitterInstance<T, any>, { id }: { id?: string } = {}): SinkInstance<T, References> {
+export function instantiateSink<T, References,>(sink: Sink<T, References>, { id }: { id?: string } = {}): SinkInstance<T, References> {
   const tag = initializeTag(
     sink.name,
     id
@@ -85,7 +85,7 @@ export async function close<T, References, Finalization>(
   sink: SinkInstance<T, References>,
   outcome: Outcome<T, Finalization>
 ) {
-  if (sink.lifecycle.state === "ACTIVE") {
+  if (sink.lifecycle.state !== "ENDED") {
     const references = getSome(sink.references)
 
     await sink.prototype.close(references, outcome)

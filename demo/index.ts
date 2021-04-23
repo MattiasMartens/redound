@@ -21,7 +21,7 @@ export function mainA() {
     sourceInstance
   )
 
-  const { set } = getSome(
+  const { set, end } = getSome(
     sourceInstance.references
   )
 
@@ -29,7 +29,9 @@ export function mainA() {
     "Hello world A!"
   )
 
-  return controller.allSinksClosed()
+  end()
+
+  return controller.awaitOutcome()
 }
 
 export function mainB() {
@@ -45,7 +47,7 @@ export function mainB() {
     sourceInstance
   )
 
-  return controller.allSinksClosed()
+  return controller.awaitOutcome()
 }
 
 export function mainC() {
@@ -70,7 +72,7 @@ export function mainC() {
     derivationInstance
   )
 
-  return controller.allSinksClosed()
+  return controller.awaitOutcome()
 }
 
 export async function mainBackpressure() {

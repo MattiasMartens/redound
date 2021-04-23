@@ -1,32 +1,44 @@
 import { defer } from "@/patterns/async"
 import { noop } from "@/patterns/functions"
 import { Source } from "@/types/abstract"
-import { pipe } from "fp-ts/lib/function"
-import { map, none, some, None, Some } from "fp-ts/lib/Option"
+import { Possible } from "@/types/patterns"
 import {
   declareSimpleSource
 } from "../core/source"
 
 async function* innerManualGenerator<T>(
-  nextPromise: () => Promise<T>
+  nextPromise: () => Promise<Possible<T>>
 ) {
   while (true) {
-    yield nextPromise()
+    const value = await nextPromise()
+
+    if (value === undefined) {
+      return
+    } else {
+      yield value
+    }
   }
 }
 
 function manualAsyncGenerator<T>() {
-  let currentDeferredPromise = defer<T>()
+  let currentDeferredPromise = defer<Possible<T>>()
   const nextPromise = () => currentDeferredPromise.promise
   const fulfillPromise = (t: T) => {
     const toResolve = currentDeferredPromise
-    currentDeferredPromise = defer<T>()
+    currentDeferredPromise = defer<Possible<T>>()
     toResolve.resolve(t)
+  }
+
+  const ender = () => {
+    const toResolve = currentDeferredPromise
+    currentDeferredPromise = defer<Possible<T>>()
+    toResolve.resolve(undefined)
   }
 
   return {
     generator: innerManualGenerator(nextPromise),
-    setter: fulfillPromise
+    setter: fulfillPromise,
+    ender
   }
 }
 
@@ -35,7 +47,7 @@ export function manualSourcePrototype<T>(
     initialValue?: T,
     name?: string
   } = {}
-): Source<T, { set: (t: T) => T; }> {
+): Source<T, { set: (t: T) => T, end: () => void }> {
   const { name = "Manual" } = params
 
   return declareSimpleSource({
@@ -45,7 +57,8 @@ export function manualSourcePrototype<T>(
     generate: () => {
       const {
         setter,
-        generator
+        generator,
+        ender
       } = manualAsyncGenerator<T>()
 
       if (params.initialValue !== undefined) {
@@ -54,7 +67,7 @@ export function manualSourcePrototype<T>(
 
       return {
         output: generator,
-        references: { set: setter }
+        references: { set: setter, end: ender }
       }
     }
   })
