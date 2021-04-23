@@ -1,21 +1,19 @@
 import { applyToBackpressure, backpressure } from "@/core/backpressure"
 import { ms } from "@/patterns/async"
 
-import * as demo from '@test/../demo'
 import * as expectations from './expectations.meta'
 import { expectationTestAsync } from '@test/helpers'
 
 import {
   useFakeTimers,
+  reset,
   SinonFakeTimers
 } from 'sinon'
 import { tupleFirst } from "@/sources"
 
 async function eventual<T>(fn: () => Promise<T>) {
   const promise = fn()
-  for (let i = 0; i < 100; i++) {
-    clock && clock.tick(100)
-  }
+  clock.tick(100000)
 
   const clockRunPromise = clock && clock.runAllAsync()
   const tuple = await Promise.all([
@@ -80,4 +78,6 @@ describe("backpressure", () => {
       return seq
     }))
   )
+
+  after(() => reset())
 })

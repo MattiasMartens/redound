@@ -22,24 +22,14 @@ async function captureLogOutput(fn: () => Promise<void>) {
   return toCapture
 }
 
-let clock: SinonFakeTimers
-function eventual<T>(fn: () => Promise<T>) {
-  return () => {
-    const promise = fn()
-    clock?.tick(60 * 1000)
-    return promise
-  }
-}
 
 describe("demo", () => {
-  before(() => clock = null as any && useFakeTimers())
-
   for (const exportedFunction in demo) {
     describe(exportedFunction, () => {
       it("Produces the expected output", async () => expectationTestAsync(
         expectations,
         exportedFunction,
-        () => captureLogOutput(eventual(demo[exportedFunction]))
+        () => captureLogOutput(demo[exportedFunction])
       ))
     })
   }

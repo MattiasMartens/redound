@@ -1,3 +1,4 @@
+import { Possible } from "@/types/patterns"
 
 export function* filterIterable<T>(iterable: Iterable<T>, filter: (t: T, i: number) => boolean): Iterable<T> {
   let i = 0
@@ -53,6 +54,25 @@ export function isIterable(obj: any) {
     return false
   }
   return typeof obj[Symbol.iterator] === 'function'
+}
+
+export function first<T>(arr: Iterable<T>) {
+  for (const i of arr) {
+    return i
+  }
+}
+
+export function last<T>(arr: Iterable<T>) {
+  if (Array.isArray(arr)) {
+    return arr[arr.length - 1]
+  } else {
+    let ret: Possible<T> = undefined
+    for (const i of arr) {
+      ret = i
+    }
+
+    return ret
+  }
 }
 
 export function* flatMap<T, V>(

@@ -49,6 +49,7 @@ export function instantiateSink<T, References, SinkResult>(sink: Sink<T, Referen
       const result = await sinkInstance.prototype.seal(
         getSome(sinkInstance.references)
       )
+      sinkResult.resolve(result)
       sinkInstance.lifecycle = { state: "SEALED" }
 
       // TODO Same logic in other graph components

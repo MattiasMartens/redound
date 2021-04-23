@@ -1,6 +1,3 @@
-import { v4 } from "uuid"
-import { isIterable } from "./iterables"
-
 export async function end(promise: Promise<any>) {
   try {
     await promise
@@ -61,7 +58,7 @@ export function ms(milliseconds = 0) {
   })
 }
 
-export type PossiblyAsyncResult<T> = undefined | void | T | Promise<void | T> | Iterable<T | Promise<T>> | Promise<Iterable<T | Promise<T>>> | AsyncIterable<T> | Promise<AsyncIterable<T>>
+export type PossiblyAsyncResult<T> = undefined | void | T | Promise<void | T> | Iterable<T | Promise<T>> | Promise<Iterable<T | Promise<T>>> | AsyncIterable<T> | AsyncIterable<T> | Generator<T> | AsyncGenerator<T>
 
 export function isPromise(p: any): p is Promise<any> {
   if (p === null || p === undefined) {

@@ -4,6 +4,8 @@ import { noop } from "@/patterns/functions"
 import { Derivation } from "@/types/abstract"
 import { EmitterInstanceAlias } from "@/types/instances"
 
+export * from './stateful'
+
 export type UnaryDerivation<I, O> = Derivation<{ main: EmitterInstanceAlias<I> }, O, any>
 
 export function mappedDerivationPrototype<In, Out>(
@@ -18,7 +20,7 @@ export function mappedDerivationPrototype<In, Out>(
 }, Out, void> {
   return declareSimpleDerivation({
     consume: unaryDerivationConsumer(
-      i => ({ payload: [mapper(i)], aggregate: undefined })
+      i => ({ output: [mapper(i)], aggregate: undefined })
     ),
     seal: defaultDerivationSeal,
     close: noop,
@@ -26,45 +28,6 @@ export function mappedDerivationPrototype<In, Out>(
     emits: new Set(/** TODO */),
     consumes: new Set(/** TODO */),
     open: noop,
-    unroll: noop
-  })
-}
-
-export function statefulDerivationPrototype<In, State, Out>(
-  transformer: (i: In, s: State) => { state: State, payload: Out[] },
-  initial: () => State,
-  {
-    name = "Reduced",
-    seal
-  }: {
-    name?: string,
-    seal?: (s: State) => Out[]
-  } = {}
-): Derivation<{
-  main: EmitterInstanceAlias<In>
-}, Out, State> {
-  return declareSimpleDerivation({
-    consume: unaryDerivationConsumer(
-      (i, acc) => {
-        const { state, payload } = transformer(i, acc)
-
-        return {
-          payload,
-          aggregate: state
-        }
-      }
-    ),
-    open: initial,
-    close: noop,
-    seal: (params) => ({
-      ...defaultDerivationSeal(params),
-      ...seal && {
-        output: seal(params.aggregate)
-      }
-    }),
-    name,
-    emits: new Set(/** TODO */),
-    consumes: new Set(/** TODO */),
     unroll: noop
   })
 }
@@ -86,7 +49,7 @@ export function reducedDerivationPrototype<In, Out>(
         const reduced = reducer(acc, i)
 
         return {
-          payload: [reduced],
+          output: [reduced],
           aggregate: reduced
         }
       }

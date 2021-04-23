@@ -3,6 +3,7 @@ import { DerivationInstance, EmitterInstanceAlias, SinkInstance, SourceInstance 
 import { none, Option, some } from "fp-ts/lib/Option"
 import { left, right } from "fp-ts/lib/Either"
 import { makeDerivation } from "./orchestrate"
+import { PossiblyAsyncResult } from "@/patterns/async"
 
 export const defaultDerivationSeal = (
   { remainingUnsealedSources, aggregate }: { remainingUnsealedSources: Set<any>, aggregate: any }
@@ -12,20 +13,20 @@ export const defaultDerivationSeal = (
   aggregate
 })
 
-export const unaryDerivationConsumer = <In, Out, Aggregate>(mapper: (i: In, m: Aggregate) => { payload: Out[], aggregate: Aggregate }) => (
+export const unaryDerivationConsumer = <In, Out, Aggregate>(mapper: (i: In, m: Aggregate) => { output: PossiblyAsyncResult<Out>, aggregate: Aggregate }) => (
   { event, aggregate }: {
     event: In,
     aggregate: Aggregate
   }
 ) => {
   const {
-    payload,
+    output,
     aggregate: newAggregate
   } = mapper(event, aggregate)
 
   return {
     aggregate: newAggregate,
-    output: payload
+    output
   }
 }
 
