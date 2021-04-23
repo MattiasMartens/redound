@@ -4,7 +4,7 @@ import { Sink } from "@/types/abstract"
 
 export function consoleLogSinkPrototype<T>(
   name?: string
-): Sink<T, void> {
+): Sink<T, void, void> {
   return declareSimpleSink({
     open: noop,
     close: noop,

@@ -73,14 +73,13 @@ export type Derivation<DerivationSourceType extends Record<string, EmitterInstan
 }
 
 type Finalization = any
-type SinkOutput = any
-export type Sink<T, References> = {
+export type Sink<T, References, SinkResult> = {
   graphComponentType: "Sink",
   // TODO Define consumes/emits protocol
   consumes: Set<any>,
   consume: (e: T, r: References) => void | Promise<void>,
   open: () => References,
-  seal: (r: References) => SinkOutput | Promise<SinkOutput>,
+  seal: (r: References) => SinkResult | Promise<SinkResult>,
   close: (r: References, o: Outcome<any, Finalization>) => void | Promise<void>,
   name: string
 }
@@ -94,7 +93,7 @@ export type SealEvent = {
   member: any
 } | {
   graphComponentType: "Sink",
-  instance: SinkInstance<any, any>,
+  instance: SinkInstance<any, any, any>,
   result: any
 }
 
@@ -109,24 +108,24 @@ export type Controller<Finalization> = {
     sealEvent: SealEvent,
     domain: {
       sources: Set<SourceInstance<any, any>>,
-      sinks: Set<SinkInstance<any, any>>
+      sinks: Set<SinkInstance<any, any, any>>
     }
   ) => Promise<Option<Outcome<any, Finalization>>> | Option<Outcome<any, Finalization>>,
   rescue: (
     error: Error,
     event: Option<any>,
-    notifyingComponent: SourceInstance<any, any> | DerivationInstance<any, any, any> | SinkInstance<any, any>,
+    notifyingComponent: SourceInstance<any, any> | DerivationInstance<any, any, any> | SinkInstance<any, any, any>,
     domain: {
       sources: Set<SourceInstance<any, any>>,
-      sinks: Set<SinkInstance<any, any>>
+      sinks: Set<SinkInstance<any, any, any>>
     }
   ) => Promise<Option<Outcome<any, Finalization>>> | Outcome<any, Finalization>,
   taggedEvent: (
     event: any,
-    notifyingComponent: SourceInstance<any, any> | DerivationInstance<any, any, any> | SinkInstance<any, any>,
+    notifyingComponent: SourceInstance<any, any> | DerivationInstance<any, any, any> | SinkInstance<any, any, any>,
     domain: {
       sources: Set<SourceInstance<any, any>>,
-      sinks: Set<SinkInstance<any, any>>
+      sinks: Set<SinkInstance<any, any, any>>
     }
   ) => Promise<Option<Outcome<any, Finalization>>> | Option<Outcome<any, Finalization>>
 }

@@ -10,13 +10,14 @@ import { noopAsync } from '@/patterns/functions'
 import { pipe } from 'fp-ts/lib/function'
 import { ControlEvent, SealEvent, EndOfTagEvent } from '@/types/events'
 import { map } from 'fp-ts/lib/Option'
+import { defer } from '@/patterns/async'
 
 /**
  * TypeScript doesn't allow mixing inferred with optional
  * types, so this allows a simpler type declaration for a
  * Source.
  */
-export function declareSimpleSink<T, References>(sink: Omit<Sink<T, References>, 'graphComponentType'>) {
+export function declareSimpleSink<T, References, SinkResult>(sink: Omit<Sink<T, References, SinkResult>, 'graphComponentType'>) {
   // @ts-ignore
   sink.graphComponentType = "Sink"
   return Object.assign(
@@ -24,16 +25,18 @@ export function declareSimpleSink<T, References>(sink: Omit<Sink<T, References>,
     {
       graphComponentType: "Sink"
     }
-  ) as Sink<T, References>
+  ) as Sink<T, References, SinkResult>
 }
 
-export function instantiateSink<T, References,>(sink: Sink<T, References>, { id }: { id?: string } = {}): SinkInstance<T, References> {
+export function instantiateSink<T, References, SinkResult>(sink: Sink<T, References, SinkResult>, { id }: { id?: string } = {}): SinkInstance<T, References, SinkResult> {
   const tag = initializeTag(
     sink.name,
     id
   )
 
-  return {
+  const sinkResult = defer<SinkResult>()
+
+  const sinkInstance = {
     prototype: sink,
     latestTickByProvenance: new Map(),
     lifecycle: {
@@ -41,13 +44,35 @@ export function instantiateSink<T, References,>(sink: Sink<T, References>, { id 
     },
     references: some(sink.open()),
     controller: none,
+    sinkResult: () => sinkResult.promise,
+    async seal() {
+      const result = await sinkInstance.prototype.seal(
+        getSome(sinkInstance.references)
+      )
+      sinkInstance.lifecycle = { state: "SEALED" }
+
+      // TODO Same logic in other graph components
+      await pipe(
+        sinkInstance.controller,
+        fold(
+          noopAsync,
+          controller => controller.seal({
+            graphComponentType: sinkInstance.prototype.graphComponentType,
+            instance: sinkInstance,
+            result
+          })
+        )
+      )
+    },
     id: tag
-  }
+  } as SinkInstance<T, References, SinkResult>
+
+  return sinkInstance
 }
 
 export async function consume<T, MemberOrReferences>(
   source: GenericEmitterInstance<T, MemberOrReferences>,
-  sink: SinkInstance<T, any>,
+  sink: SinkInstance<T, any, any>,
   e: T | ControlEvent
 ) {
   if (sink.lifecycle.state === "ACTIVE") {
@@ -55,23 +80,7 @@ export async function consume<T, MemberOrReferences>(
       // TODO
       throw new Error("Not implemented")
     } else if (e === SealEvent) {
-      const result = await sink.prototype.seal(
-        getSome(sink.references)
-      )
-      sink.lifecycle = { state: "SEALED" }
-
-      // TODO Same logic in other graph components
-      await pipe(
-        sink.controller,
-        fold(
-          noopAsync,
-          controller => controller.seal({
-            graphComponentType: sink.prototype.graphComponentType,
-            instance: sink,
-            result
-          })
-        )
-      )
+      await sink.seal()
     } else {
       const references = getSome(sink.references)
       await sink.prototype.consume(e as T, references)
@@ -82,7 +91,7 @@ export async function consume<T, MemberOrReferences>(
 }
 
 export async function close<T, References, Finalization>(
-  sink: SinkInstance<T, References>,
+  sink: SinkInstance<T, References, any>,
   outcome: Outcome<T, Finalization>
 ) {
   if (sink.lifecycle.state !== "ENDED") {

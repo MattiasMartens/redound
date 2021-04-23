@@ -8,7 +8,7 @@ import { defaultControllerRescue, defaultControllerSeal, defaultControllerTagged
 import { close } from "./source"
 import { initializeTag } from "./tags"
 
-type ControllerReceiver = DerivationInstance<any, any, any> | SourceInstance<any, any> | SinkInstance<any, any>
+type ControllerReceiver = DerivationInstance<any, any, any> | SourceInstance<any, any> | SinkInstance<any, any, any>
 
 export async function propagateController(
   component: ControllerReceiver,
@@ -51,7 +51,7 @@ export function instantiateController<Finalization>(
   const outcomePromise = defer<Outcome<any, Finalization>>()
   const domain = {
     sources: new Set(sources),
-    sinks: new Set<SinkInstance<any, any>>()
+    sinks: new Set<SinkInstance<any, any, any>>()
   }
 
   const allSinksClosed = defer()
@@ -60,7 +60,7 @@ export function instantiateController<Finalization>(
     id: tag,
     outcome: none,
     awaitOutcome: () => outcomePromise.promise,
-    async rescue(error: Error, event: Option<any>, notifyingComponent: SourceInstance<any, any> | DerivationInstance<any, any, any> | SinkInstance<any, any>) {
+    async rescue(error: Error, event: Option<any>, notifyingComponent: SourceInstance<any, any> | DerivationInstance<any, any, any> | SinkInstance<any, any, any>) {
       pipe(
         await controller.rescue(error, event, notifyingComponent, domain),
         map(

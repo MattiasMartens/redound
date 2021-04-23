@@ -11,7 +11,7 @@ import {
 } from "./derivation"
 import { ControlEvent } from "@/types/events"
 
-export function consume<T, MemberOrReferences, Finalization>(
+export function consume<T, MemberOrReferences>(
   emitter: GenericEmitterInstance<T, MemberOrReferences>,
   consumer: GenericConsumerInstance<T, any>,
   event: T | ControlEvent
@@ -19,7 +19,7 @@ export function consume<T, MemberOrReferences, Finalization>(
   if (consumer.prototype.graphComponentType === "Sink") {
     return sinkConsume(
       emitter,
-      consumer as SinkInstance<T, MemberOrReferences>,
+      consumer as SinkInstance<T, MemberOrReferences, any>,
       event
     )
   } else if (consumer.prototype.graphComponentType === "Derivation") {
@@ -40,7 +40,7 @@ export function close<T, MemberOrReferences>(
 ) {
   if (consumer.prototype.graphComponentType === "Sink") {
     sinkClose(
-      consumer as SinkInstance<T, MemberOrReferences>,
+      consumer as SinkInstance<T, MemberOrReferences, any>,
       outcome
     )
   } else {

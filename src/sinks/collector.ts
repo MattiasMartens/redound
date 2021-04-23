@@ -4,7 +4,7 @@ import { Sink } from "@/types/abstract"
 
 export function eventCollectorPrototype<T>(
   name?: string
-): Sink<T, T[]> {
+): Sink<T, T[], T[]> {
   return declareSimpleSink({
     open: () => [] as T[],
     close: noop,

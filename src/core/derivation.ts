@@ -188,7 +188,7 @@ function genericConsume<T, MemberOrReferences>(
   if (consumer.prototype.graphComponentType === "Sink") {
     return sinkConsume(
       emitter,
-      consumer as SinkInstance<T, MemberOrReferences>,
+      consumer as SinkInstance<T, MemberOrReferences, any>,
       event
     )
   } else {

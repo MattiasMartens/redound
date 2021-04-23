@@ -48,7 +48,7 @@ export function defaultControllerSeal(
   sealEvent: SealEvent,
   domain: {
     sources: Set<SourceInstance<any, any>>,
-    sinks: Set<SinkInstance<any, any>>
+    sinks: Set<SinkInstance<any, any, any>>
   }
 ): Option<Outcome<any, any>> {
   if (sealEvent.graphComponentType === "Sink") {
