@@ -33,7 +33,10 @@ export type Source<T, References> = GenericEmitter<References> & {
     output?: PossiblyAsyncResult<T>
   },
   close: (r: References, o: Outcome<any, Finalization>) => void | Promise<void>,
-  pull?: (query: Query, r: References) => PossiblyAsyncResult<T>,
+  pull?: (query: Query, r: References) => Either<
+    Error,
+    PossiblyAsyncResult<T>
+  >,
   // Experiment -- mechanism to induce an effect upstream of
   // the source, using the event paradigm. In essence, in the
   // standard track, upstream data produces events. This

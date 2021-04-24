@@ -6,7 +6,7 @@ import {
 } from '@/types/abstract'
 import { PossiblyAsyncResult } from "@/patterns/async"
 import { SourceInstance, GenericConsumerInstance, DerivationInstance, GenericEmitterInstance, SinkInstance, EmitterInstanceAlias } from '@/types/instances'
-import { isSome, some } from 'fp-ts/lib/Option'
+import { fold, isSome, some } from 'fp-ts/lib/Option'
 import { none } from 'fp-ts/lib/Option'
 import { close as consumerClose } from './consumer'
 import {
@@ -17,7 +17,8 @@ import { propagateController } from './controller'
 import { getSome } from '@/patterns/options'
 import { applyToBackpressure, backpressure } from './backpressure'
 import { ControlEvent, EndOfTagEvent, SealEvent } from '@/types/events'
-import { Either } from 'fp-ts/lib/Either'
+import { Either, left } from 'fp-ts/lib/Either'
+import { pipe } from 'fp-ts/lib/function'
 
 export function* allSources(derivation: Record<string, EmitterInstanceAlias<any>>) {
   for (const role in derivation) {
@@ -261,6 +262,10 @@ function getSourceRole<SourceType extends Record<string, EmitterInstanceAlias<an
   throw new Error(`Emitter ${source.id} yielded event to derivation ${derivation.id} but no role had been registered for that emitter`)
 }
 
+const defaultCapabilities = {
+  push: () => left(new Error("No controller present, so push not supported")),
+  pull: () => left(new Error("No controller present, so pull not supported"))
+}
 
 export async function consume<T, MemberOrReferences>(
   source: GenericEmitterInstance<T, MemberOrReferences>,
@@ -308,7 +313,14 @@ export async function consume<T, MemberOrReferences>(
         event: e,
         aggregate: inAggregate,
         source,
-        role
+        role,
+        capabilities: pipe(
+          derivation.controller,
+          fold(
+            () => defaultCapabilities,
+            c => c.capabilities
+          )
+        )
       })
 
       derivation.aggregate = some(

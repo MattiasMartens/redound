@@ -3,14 +3,15 @@ import { forEachIterable } from "@/patterns/iterables"
 import { Controller, Outcome, SealEvent } from "@/types/abstract"
 import { ControllerInstance, DerivationInstance, SinkInstance, SourceInstance } from "@/types/instances"
 import { pipe } from "fp-ts/lib/function"
-import { isNone, map, none, Option, some } from "fp-ts/lib/Option"
+import { fold, fromNullable, isNone, map, none, Option, some } from "fp-ts/lib/Option"
 import { defaultControllerRescue, defaultControllerSeal, defaultControllerTaggedEvent } from "./helpers"
 import { close } from "./source"
 import { initializeTag } from "./tags"
 import {
   foldingGet
 } from "big-m"
-import { left, Left } from "fp-ts/lib/Either"
+import { left, map as mapRight } from "fp-ts/lib/Either"
+import { noop } from "@/patterns/functions"
 
 type ControllerReceiver = DerivationInstance<any, any, any> | SourceInstance<any, any> | SinkInstance<any, any, any>
 
@@ -80,23 +81,40 @@ export function instantiateController<Finalization>(
         () => left(new Error(`Role ${role} does not exist on source`))
       )
     },
-    // Object to pass to graph components, which should not receive the Promise
-    // returned by the Right outcome of a pull or push operation lest they await
-    // it and cause a (potential, pending event-tag tracking) deadlock.
+    // Object to pass to graph components, which should not receive the Promise returned by the Right outcome of a pull or push operation lest they await it and cause a (potential, pending event-tag tracking) deadlock.
     capabilities: {
       pull: (query, role) => {
         return foldingGet(
           domain.sourcesByRole,
           role,
-          source => source.pull ? source.pull(query) : left(new Error("Source does not have pull functionality")),
-          () => left(new Error(`Role ${role} does not exist on source`))
+          source => pipe(
+            source.pull,
+            fromNullable,
+            fold(
+              () => left(new Error("Source does not have pull functionality")),
+              pullFn => pipe(
+                pullFn(query),
+                mapRight(noop)
+              )
+            )
+          )
         )
       },
       push: (event, role) => {
         return foldingGet(
           domain.sourcesByRole,
           role,
-          source => source.pull ? source.pull(event) : left(new Error("Source does not have push functionality")),
+          source => pipe(
+            source.pull,
+            fromNullable,
+            fold(
+              () => left(new Error("Source does not have push functionality")),
+              pullFn => pipe(
+                pullFn(event),
+                mapRight(noop)
+              )
+            )
+          ),
           () => left(new Error(`Role ${role} does not exist on source`))
         )
       },

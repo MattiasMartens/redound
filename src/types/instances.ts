@@ -48,11 +48,7 @@ export type DerivationInstance<DerivationSourceType extends Record<string, Emitt
   consumers: Set<GenericConsumerInstance<T, any>>,
   backpressure: Backpressure,
   lifecycle: { state: "READY" | "ACTIVE" | "SEALED" } | { state: "ENDED", outcome: Outcome<T, Finalization> },
-  aggregate: Option<Aggregate>,
-  capabilities: {
-    push: (event: any, role: string) => Either<Error, void>,
-    pull: (query: any, role: string) => Either<Error, void>
-  }
+  aggregate: Option<Aggregate>
 } & DerivationVariation<DerivationSourceType, Aggregate>
 
 export type GenericEmitterInstance<T, MemberOrReferences> = SourceInstance<T, MemberOrReferences> | DerivationInstance<any, T, MemberOrReferences>

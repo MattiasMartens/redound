@@ -17,6 +17,9 @@ import { propagateController } from './controller'
 import { backpressure } from './backpressure'
 import { pipe } from 'fp-ts/lib/function'
 import { map } from 'fp-ts/lib/Option'
+import {
+  map as mapRight
+} from 'fp-ts/lib/Either'
 import { ControlEvent, SealEvent } from '@/types/events'
 import { getSome } from '@/patterns/options'
 
@@ -34,13 +37,19 @@ import { getSome } from '@/patterns/options'
  * types, so this allows a simpler type declaration for a
  * Source.
  */
-export function declareSimpleSource<T, References>(source: Omit<Source<T, References>, "graphComponentType" | "pull">) {
+export function declareSimpleSource<T, References>(source: Partial<Omit<Source<T, References>, "graphComponentType">>): Source<T, References> {
+  const nullSource = {
+    graphComponentType: "Source",
+    close: noop,
+    emits: new Set(),
+    generate: () => ({}),
+    name: "DefaultSource"
+  } as Source<T, References>
+
   return Object.assign(
-    source,
-    {
-      graphComponentType: "Source"
-    }
-  ) as Source<T, References>
+    nullSource,
+    source
+  )
 }
 
 export function instantiateSource<T, References>(source: Source<T, References>, { id, controller, role }: { id?: string, tick?: number, controller?: ControllerInstance<any>, role?: string } = {}): SourceInstance<T, References> {
@@ -62,7 +71,7 @@ export function instantiateSource<T, References>(source: Source<T, References>, 
     controller: controllerOption,
     id: tag,
     pull: source.pull ? (
-      async (query: Query) => {
+      (query: Query) => {
         if (sourceInstance.lifecycle.state === "READY" || sourceInstance.lifecycle.state === "SEALED" || sourceInstance.lifecycle.state === "ENDED") {
           throw new Error(`Attempted action pull() on source ${id} in incompatible lifecycle state: ${sourceInstance.lifecycle.state}`)
         }
@@ -72,25 +81,32 @@ export function instantiateSource<T, References>(source: Source<T, References>, 
           getSome(sourceInstance.references)
         )
 
-        try {
-          await iterateOverAsyncResult(
-            result,
-            event => voidPromiseIterable(
-              mapIterable(
-                sourceInstance.consumers,
-                async c => consume(sourceInstance, c, event)
-              )
-            ),
-            () => sourceInstance.lifecycle.state === "ENDED"
+        return pipe(
+          result,
+          mapRight(
+            async possiblyAsyncResult => {
+              try {
+                await iterateOverAsyncResult(
+                  possiblyAsyncResult,
+                  event => voidPromiseIterable(
+                    mapIterable(
+                      sourceInstance.consumers,
+                      async c => consume(sourceInstance, c, event)
+                    )
+                  ),
+                  () => sourceInstance.lifecycle.state === "ENDED"
+                )
+              } catch (e) {
+                pipe(
+                  sourceInstance.controller,
+                  map(
+                    c => c.rescue(e, none, sourceInstance)
+                  )
+                )
+              }
+            }
           )
-        } catch (e) {
-          pipe(
-            sourceInstance.controller,
-            map(
-              c => c.rescue(e, none, sourceInstance)
-            )
-          )
-        }
+        )
       }
     ) : undefined
   } as SourceInstance<T, References>

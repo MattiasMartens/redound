@@ -2,15 +2,16 @@ import {
   Outcome,
   Sink
 } from '@/types/abstract'
-import { SinkInstance, GenericEmitterInstance } from '@/types/instances'
+import { SinkInstance, GenericEmitterInstance, ControllerInstance } from '@/types/instances'
 import { getSome } from '@/patterns/options'
-import { fold, none, some } from 'fp-ts/lib/Option'
+import { fold, fromNullable, none, some } from 'fp-ts/lib/Option'
 import { initializeTag } from './tags'
 import { noopAsync } from '@/patterns/functions'
 import { pipe } from 'fp-ts/lib/function'
 import { ControlEvent, SealEvent, EndOfTagEvent } from '@/types/events'
 import { map } from 'fp-ts/lib/Option'
 import { defer } from '@/patterns/async'
+import { left } from 'fp-ts/lib/Either'
 
 /**
  * TypeScript doesn't allow mixing inferred with optional
@@ -28,7 +29,12 @@ export function declareSimpleSink<T, References, SinkResult>(sink: Omit<Sink<T, 
   ) as Sink<T, References, SinkResult>
 }
 
-export function instantiateSink<T, References, SinkResult>(sink: Sink<T, References, SinkResult>, { id }: { id?: string } = {}): SinkInstance<T, References, SinkResult> {
+const defaultCapabilities = {
+  push: () => left(new Error("No controller present, so push not supported")),
+  pull: () => left(new Error("No controller present, so pull not supported"))
+}
+
+export function instantiateSink<T, References, SinkResult>(sink: Sink<T, References, SinkResult>, { id, controller }: { id?: string, controller?: ControllerInstance<any> } = {}): SinkInstance<T, References, SinkResult> {
   const tag = initializeTag(
     sink.name,
     id
@@ -36,14 +42,24 @@ export function instantiateSink<T, References, SinkResult>(sink: Sink<T, Referen
 
   const sinkResult = defer<SinkResult>()
 
+  const sourceController = fromNullable(controller)
+
   const sinkInstance = {
     prototype: sink,
     latestTickByProvenance: new Map(),
     lifecycle: {
       state: "ACTIVE"
     },
-    references: some(sink.open()),
-    controller: none,
+    references: some(sink.open(
+      pipe(
+        sourceController,
+        fold(
+          () => defaultCapabilities,
+          c => c.capabilities
+        )
+      )
+    )),
+    controller: sourceController,
     sinkResult: () => sinkResult.promise,
     async seal() {
       const result = await sinkInstance.prototype.seal(
