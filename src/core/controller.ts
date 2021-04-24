@@ -7,6 +7,10 @@ import { isNone, map, none, Option, some } from "fp-ts/lib/Option"
 import { defaultControllerRescue, defaultControllerSeal, defaultControllerTaggedEvent } from "./helpers"
 import { close } from "./source"
 import { initializeTag } from "./tags"
+import {
+  foldingGet
+} from "big-m"
+import { left, Left } from "fp-ts/lib/Either"
 
 type ControllerReceiver = DerivationInstance<any, any, any> | SourceInstance<any, any> | SinkInstance<any, any, any>
 
@@ -41,7 +45,7 @@ export async function propagateController(
 
 export function instantiateController<Finalization>(
   controller: Controller<Finalization>,
-  { id, sources }: { id?: string, sources?: SourceInstance<any, any>[] } = {}
+  { id, sources, sourcesByRole }: { id?: string, sources?: SourceInstance<any, any>[], sourcesByRole?: Record<string, SourceInstance<any, any>> } = {}
 ): ControllerInstance<Finalization> {
   const tag = initializeTag(
     controller.name,
@@ -50,8 +54,9 @@ export function instantiateController<Finalization>(
 
   const outcomePromise = defer<Outcome<any, Finalization>>()
   const domain = {
-    sources: new Set(sources),
-    sinks: new Set<SinkInstance<any, any, any>>()
+    sources: new Set([...sources || [], ...Object.values(sourcesByRole || {})]),
+    sinks: new Set<SinkInstance<any, any, any>>(),
+    sourcesByRole: new Map(Object.entries(sourcesByRole || {}))
   }
 
   const allSinksClosed = defer()
@@ -59,6 +64,43 @@ export function instantiateController<Finalization>(
   const controllerInstance: ControllerInstance<Finalization> = {
     id: tag,
     outcome: none,
+    pull: (query, role) => {
+      return foldingGet(
+        domain.sourcesByRole,
+        role,
+        source => source.pull ? source.pull(query) : left(new Error("Source does not have pull functionality")),
+        () => left(new Error(`Role ${role} does not exist on source`))
+      )
+    },
+    push: (event, role) => {
+      return foldingGet(
+        domain.sourcesByRole,
+        role,
+        source => source.pull ? source.pull(event) : left(new Error("Source does not have push functionality")),
+        () => left(new Error(`Role ${role} does not exist on source`))
+      )
+    },
+    // Object to pass to graph components, which should not receive the Promise
+    // returned by the Right outcome of a pull or push operation lest they await
+    // it and cause a (potential, pending event-tag tracking) deadlock.
+    capabilities: {
+      pull: (query, role) => {
+        return foldingGet(
+          domain.sourcesByRole,
+          role,
+          source => source.pull ? source.pull(query) : left(new Error("Source does not have pull functionality")),
+          () => left(new Error(`Role ${role} does not exist on source`))
+        )
+      },
+      push: (event, role) => {
+        return foldingGet(
+          domain.sourcesByRole,
+          role,
+          source => source.pull ? source.pull(event) : left(new Error("Source does not have push functionality")),
+          () => left(new Error(`Role ${role} does not exist on source`))
+        )
+      },
+    },
     awaitOutcome: () => outcomePromise.promise,
     async rescue(error: Error, event: Option<any>, notifyingComponent: SourceInstance<any, any> | DerivationInstance<any, any, any> | SinkInstance<any, any, any>) {
       pipe(
@@ -91,9 +133,21 @@ export function instantiateController<Finalization>(
       )
     },
     registerSource(
-      sourceInstance
+      sourceInstance,
+      role?: string
     ) {
+      if (role !== undefined) {
+        if (domain.sourcesByRole.has(role)) {
+          if (domain.sourcesByRole.get(role) !== sourceInstance) {
+            throw new Error(`Tried to add source ${sourceInstance.id} to controller on role ${role} but it was already specified`)
+          }
+        } else {
+          domain.sourcesByRole.set(role, sourceInstance)
+        }
+      }
+
       domain.sources.add(sourceInstance)
+
       propagateController(
         sourceInstance,
         controllerInstance
@@ -115,6 +169,7 @@ export function instantiateController<Finalization>(
     },
     sources: domain.sources,
     sinks: domain.sinks,
+    sourcesByRole: domain.sourcesByRole,
     taggedEvent: () => {
       // TODO
       throw new Error("Not implemented")
@@ -128,7 +183,7 @@ export function instantiateController<Finalization>(
         allSinksClosed.resolve()
       }
     },
-    allSinksClosed: () => allSinksClosed.promise
+    allSinksClosed: () => allSinksClosed.promise,
   }
 
   forEachIterable(

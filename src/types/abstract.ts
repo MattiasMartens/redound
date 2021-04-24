@@ -14,7 +14,7 @@ export type Outcome<T, Finalization> = Either<{
   finalization: Finalization
 }>
 
-export type GenericEmitter<T, References> = {
+export type GenericEmitter<References> = {
   /** In general, it should be enforced that the type of instances of Event<T> is confined to the subtypes specified in `emits`. In TypeScript it is best to offer the ability to enforce it at runtime. */
   emits: Set<any>,
   close: (r: References, o: Outcome<any, Finalization>) => void | Promise<void>,
@@ -24,7 +24,7 @@ export type GenericEmitter<T, References> = {
 // TODO Finalize query semantics
 export type Query = any
 
-export type Source<T, References> = GenericEmitter<T, References> & {
+export type Source<T, References> = GenericEmitter<References> & {
   graphComponentType: "Source",
   generate: () => {
     // Can be omitted only if the type of References is `void`
@@ -38,7 +38,11 @@ export type Source<T, References> = GenericEmitter<T, References> & {
   // the source, using the event paradigm. In essence, in the
   // standard track, upstream data produces events. This
   // method would allow events to produce upstream data.
-  push?: (e: T) => Promise<T>
+  push?: (e: T) => Promise<T>,
+  // A Source can Push anything it can Emit by definition, but it might also 
+  // want to Push things it can't emit (e.g., a Data Access Object without an
+  // ID).
+  pushes?: Set<any>
 }
 
 type DerivationRole = string
@@ -48,19 +52,24 @@ export type SourceType = {
   named: Map<DerivationRole, GenericEmitterInstance<any, any>>
 }
 
-export type Derivation<DerivationSourceType extends Record<string, EmitterInstanceAlias<any>>, T, Aggregate> = GenericEmitter<T, Aggregate> & {
+export type Derivation<DerivationSourceType extends Record<string, EmitterInstanceAlias<any>>, T, Aggregate> = GenericEmitter<Aggregate> & {
   graphComponentType: "Derivation",
   derivationSpecies: "Relay" | "Transform",
   // TODO Define query protocol
   unroll: (aggregate: Aggregate, query: any) => PossiblyAsyncResult<T>,
   // TODO define consumes/emits protocol
   consumes: Set<any>,
+  emits: Set<any>,
   consume: <K extends keyof DerivationSourceType>(
     params: {
       event: PayloadTypeOf<DerivationSourceType[K]>,
       aggregate: Aggregate,
       source: GenericEmitterInstance<any, unknown>,
-      role: K
+      role: K,
+      capabilities: {
+        push: (event: any, role: string) => Either<Error, void>,
+        pull: (query: any, role: string) => Either<Error, void>
+      }
     }
   ) => {
     aggregate: Aggregate,
@@ -80,8 +89,16 @@ export type Sink<T, References, SinkResult> = {
   graphComponentType: "Sink",
   // TODO Define consumes/emits protocol
   consumes: Set<any>,
-  consume: (e: T, r: References) => void | Promise<void>,
-  open: () => References,
+  consume: (e: T, r: References, capabilities: {
+    push: (event: any, role: string) => Either<Error, void>,
+    pull: (query: any, role: string) => Either<Error, void>
+  }) => void | Promise<void>,
+  open: (
+    capabilities: {
+      push: (event: any, role: string) => Either<Error, void>,
+      pull: (query: any, role: string) => Either<Error, void>
+    }
+  ) => References,
   seal: (r: References) => SinkResult | Promise<SinkResult>,
   close: (r: References, o: Outcome<any, Finalization>) => void | Promise<void>,
   name: string

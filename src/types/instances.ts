@@ -1,7 +1,7 @@
 import { Option } from "fp-ts/lib/Option"
 import { Derivation, Outcome, Query, SealEvent, Sink, Source } from "./abstract"
 import { Backpressure } from "@/core/backpressure"
-import { PossiblyAsyncResult } from "@/patterns/async"
+import { Either } from "fp-ts/lib/Either"
 
 export type GenericConsumerInstance<T, MemberOrReferences> = SinkInstance<T, MemberOrReferences, any> | DerivationInstance<any, any, MemberOrReferences>
 
@@ -19,7 +19,10 @@ export type SourceInstance<T, References> = {
   pull?: (
     query: Query
     // TODO Tag
-  ) => Promise<void>
+  ) => Either<Error, Promise<void>>,
+  push?: (
+    event: any
+  ) => Either<Error, Promise<void>>
 }
 
 export type EmitterInstanceAlias<T> = SourceInstance<T, any> | DerivationInstance<any, T, any>
@@ -45,7 +48,11 @@ export type DerivationInstance<DerivationSourceType extends Record<string, Emitt
   consumers: Set<GenericConsumerInstance<T, any>>,
   backpressure: Backpressure,
   lifecycle: { state: "READY" | "ACTIVE" | "SEALED" } | { state: "ENDED", outcome: Outcome<T, Finalization> },
-  aggregate: Option<Aggregate>
+  aggregate: Option<Aggregate>,
+  capabilities: {
+    push: (event: any, role: string) => Either<Error, void>,
+    pull: (query: any, role: string) => Either<Error, void>
+  }
 } & DerivationVariation<DerivationSourceType, Aggregate>
 
 export type GenericEmitterInstance<T, MemberOrReferences> = SourceInstance<T, MemberOrReferences> | DerivationInstance<any, T, MemberOrReferences>
@@ -61,12 +68,19 @@ export type SinkInstance<T, References, SinkResult> = {
   sinkResult: () => Promise<SinkResult>,
   // Initialized to 'Some' on first subscription event,
   // reverted to 'None' once closed.
-  references: Option<References>
+  references: Option<References>,
+  capabilities: {
+    push: (event: any, role: string) => Either<Error, void>,
+    pull: (query: any, role: string) => Either<Error, void>
+  }
 }
 
 export type ControllerInstance<Finalization> = {
   sources: Set<SourceInstance<any, any>>,
+  sourcesByRole: Map<string, SourceInstance<any, any>>,
   sinks: Set<SinkInstance<any, any, any>>,
+  push: (event: any, role: string) => Either<Error, Promise<void>>,
+  pull: (query: any, role: string) => Either<Error, Promise<void>>
   seal: (
     sealEvent: SealEvent
   ) => Promise<void>,
@@ -90,7 +104,12 @@ export type ControllerInstance<Finalization> = {
   // TODO: Maybe it should?
   allSinksClosed: () => Promise<void>,
   registerSource: (
-    sourceInstance: SourceInstance<any, any>
+    sourceInstance: SourceInstance<any, any>,
+    role?: string
   ) => void,
+  capabilities: {
+    push: (event: any, role: string) => Either<Error, void>,
+    pull: (query: any, role: string) => Either<Error, void>
+  },
   id: string
 }

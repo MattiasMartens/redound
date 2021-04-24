@@ -17,6 +17,7 @@ import { propagateController } from './controller'
 import { getSome } from '@/patterns/options'
 import { applyToBackpressure, backpressure } from './backpressure'
 import { ControlEvent, EndOfTagEvent, SealEvent } from '@/types/events'
+import { Either } from 'fp-ts/lib/Either'
 
 export function* allSources(derivation: Record<string, EmitterInstanceAlias<any>>) {
   for (const role in derivation) {

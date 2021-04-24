@@ -43,7 +43,7 @@ export function declareSimpleSource<T, References>(source: Omit<Source<T, Refere
   ) as Source<T, References>
 }
 
-export function instantiateSource<T, References>(source: Source<T, References>, { id, controller }: { id?: string, tick?: number, controller?: ControllerInstance<any> } = {}): SourceInstance<T, References> {
+export function instantiateSource<T, References>(source: Source<T, References>, { id, controller, role }: { id?: string, tick?: number, controller?: ControllerInstance<any>, role?: string } = {}): SourceInstance<T, References> {
   const tag = initializeTag(
     source.name,
     id
@@ -98,7 +98,7 @@ export function instantiateSource<T, References>(source: Source<T, References>, 
   pipe(
     controllerOption,
     map(
-      controller => controller.registerSource(sourceInstance)
+      controller => controller.registerSource(sourceInstance, role)
     )
   )
 

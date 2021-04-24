@@ -85,7 +85,7 @@ export async function consume<T, MemberOrReferences>(
     } else {
       const references = getSome(sink.references)
       try {
-        await sink.prototype.consume(event as T, references)
+        await sink.prototype.consume(event as T, references, sink.capabilities)
       } catch (e) {
         await pipe(
           sink.controller,
