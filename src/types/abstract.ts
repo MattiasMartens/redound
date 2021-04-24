@@ -21,6 +21,9 @@ export type GenericEmitter<T, References> = {
   name: string
 }
 
+// TODO Finalize query semantics
+export type Query = any
+
 export type Source<T, References> = GenericEmitter<T, References> & {
   graphComponentType: "Source",
   generate: () => {
@@ -30,7 +33,7 @@ export type Source<T, References> = GenericEmitter<T, References> & {
     output?: PossiblyAsyncResult<T>
   },
   close: (r: References, o: Outcome<any, Finalization>) => void | Promise<void>,
-  pull?: (query: Record<string, string>, r: References) => PossiblyAsyncResult<T>,
+  pull?: (query: Query, r: References) => PossiblyAsyncResult<T>,
   // Experiment -- mechanism to induce an effect upstream of
   // the source, using the event paradigm. In essence, in the
   // standard track, upstream data produces events. This

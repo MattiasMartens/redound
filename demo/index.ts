@@ -1,8 +1,6 @@
 import { makeController, makeSource } from "@/core"
-import { applyToBackpressure, backpressure } from "@/core/backpressure"
 import { makeSink, makeUnaryDerivation } from "@/core"
 import { mappedDerivationPrototype } from "@/derivations"
-import { ms } from "@/patterns/async"
 import { getSome } from "@/patterns/options"
 import { consoleLogSinkPrototype } from "@/sinks/console-logger"
 import { iterableSourcePrototype } from "@/sources/iterable"

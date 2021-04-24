@@ -74,17 +74,33 @@ export function instantiateSink<T, References, SinkResult>(sink: Sink<T, Referen
 export async function consume<T, MemberOrReferences>(
   source: GenericEmitterInstance<T, MemberOrReferences>,
   sink: SinkInstance<T, any, any>,
-  e: T | ControlEvent
+  event: T | ControlEvent
 ) {
   if (sink.lifecycle.state === "ACTIVE") {
-    if (e === EndOfTagEvent) {
+    if (event === EndOfTagEvent) {
       // TODO
       throw new Error("Not implemented")
-    } else if (e === SealEvent) {
+    } else if (event === SealEvent) {
       await sink.seal()
     } else {
       const references = getSome(sink.references)
-      await sink.prototype.consume(e as T, references)
+      try {
+        await sink.prototype.consume(event as T, references)
+      } catch (e) {
+        await pipe(
+          sink.controller,
+          fold(
+            async () => {
+              // TODO Error is suppressed but the programmer should still be notified somehow?
+            },
+            c => c.rescue(
+              e,
+              some(event),
+              sink
+            )
+          )
+        )
+      }
     }
   } else {
     throw new Error(`Attempted action consume() on sink ${sink.id} in incompatible lifecycle state: ${source.lifecycle.state}`)

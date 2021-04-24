@@ -1,6 +1,7 @@
 import { Option } from "fp-ts/lib/Option"
-import { Derivation, Outcome, SealEvent, Sink, Source } from "./abstract"
+import { Derivation, Outcome, Query, SealEvent, Sink, Source } from "./abstract"
 import { Backpressure } from "@/core/backpressure"
+import { PossiblyAsyncResult } from "@/patterns/async"
 
 export type GenericConsumerInstance<T, MemberOrReferences> = SinkInstance<T, MemberOrReferences, any> | DerivationInstance<any, any, MemberOrReferences>
 
@@ -14,7 +15,11 @@ export type SourceInstance<T, References> = {
   lifecycle: { state: "READY" | "ACTIVE" | "SEALED" } | { state: "ENDED", outcome: Outcome<T, Finalization> },
   // Initialized to 'Some' on first subscription event,
   // reverted to 'None' once closed.
-  references: Option<References>
+  references: Option<References>,
+  pull?: (
+    query: Query
+    // TODO Tag
+  ) => Promise<void>
 }
 
 export type EmitterInstanceAlias<T> = SourceInstance<T, any> | DerivationInstance<any, T, any>

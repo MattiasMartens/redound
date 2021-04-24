@@ -2,6 +2,7 @@ import { iterateOverAsyncResult, voidPromiseIterable, wrapAsync } from '@/patter
 import { forEachIterable, mapIterable } from '@/patterns/iterables'
 import {
   Outcome,
+  Query,
   Source
 } from '@/types/abstract'
 import { SourceInstance, GenericConsumerInstance, ControllerInstance } from '@/types/instances'
@@ -16,8 +17,8 @@ import { propagateController } from './controller'
 import { backpressure } from './backpressure'
 import { pipe } from 'fp-ts/lib/function'
 import { map } from 'fp-ts/lib/Option'
-import { ControlEvent, SealEvent, EndOfTagEvent } from '@/types/events'
-import { v4 } from 'uuid'
+import { ControlEvent, SealEvent } from '@/types/events'
+import { getSome } from '@/patterns/options'
 
 // Dependency Map:
 // source imports sink
@@ -59,7 +60,39 @@ export function instantiateSource<T, References>(source: Source<T, References>, 
     references: none,
     backpressure: backpressure(),
     controller: controllerOption,
-    id: tag
+    id: tag,
+    pull: source.pull ? (
+      async (query: Query) => {
+        if (sourceInstance.lifecycle.state === "READY" || sourceInstance.lifecycle.state === "SEALED" || sourceInstance.lifecycle.state === "ENDED") {
+          throw new Error(`Attempted action pull() on source ${id} in incompatible lifecycle state: ${sourceInstance.lifecycle.state}`)
+        }
+
+        const result = source.pull!(
+          query,
+          getSome(sourceInstance.references)
+        )
+
+        try {
+          await iterateOverAsyncResult(
+            result,
+            event => voidPromiseIterable(
+              mapIterable(
+                sourceInstance.consumers,
+                async c => consume(sourceInstance, c, event)
+              )
+            ),
+            () => sourceInstance.lifecycle.state === "ENDED"
+          )
+        } catch (e) {
+          pipe(
+            sourceInstance.controller,
+            map(
+              c => c.rescue(e, none, sourceInstance)
+            )
+          )
+        }
+      }
+    ) : undefined
   } as SourceInstance<T, References>
 
   pipe(
@@ -77,7 +110,7 @@ export async function emit<T, References>(
   event: T | ControlEvent
 ) {
   if (source.lifecycle.state === "ACTIVE") {
-    voidPromiseIterable(
+    return voidPromiseIterable(
       mapIterable(
         source.consumers,
         async c => consume(source, c, event)
