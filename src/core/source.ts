@@ -43,7 +43,7 @@ export function declareSimpleSource<T, References>(source: Partial<Omit<Source<T
     close: noop,
     emits: new Set(),
     generate: () => ({}),
-    name: "DefaultSource"
+    name: "AnonymousSource"
   } as Source<T, References>
 
   return Object.assign(
@@ -88,12 +88,24 @@ export function instantiateSource<T, References>(source: Source<T, References>, 
               try {
                 await iterateOverAsyncResult(
                   possiblyAsyncResult,
-                  event => voidPromiseIterable(
-                    mapIterable(
-                      sourceInstance.consumers,
-                      async c => consume(sourceInstance, c, event)
+                  event => {
+                    // This is intentionally framed as a hack.
+                    // Why?
+                    // When a query is fulfilled, there are cases where an implementation may want to finalize events for the source as a whole and confirm that no more events will be emitted.
+                    // However, these cases are so rare that we do not want to create the impression for users that emitting Seal Events from pull implementations is standard.
+                    if ((event as any) === SealEvent) {
+                      return seal(sourceInstance)
+                    }
+
+                    return voidPromiseIterable(
+                      mapIterable(
+                        sourceInstance.consumers,
+                        async c => {
+                          consume(sourceInstance, c, event)
+                        }
+                      )
                     )
-                  ),
+                  },
                   () => sourceInstance.lifecycle.state === "ENDED"
                 )
               } catch (e) {
@@ -217,12 +229,14 @@ export function seal<T, References>(
   if (source.lifecycle.state === "ACTIVE") {
     source.lifecycle.state = "SEALED"
 
-    forEachIterable(
-      source.consumers,
-      consumer => consume(
-        source,
-        consumer,
-        SealEvent
+    return voidPromiseIterable(
+      mapIterable(
+        source.consumers,
+        consumer => consume(
+          source,
+          consumer,
+          SealEvent
+        )
       )
     )
   } else if (source.lifecycle.state === "ENDED") {

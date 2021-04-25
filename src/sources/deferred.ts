@@ -1,5 +1,9 @@
-import { close, declareSimpleSource } from "@/core/source";
+import { makeSink } from "@/core";
+import { declareSimpleSink } from "@/core/sink";
+import { close, declareSimpleSource, seal } from "@/core/source";
+import { chainAsyncResults } from "@/patterns/async";
 import { pick } from "@/patterns/functions";
+import { SealEvent } from "@/types/events";
 import { SourceInstance } from "@/types/instances";
 import { right, left } from "fp-ts/lib/Either";
 import { pipe } from "fp-ts/lib/function";
@@ -10,7 +14,7 @@ export function deferredSource(
   sourceProducingFunction: (query: any) => SourceInstance<any, any>,
   name?: string
 ) {
-  return declareSimpleSource(
+  const deferredSourceInstance = declareSimpleSource(
     {
       name: name ?? "Deferred",
       emits: new Set(/** TODO */),
@@ -45,9 +49,12 @@ export function deferredSource(
                 output
               } = newSource.prototype.generate()
 
-              // TODO The deferred source should seal itself when the inner source seals. This could be done with an inner sink that just waits for the seal control event.
-
-              return right(output)
+              return right(
+                chainAsyncResults(
+                  output,
+                  SealEvent as any
+                )
+              )
             },
             () => left(new Error("Attempted to initialize inner source of deferred source after it had already been initialized"))
           )
@@ -55,4 +62,6 @@ export function deferredSource(
       }
     }
   )
+
+  return deferredSourceInstance
 }

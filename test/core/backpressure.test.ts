@@ -2,26 +2,15 @@ import { applyToBackpressure, backpressure } from "@/core/backpressure"
 import { ms } from "@/patterns/async"
 
 import * as expectations from './expectations.meta'
-import { expectationTestAsync } from '@test/helpers'
+import { expectationTestAsync, eventual } from '@test/helpers'
 
 import {
   useFakeTimers,
-  reset,
-  SinonFakeTimers
+
+  SinonFakeTimers,
+  restore
 } from 'sinon'
 import { tupleFirst } from "@/sources"
-
-async function eventual<T>(fn: () => Promise<T>) {
-  const promise = fn()
-  clock.tick(100000)
-
-  const clockRunPromise = clock && clock.runAllAsync()
-  const tuple = await Promise.all([
-    promise,
-    clockRunPromise
-  ])
-  return tupleFirst(tuple)
-}
 
 let clock: SinonFakeTimers
 describe("backpressure", () => {
@@ -30,7 +19,7 @@ describe("backpressure", () => {
   it("Always executes Promises in order and never commences one Promise function while another is still executing", () => expectationTestAsync(
     expectations,
     "sequential",
-    () => eventual(async () => {
+    () => eventual(clock, async () => {
       const seq: {
         id: number,
         state: "COMMENCING" | "COMPLETED"
@@ -79,5 +68,5 @@ describe("backpressure", () => {
     }))
   )
 
-  after(() => reset())
+  after(() => restore())
 })

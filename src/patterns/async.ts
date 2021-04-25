@@ -54,7 +54,10 @@ export async function wrapAsync<T>(fn: () => T | Promise<T>) {
 
 export function ms(milliseconds = 0) {
   return new Promise((resolve) => {
-    setTimeout(resolve, milliseconds)
+    setTimeout(
+      resolve,
+      milliseconds
+    )
   })
 }
 
@@ -128,6 +131,26 @@ export async function iterateOverAsyncResult<T>(
       }
     } else {
       await consumer(awaited as T)
+    }
+  }
+}
+
+export async function* chainAsyncResults<T>(
+  ...results: PossiblyAsyncResult<T>[]
+) {
+  for (const result of results) {
+    if (result === undefined) {
+      // noop
+    } else if (Symbol.asyncIterator in result) {
+      yield* (result as AsyncIterable<T>)
+    } else {
+      const awaited = await result
+
+      if (Symbol.iterator in result) {
+        yield* (result as Iterable<T>)
+      } else {
+        yield awaited
+      }
     }
   }
 }

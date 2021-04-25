@@ -6,7 +6,7 @@ import { SinkInstance, GenericEmitterInstance, ControllerInstance } from '@/type
 import { getSome } from '@/patterns/options'
 import { fold, fromNullable, none, some } from 'fp-ts/lib/Option'
 import { initializeTag } from './tags'
-import { noopAsync } from '@/patterns/functions'
+import { noop, noopAsync } from '@/patterns/functions'
 import { pipe } from 'fp-ts/lib/function'
 import { ControlEvent, SealEvent, EndOfTagEvent } from '@/types/events'
 import { map } from 'fp-ts/lib/Option'
@@ -18,15 +18,21 @@ import { left } from 'fp-ts/lib/Either'
  * types, so this allows a simpler type declaration for a
  * Source.
  */
-export function declareSimpleSink<T, References, SinkResult>(sink: Omit<Sink<T, References, SinkResult>, 'graphComponentType'>) {
+export function declareSimpleSink<T, References, SinkResult>(sink: Partial<Omit<Sink<T, References, SinkResult>, 'graphComponentType'>>): Sink<T, References, SinkResult> {
   // @ts-ignore
   sink.graphComponentType = "Sink"
   return Object.assign(
-    sink,
     {
-      graphComponentType: "Sink"
-    }
-  ) as Sink<T, References, SinkResult>
+      graphComponentType: "Sink",
+      close: noop,
+      consume: noop,
+      seal: noop,
+      consumes: new Set(),
+      name: "AnonymousSink",
+      open: noop
+    } as Sink<any, any, any>,
+    sink
+  )
 }
 
 const defaultCapabilities = {

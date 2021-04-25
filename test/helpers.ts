@@ -2,8 +2,9 @@ import { Possible } from "@/types/patterns"
 import {
   deepStrictEqual
 } from "assert"
-import { iterableSourcePrototype, UnaryDerivation, makeUnaryDerivation, makeSource, makeSink, eventCollectorPrototype, makeController } from "@/index"
+import { iterableSourcePrototype, UnaryDerivation, makeUnaryDerivation, makeSource, makeSink, eventCollectorPrototype, makeController, tupleFirst } from "@/index"
 import { PossiblyAsyncResult } from "@/patterns/async"
+import Sinon = require("sinon")
 
 export function expectationTest<T>(expectationsImport: any, scenarioKey: string, fn: () => T) {
   const generated = expectationsImport[scenarioKey] as Possible<T>
@@ -49,4 +50,24 @@ export function getDerivationEmitted<I, O>(
   )
 
   return sink.sinkResult()
+}
+
+export function unaryCapture<T>() {
+  const captured = [] as T[]
+
+  return {
+    capture: (t: T) => void captured.push(t),
+    captured
+  }
+}
+
+export async function eventual<T>(clock: Sinon.SinonFakeTimers, fn: () => Promise<T>) {
+  const promise = fn()
+
+  const clockRunPromise = clock && clock.runAllAsync()
+  const tuple = await Promise.all([
+    promise,
+    clockRunPromise
+  ])
+  return tupleFirst(tuple)
 }

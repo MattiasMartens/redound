@@ -11,7 +11,7 @@ export type Backpressure = ReturnType<typeof backpressure>
 function cycleBackpressure(backpressure: Backpressure) {
   if (backpressure.queue.length) {
     const promiseFn = backpressure.queue.shift()!
-    backpressure.holder = promiseFn()
+    backpressure.holder = promiseFn();
   } else {
     backpressure.holder = undefined
   }
