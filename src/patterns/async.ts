@@ -61,8 +61,6 @@ export function ms(milliseconds = 0) {
   })
 }
 
-export type PossiblyAsyncResult<T> = undefined | void | Promise<void | T> | Iterable<T | Promise<T>> | Promise<Iterable<T | Promise<T>>> | AsyncIterable<T> | AsyncIterable<T> | Generator<T> | AsyncGenerator<T>
-
 export function isPromise(p: any): p is Promise<any> {
   if (p === null || p === undefined) {
     return false
@@ -70,6 +68,8 @@ export function isPromise(p: any): p is Promise<any> {
     return ("then" in p) && (typeof p === "function")
   }
 }
+
+export type PossiblyAsyncResult<T> = undefined | void | Promise<void | T> | Iterable<T | Promise<T>> | Promise<Iterable<T | Promise<T>>> | AsyncIterable<T> | AsyncIterable<T> | Generator<T> | AsyncGenerator<T>
 
 /**
  * @param result A value, Iterable of values, mixed Iterable of values and Promises of values, Async Iterable, or Promise wrapping any of the above.
@@ -137,7 +137,7 @@ export async function iterateOverAsyncResult<T>(
 
 export async function* chainAsyncResults<T>(
   ...results: PossiblyAsyncResult<T>[]
-) {
+): PossiblyAsyncResult<T> {
   for (const result of results) {
     if (result === undefined) {
       // noop
@@ -146,9 +146,12 @@ export async function* chainAsyncResults<T>(
     } else {
       const awaited = await result
 
-      if (Symbol.iterator in result) {
-        yield* (result as Iterable<T>)
+      if (awaited === undefined) {
+        // noop
+      } else if (Symbol.iterator in awaited) {
+        yield* (awaited as Iterable<T>)
       } else {
+        console.log(awaited)
         yield awaited
       }
     }

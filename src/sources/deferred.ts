@@ -52,7 +52,7 @@ export function deferredSource(
               return right(
                 chainAsyncResults(
                   output,
-                  SealEvent as any
+                  [SealEvent] as any
                 )
               )
             },
