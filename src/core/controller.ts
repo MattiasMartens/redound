@@ -65,11 +65,11 @@ export function instantiateController<Finalization>(
   const controllerInstance: ControllerInstance<Finalization> = {
     id: tag,
     outcome: none,
-    pull: (query, role) => {
+    pull: ({ query, role, tag }) => {
       return foldingGet(
         domain.sourcesByRole,
         role,
-        source => source.pull ? source.pull(query) : left(new Error("Source does not have pull functionality")),
+        source => source.pull ? source.pull(query, tag) : left(new Error("Source does not have pull functionality")),
         () => left(new Error(`Role ${role} does not exist on source`))
       )
     },

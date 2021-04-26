@@ -96,7 +96,8 @@ export function instantiateSink<T, References, SinkResult>(sink: Sink<T, Referen
 export async function consume<T, MemberOrReferences>(
   source: GenericEmitterInstance<T, MemberOrReferences>,
   sink: SinkInstance<T, any, any>,
-  event: T | ControlEvent
+  event: T | ControlEvent,
+  tag?: string
 ) {
   if (sink.lifecycle.state === "ACTIVE") {
     if (event === EndOfTagEvent) {

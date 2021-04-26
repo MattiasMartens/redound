@@ -146,10 +146,8 @@ export async function* chainAsyncResults<T>(
 
       if (awaited === undefined) {
         // noop
-      } else if (Symbol.iterator in awaited) {
-        yield* (awaited as Iterable<T>)
       } else {
-        yield awaited
+        yield* (awaited as Iterable<T>)
       }
     }
   }

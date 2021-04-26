@@ -17,8 +17,8 @@ export type SourceInstance<T, References> = {
   // reverted to 'None' once closed.
   references: Option<References>,
   pull?: (
-    query: Query
-    // TODO Tag
+    query: Query,
+    tag?: string
   ) => Either<Error, Promise<void>>,
   push?: (
     event: any
@@ -76,9 +76,16 @@ export type ControllerInstance<Finalization> = {
   sourcesByRole: Map<string, SourceInstance<any, any>>,
   sinks: Set<SinkInstance<any, any, any>>,
   push: (event: any, role: string) => Either<Error, Promise<void>>,
-  pull: (query: any, role: string) => Either<Error, Promise<void>>
+  pull: (params: {
+    query: any,
+    role: string,
+    tag?: string
+  }) => Either<Error, Promise<void>>,
   seal: (
     sealEvent: SealEvent
+  ) => Promise<void>,
+  querySeal: (
+    sealEvent: QuerySealEvent
   ) => Promise<void>,
   rescue: (
     error: Error,

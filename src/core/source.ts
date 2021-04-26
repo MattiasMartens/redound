@@ -20,7 +20,7 @@ import { map } from 'fp-ts/lib/Option'
 import {
   map as mapRight
 } from 'fp-ts/lib/Either'
-import { ControlEvent, SealEvent } from '@/types/events'
+import { ControlEvent, EndOfTagEvent, SealEvent } from '@/types/events'
 import { getSome } from '@/patterns/options'
 
 // Dependency Map:
@@ -101,13 +101,25 @@ export function instantiateSource<T, References>(source: Source<T, References>, 
                       mapIterable(
                         sourceInstance.consumers,
                         async c => {
-                          consume(sourceInstance, c, event)
+                          consume(sourceInstance, c, event, tag)
                         }
                       )
                     )
                   },
                   () => sourceInstance.lifecycle.state === "ENDED"
                 )
+
+                // Emit query finalization event
+                if (sourceInstance.lifecycle.state !== "ENDED") {
+                  voidPromiseIterable(
+                    mapIterable(
+                      sourceInstance.consumers,
+                      async c => {
+                        consume(sourceInstance, c, EndOfTagEvent, tag)
+                      }
+                    )
+                  )
+                }
               } catch (e) {
                 pipe(
                   sourceInstance.controller,

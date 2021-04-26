@@ -14,19 +14,22 @@ import { ControlEvent } from "@/types/events"
 export function consume<T, MemberOrReferences>(
   emitter: GenericEmitterInstance<T, MemberOrReferences>,
   consumer: GenericConsumerInstance<T, any>,
-  event: T | ControlEvent
+  event: T | ControlEvent,
+  tag?: string
 ) {
   if (consumer.prototype.graphComponentType === "Sink") {
     return sinkConsume(
       emitter,
       consumer as SinkInstance<T, MemberOrReferences, any>,
-      event
+      event,
+      tag
     )
   } else if (consumer.prototype.graphComponentType === "Derivation") {
     return derivationConsume(
       emitter,
       consumer as DerivationInstance<any, any, MemberOrReferences>,
-      event
+      event,
+      tag
     )
   } else {
     throw new Error(`Attempted consume on illegal graph component with ID ${consumer.id} and type ${(consumer.prototype as any).graphComponentType}`)
