@@ -1,17 +1,17 @@
 import { makeSink, makeSource } from "@/core"
-import { eventCollectorPrototype } from "@/sinks"
-import { iterableSourcePrototype } from "@/sources"
+import { eventCollectorSink } from "@/sinks"
+import { iterableSource } from "@/sources"
 import {
   deepStrictEqual
 } from 'assert'
 
 describe(
-  "iterableSourcePrototype",
+  "iterableSource",
   () => {
     it("Emits data from an Array", async () => {
-      const source = makeSource(iterableSourcePrototype(["A", "B", "C"]))
+      const source = makeSource(iterableSource(["A", "B", "C"]))
       const sink = makeSink(
-        eventCollectorPrototype(),
+        eventCollectorSink(),
         source
       )
 

@@ -151,7 +151,6 @@ export async function* chainAsyncResults<T>(
       } else if (Symbol.iterator in awaited) {
         yield* (awaited as Iterable<T>)
       } else {
-        console.log(awaited)
         yield awaited
       }
     }

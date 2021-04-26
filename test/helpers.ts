@@ -2,7 +2,7 @@ import { Possible } from "@/types/patterns"
 import {
   deepStrictEqual
 } from "assert"
-import { iterableSourcePrototype, UnaryDerivation, makeUnaryDerivation, makeSource, makeSink, eventCollectorPrototype, makeController, tupleFirst } from "@/index"
+import { iterableSource, UnaryDerivation, makeUnaryDerivation, makeSource, makeSink, eventCollectorSink, makeController, tupleFirst } from "@/index"
 import { PossiblyAsyncResult } from "@/patterns/async"
 import Sinon = require("sinon")
 
@@ -38,14 +38,14 @@ export function getDerivationEmitted<I, O>(
     }
   )
 
-  const sourceInstance = makeSource(iterableSourcePrototype(input), { controller: controllerInstance })
+  const sourceInstance = makeSource(iterableSource(input), { controller: controllerInstance })
   const derivationInstance = makeUnaryDerivation(
     derivation,
     sourceInstance
   )
 
   const sink = makeSink(
-    eventCollectorPrototype(),
+    eventCollectorSink(),
     derivationInstance
   )
 

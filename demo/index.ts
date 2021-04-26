@@ -1,21 +1,21 @@
 import { makeController, makeSource } from "@/core"
 import { makeSink, makeUnaryDerivation } from "@/core"
-import { mappedDerivationPrototype } from "@/derivations"
+import { mappedDerivation } from "@/derivations"
 import { getSome } from "@/patterns/options"
-import { consoleLogSinkPrototype } from "@/sinks/console-logger"
-import { iterableSourcePrototype } from "@/sources/iterable"
-import { manualSourcePrototype } from "@/sources/manual"
+import { consoleLogSink } from "@/sinks/console-logger"
+import { iterableSource } from "@/sources/iterable"
+import { manualSource } from "@/sources/manual"
 
 export function mainA() {
   const controller = makeController()
 
   const sourceInstance = makeSource(
-    manualSourcePrototype(),
+    manualSource(),
     { controller }
   )
 
   makeSink(
-    consoleLogSinkPrototype(),
+    consoleLogSink(),
     sourceInstance
   )
 
@@ -36,12 +36,12 @@ export function mainB() {
   const controller = makeController()
 
   const sourceInstance = makeSource(
-    iterableSourcePrototype(["Hello world B!"]),
+    iterableSource(["Hello world B!"]),
     { controller }
   )
 
   makeSink(
-    consoleLogSinkPrototype(),
+    consoleLogSink(),
     sourceInstance
   )
 
@@ -52,21 +52,21 @@ export function mainC() {
   const controller = makeController()
 
   const sourceInstance = makeSource(
-    iterableSourcePrototype([5, 8, 13]),
+    iterableSource([5, 8, 13]),
     {
       controller
     }
   )
 
   const derivationInstance = makeUnaryDerivation(
-    mappedDerivationPrototype(
+    mappedDerivation(
       x => `Hello world C-${x}!`
     ),
     sourceInstance
   )
 
   makeSink(
-    consoleLogSinkPrototype(),
+    consoleLogSink(),
     derivationInstance
   )
 

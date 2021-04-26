@@ -2,7 +2,7 @@ import { declareSimpleSink } from "@/core/index.author"
 import { noop } from "@/patterns/functions"
 import { Sink } from "@/types/abstract"
 
-export function eventCollectorPrototype<T>(
+export function eventCollectorSink<T>(
   name?: string
 ): Sink<T, T[], T[]> {
   return declareSimpleSink({

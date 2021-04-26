@@ -1,16 +1,16 @@
 import {
-  mappedDerivationPrototype
+  mappedDerivation
 } from '@/derivations'
 import { expectationTestAsync, getDerivationEmitted } from '@test/helpers'
 import * as expectations from './expectations.meta'
 
 describe('derivations', () => {
-  describe('mappedDerivationPrototype', () => {
+  describe('mappedDerivation', () => {
     it("works good", () => expectationTestAsync(
       expectations,
       "scenario_base",
       () => getDerivationEmitted(
-        mappedDerivationPrototype<string, string>(
+        mappedDerivation<string, string>(
           s => s.toUpperCase()
         ),
         [

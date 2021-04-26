@@ -2,7 +2,7 @@ import { declareSimpleSink } from "@/core/index.author"
 import { noop } from "@/patterns/functions"
 import { Sink } from "@/types/abstract"
 
-export function consoleLogSinkPrototype<T>(
+export function consoleLogSink<T>(
   name?: string
 ): Sink<T, void, void> {
   return declareSimpleSink({

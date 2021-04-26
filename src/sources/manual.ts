@@ -42,7 +42,7 @@ function manualAsyncGenerator<T>() {
   }
 }
 
-export function manualSourcePrototype<T>(
+export function manualSource<T>(
   params: {
     initialValue?: T,
     name?: string

@@ -2,7 +2,7 @@ import { declareSimpleSink } from "@/core/index.author"
 import { noop } from "@/patterns/functions"
 import { Sink } from "@/types/abstract"
 
-export function forEachPrototype<T>(
+export function forEachSink<T>(
   forEach: (t: T) => void | Promise<void>,
   name?: string
 ): Sink<T, void, void> {

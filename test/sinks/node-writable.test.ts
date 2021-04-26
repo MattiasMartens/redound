@@ -1,6 +1,6 @@
 import { makeSink, makeSource } from "@/core"
 import { nodeWritableSink } from "@/sinks/node-writable"
-import { iterableSourcePrototype } from "@/sources"
+import { iterableSource } from "@/sources"
 import { PassThrough } from 'stream'
 import {
   deepStrictEqual
@@ -8,7 +8,7 @@ import {
 
 describe("nodeWritableSink", () => {
   it("Writes input to a Node writable stream", async () => {
-    const source = makeSource(iterableSourcePrototype(["A", "B", "C"]))
+    const source = makeSource(iterableSource(["A", "B", "C"]))
     const writable = new PassThrough()
     const sink = makeSink(
       nodeWritableSink(writable),

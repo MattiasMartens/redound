@@ -5,7 +5,7 @@ import { noop } from "@/patterns/functions"
 import { Derivation } from "@/types/abstract"
 import { EmitterInstanceAlias } from "@/types/instances"
 
-export function statefulDerivationPrototype<In, Out, State>(
+export function statefulDerivation<In, Out, State>(
   transformer: (i: In, s: State) => { state: State, output: PossiblyAsyncResult<Out> },
   initial: () => State,
   {

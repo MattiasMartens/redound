@@ -5,16 +5,7 @@ import {
   Readable
 } from "stream"
 
-// TODO Mystery here: Readable seems to work just like async generator
-// but isn't assignable or even lightly castable to it. This function
-// may be needed to explicitly convert.
-async function* generateFromStream(r: Readable) {
-  for await (const x of r) {
-    yield x
-  }
-}
-
-export function nodeReadableSourcePrototype<T>(
+export function nodeReadableSource<T>(
   stream: Readable,
   {
     name = "NodeReadable"

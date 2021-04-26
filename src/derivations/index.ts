@@ -8,7 +8,7 @@ export * from './stateful'
 
 export type UnaryDerivation<I, O> = Derivation<{ main: EmitterInstanceAlias<I> }, O, any>
 
-export function mappedDerivationPrototype<In, Out>(
+export function mappedDerivation<In, Out>(
   mapper: (i: In) => Out,
   {
     name = "Mapped"
@@ -32,7 +32,7 @@ export function mappedDerivationPrototype<In, Out>(
   })
 }
 
-export function reducedDerivationPrototype<In, Out>(
+export function reducedDerivation<In, Out>(
   reducer: (acc: Out, i: In) => Out,
   initial: () => Out,
   {

@@ -8,7 +8,7 @@ import {
 // TODO This could have a faculty to make it interruptible on close(),
 // Or to yield control to the event loop periodically. At the moment this
 // is a simple, uninterruptible, blocking generation.
-export function iterableSourcePrototype<T>(
+export function iterableSource<T>(
   iterable: PossiblyAsyncResult<T>,
   {
     name = "Iterable"

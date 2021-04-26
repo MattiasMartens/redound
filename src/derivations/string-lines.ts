@@ -1,4 +1,4 @@
-import { statefulDerivationPrototype } from './stateful'
+import { statefulDerivation } from './stateful'
 import { first, last } from '@/patterns/iterables'
 
 function* yieldItemThenAllButFirstAndLastOfArray<T>(item: T, arr: T[]) {
@@ -16,7 +16,7 @@ function* justYield<T>(arr: T[]) {
 }
 
 const newlineRegex = /\r?\n/g
-export const stringLinesDerivationPrototype = statefulDerivationPrototype<string, string, string[]>(
+export const stringLinesDerivation = statefulDerivation<string, string, string[]>(
   (i, buffer) => {
     const incomingSplitIntoLines = i.split(newlineRegex)
 

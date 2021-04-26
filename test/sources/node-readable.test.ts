@@ -1,6 +1,6 @@
 import { makeSink, makeSource } from "@/core"
-import { eventCollectorPrototype } from "@/sinks"
-import { nodeReadableSourcePrototype } from "@/sources/node-readable"
+import { eventCollectorSink } from "@/sinks"
+import { nodeReadableSource } from "@/sources/node-readable"
 import {
   Readable
 } from "stream"
@@ -12,14 +12,14 @@ import {
 } from 'fs'
 
 describe(
-  "nodeReadableSourcePrototype",
+  "nodeReadableSource",
   () => {
     it("Emits data from a Node Readable stream", async () => {
       const nodeStream = Readable.from(["A", "B", "C"])
 
-      const source = makeSource(nodeReadableSourcePrototype(nodeStream))
+      const source = makeSource(nodeReadableSource(nodeStream))
       const sink = makeSink(
-        eventCollectorPrototype(),
+        eventCollectorSink(),
         source
       )
 
@@ -33,10 +33,10 @@ describe(
       )
 
       const source = makeSource(
-        nodeReadableSourcePrototype(nodeStream)
+        nodeReadableSource(nodeStream)
       )
       const sink = makeSink(
-        eventCollectorPrototype(),
+        eventCollectorSink(),
         source
       )
 

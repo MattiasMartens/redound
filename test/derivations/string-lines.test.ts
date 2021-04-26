@@ -1,4 +1,4 @@
-import { stringLinesDerivationPrototype } from '@/derivations/string-lines'
+import { stringLinesDerivation } from '@/derivations/string-lines'
 import { expectationTestAsync, getDerivationEmitted } from '@test/helpers'
 import * as expectations from './expectations.meta'
 import {
@@ -15,12 +15,12 @@ let clock: SinonFakeTimers
 describe('derivations', () => {
   before(() => clock = useFakeTimers())
 
-  describe('stringLinesDerivationPrototype', () => {
+  describe('stringLinesDerivation', () => {
     it("collects partial lines into full lines", () => expectationTestAsync(
       expectations,
       "lines",
       () => getDerivationEmitted(
-        stringLinesDerivationPrototype,
+        stringLinesDerivation,
         [
           'f',
           'oo',
@@ -36,7 +36,7 @@ describe('derivations', () => {
       expectations,
       "chunks",
       () => getDerivationEmitted(
-        stringLinesDerivationPrototype,
+        stringLinesDerivation,
         [
           'sphinx of black quartz: \njudge',
           ' my vow\n'
@@ -48,7 +48,7 @@ describe('derivations', () => {
       expectations,
       "file",
       () => getDerivationEmitted(
-        stringLinesDerivationPrototype,
+        stringLinesDerivation,
         createReadStream('./test/sources/sample.file',
           { encoding: 'utf8', highWaterMark: 1024 }
         )
