@@ -1,5 +1,5 @@
 import { Derivation, Outcome, SealEvent } from "@/types/abstract"
-import { DerivationInstance, EmitterInstanceAlias, SinkInstance, SourceInstance } from "@/types/instances"
+import { DerivationInstance, Emitter, SinkInstance, SourceInstance } from "@/types/instances"
 import { none, Option, some } from "fp-ts/lib/Option"
 import { left, right } from "fp-ts/lib/Either"
 import { makeDerivation } from "./orchestrate"
@@ -31,10 +31,10 @@ export const unaryDerivationConsumer = <In, Out, Aggregate>(mapper: (i: In, m: A
 }
 
 export function makeUnaryDerivation<U, T>(
-  derivation: Derivation<{ main: EmitterInstanceAlias<U> }, T, any>,
-  source: EmitterInstanceAlias<U>,
+  derivation: Derivation<{ main: Emitter<U> }, T, any>,
+  source: Emitter<U>,
   params: { id?: string } = {}
-): DerivationInstance<{ main: EmitterInstanceAlias<U> }, T, any> {
+): DerivationInstance<{ main: Emitter<U> }, T, any> {
   return makeDerivation(derivation, { main: source }, params)
 }
 

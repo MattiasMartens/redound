@@ -1,8 +1,9 @@
-import { makeSink } from "@/core";
+import { makeSink, makeSource } from "@/core";
 import { declareSimpleSink } from "@/core/sink";
 import { close, declareSimpleSource, seal } from "@/core/source";
 import { chainAsyncResults } from "@/patterns/async";
 import { pick } from "@/patterns/functions";
+import { Source } from "@/types/abstract";
 import { SealEvent } from "@/types/events";
 import { SourceInstance } from "@/types/instances";
 import { right, left } from "fp-ts/lib/Either";
@@ -10,11 +11,13 @@ import { pipe } from "fp-ts/lib/function";
 import { some } from "fp-ts/lib/Option";
 import { fold, isSome, map, none, Option } from "fp-ts/lib/Option";
 
-export function deferredSource(
-  sourceProducingFunction: (query: any) => SourceInstance<any, any>,
+export function deferredSource<T>(
+  sourceProducingFunction: (query: any) => Source<T, any>,
   name?: string
 ) {
-  const deferredSourceInstance = declareSimpleSource(
+  const sourceInstance: Source<any, {
+    instantiatedInnerSource: Option<SourceInstance<any, any>>;
+  }> = declareSimpleSource(
     {
       name: name ?? "Deferred",
       emits: new Set(/** TODO */),
@@ -42,7 +45,9 @@ export function deferredSource(
           references.instantiatedInnerSource,
           fold(
             () => {
-              const newSource = sourceProducingFunction(query)
+              const newSource = makeSource(
+                sourceProducingFunction(query)
+              )
               references.instantiatedInnerSource = some(newSource)
 
               const {
@@ -63,5 +68,5 @@ export function deferredSource(
     }
   )
 
-  return deferredSourceInstance
+  return sourceInstance
 }

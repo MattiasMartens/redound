@@ -5,7 +5,7 @@ import {
 import {
   Option
 } from 'fp-ts/lib/Option'
-import { GenericEmitterInstance, PayloadTypeOf, SourceInstance, EmitterInstanceAlias, SinkInstance, DerivationInstance } from './instances'
+import { GenericEmitterInstance, PayloadTypeOf, SourceInstance, Emitter, SinkInstance, DerivationInstance } from './instances'
 
 export type Outcome<T, Finalization> = Either<{
   error: Error,
@@ -55,13 +55,15 @@ export type SourceType = {
   named: Map<DerivationRole, GenericEmitterInstance<any, any>>
 }
 
-export type Derivation<DerivationSourceType extends Record<string, EmitterInstanceAlias<any>>, T, Aggregate> = GenericEmitter<Aggregate> & {
+export type Derivation<DerivationSourceType extends Record<string, Emitter<any>>, T, Aggregate> = GenericEmitter<Aggregate> & {
   graphComponentType: "Derivation",
   derivationSpecies: "Relay" | "Transform",
   // TODO Define query protocol
   unroll: (aggregate: Aggregate, query: any) => PossiblyAsyncResult<T>,
   // TODO define consumes/emits protocol
-  consumes: Set<any>,
+  consumes: {
+    [k in keyof DerivationSourceType]: Set<any>
+  },
   emits: Set<any>,
   consume: <K extends keyof DerivationSourceType>(
     params: {
@@ -79,7 +81,12 @@ export type Derivation<DerivationSourceType extends Record<string, EmitterInstan
     output: PossiblyAsyncResult<T>
   },
   open: () => Aggregate,
-  seal: (params: { aggregate: Aggregate, remainingUnsealedSources: Set<GenericEmitterInstance<any, any>> }) => {
+  seal: (params: {
+    aggregate: Aggregate,
+    source: Emitter<any>,
+    role: keyof DerivationSourceType,
+    remainingUnsealedSources: Set<GenericEmitterInstance<any, any>>
+  }) => {
     seal: boolean,
     output: PossiblyAsyncResult<T>,
     aggregate: Aggregate

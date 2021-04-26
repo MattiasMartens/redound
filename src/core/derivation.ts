@@ -5,7 +5,7 @@ import {
   Outcome
 } from '@/types/abstract'
 import { PossiblyAsyncResult } from "@/patterns/async"
-import { SourceInstance, GenericConsumerInstance, DerivationInstance, GenericEmitterInstance, SinkInstance, EmitterInstanceAlias } from '@/types/instances'
+import { SourceInstance, GenericConsumerInstance, DerivationInstance, GenericEmitterInstance, SinkInstance, Emitter } from '@/types/instances'
 import { fold, isSome, some } from 'fp-ts/lib/Option'
 import { none } from 'fp-ts/lib/Option'
 import { close as consumerClose } from './consumer'
@@ -19,8 +19,10 @@ import { applyToBackpressure, backpressure } from './backpressure'
 import { ControlEvent, EndOfTagEvent, SealEvent } from '@/types/events'
 import { Either, left } from 'fp-ts/lib/Either'
 import { pipe } from 'fp-ts/lib/function'
+import { noop } from '@/patterns/functions'
+import { defaultDerivationSeal } from './helpers'
 
-export function* allSources(derivation: Record<string, EmitterInstanceAlias<any>>) {
+export function* allSources(derivation: Record<string, Emitter<any>>) {
   for (const role in derivation) {
     yield derivation[role]
   }
@@ -31,17 +33,25 @@ export function* allSources(derivation: Record<string, EmitterInstanceAlias<any>
  * types, so this allows a simpler type declaration for a
  * Source.
  */
-export function declareSimpleDerivation<SourceType extends Record<string, EmitterInstanceAlias<any>>, T, References>(derivation: Omit<Derivation<SourceType, T, References>, "graphComponentType" | "derivationSpecies">) {
+export function declareSimpleDerivation<SourceType extends Record<string, Emitter<any>>, T, References>(derivation: Partial<Omit<Derivation<SourceType, T, References>, "graphComponentType" | "derivationSpecies">>) {
   return Object.assign(
-    derivation,
     {
       derivationSpecies: "Transform",
-      graphComponentType: "Derivation"
-    }
+      graphComponentType: "Derivation",
+      close: noop,
+      consume: ({ aggregate }) => ({ aggregate }),
+      consumes: {},
+      emits: new Set(),
+      name: "AnonymousDerivation",
+      open: noop,
+      seal: defaultDerivationSeal,
+      unroll: noop
+    } as Derivation<SourceType, T, References>,
+    derivation
   ) as Derivation<SourceType, T, References>
 }
 
-export function instantiateDerivation<SourceType extends Record<string, EmitterInstanceAlias<any>>, T, Aggregate>(derivation: Derivation<any, T, Aggregate>, sources: SourceType, { id }: { id?: string } = {}): DerivationInstance<SourceType, T, Aggregate> {
+export function instantiateDerivation<SourceType extends Record<string, Emitter<any>>, T, Aggregate>(derivation: Derivation<SourceType, T, Aggregate>, sources: SourceType, { id }: { id?: string } = {}): DerivationInstance<SourceType, T, Aggregate> {
   const tag = initializeTag(
     derivation.name,
     id
@@ -123,7 +133,7 @@ export async function scheduleEmissions<T, References>(
   }
 }
 
-export function open<SourceType extends Record<string, EmitterInstanceAlias<any>>, T, Aggregate>(
+export function open<SourceType extends Record<string, Emitter<any>>, T, Aggregate>(
   derivation: DerivationInstance<SourceType, T, Aggregate>
 ) {
   if (derivation.lifecycle.state === "READY") {
@@ -252,7 +262,7 @@ export function close<References>(
   }
 }
 
-function getSourceRole<SourceType extends Record<string, EmitterInstanceAlias<any>>>(derivation: DerivationInstance<SourceType, any, any>, source: GenericEmitterInstance<any, any>) {
+function getSourceRole<SourceType extends Record<string, Emitter<any>>>(derivation: DerivationInstance<SourceType, any, any>, source: GenericEmitterInstance<any, any>) {
   for (const role in derivation.sourcesByRole) {
     if (derivation.sourcesByRole[role] === source) {
       return role
@@ -280,6 +290,11 @@ export async function consume<T, MemberOrReferences>(
       derivation.sealedSources.add(source)
       const sealResult = derivation.prototype.seal({
         aggregate: getSome(derivation.aggregate),
+        source,
+        role: getSourceRole(
+          derivation,
+          source
+        ),
         remainingUnsealedSources: new Set(
           without(
             allSources(derivation.sourcesByRole),

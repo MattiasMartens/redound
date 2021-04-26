@@ -49,7 +49,7 @@ export function declareSimpleSource<T, References>(source: Partial<Omit<Source<T
   return Object.assign(
     nullSource,
     source
-  )
+  ) as Source<T, References>
 }
 
 export function instantiateSource<T, References>(source: Source<T, References>, { id, controller, role }: { id?: string, tick?: number, controller?: ControllerInstance<any>, role?: string } = {}): SourceInstance<T, References> {

@@ -2,11 +2,11 @@ import { declareSimpleDerivation } from "@/core/derivation"
 import { defaultDerivationSeal, unaryDerivationConsumer } from "@/core/helpers"
 import { noop } from "@/patterns/functions"
 import { Derivation } from "@/types/abstract"
-import { EmitterInstanceAlias } from "@/types/instances"
+import { Emitter } from "@/types/instances"
 
 export * from './stateful'
 
-export type UnaryDerivation<I, O> = Derivation<{ main: EmitterInstanceAlias<I> }, O, any>
+export type UnaryDerivation<I, O> = Derivation<{ main: Emitter<I> }, O, any>
 
 export function mappedDerivation<In, Out>(
   mapper: (i: In) => Out,
@@ -16,17 +16,19 @@ export function mappedDerivation<In, Out>(
     name?: string
   } = {}
 ): Derivation<{
-  main: EmitterInstanceAlias<In>
+  main: Emitter<In>
 }, Out, void> {
-  return declareSimpleDerivation({
+  return declareSimpleDerivation<{ main: Emitter<In> }, Out, void>({
     consume: unaryDerivationConsumer(
-      i => ({ output: [mapper(i)], aggregate: undefined })
+      i => ({ output: [mapper(i)], aggregate: noop() })
     ),
     seal: defaultDerivationSeal,
     close: noop,
     name,
     emits: new Set(/** TODO */),
-    consumes: new Set(/** TODO */),
+    consumes: {
+      main: new Set(/** TODO */)
+    },
     open: noop,
     unroll: noop
   })
@@ -41,9 +43,9 @@ export function reducedDerivation<In, Out>(
     name?: string
   } = {}
 ): Derivation<{
-  main: EmitterInstanceAlias<In>
-}, Out, void> {
-  return declareSimpleDerivation({
+  main: Emitter<In>
+}, Out, Out> {
+  return declareSimpleDerivation<{ main: Emitter<In> }, Out, Out>({
     consume: unaryDerivationConsumer(
       (i, acc) => {
         const reduced = reducer(acc, i)
@@ -59,7 +61,9 @@ export function reducedDerivation<In, Out>(
     close: noop,
     name,
     emits: new Set(/** TODO */),
-    consumes: new Set(/** TODO */),
+    consumes: {
+      main: new Set(/** TODO */)
+    },
     unroll: noop
   })
 }

@@ -3,7 +3,7 @@ import { declareSimpleDerivation } from "@/core/derivation"
 import { PossiblyAsyncResult } from "@/patterns/async"
 import { noop } from "@/patterns/functions"
 import { Derivation } from "@/types/abstract"
-import { EmitterInstanceAlias } from "@/types/instances"
+import { Emitter } from "@/types/instances"
 
 export function statefulDerivation<In, Out, State>(
   transformer: (i: In, s: State) => { state: State, output: PossiblyAsyncResult<Out> },
@@ -16,9 +16,9 @@ export function statefulDerivation<In, Out, State>(
     seal?: (s: State) => PossiblyAsyncResult<Out>
   } = {}
 ): Derivation<{
-  main: EmitterInstanceAlias<In>
+  main: Emitter<In>
 }, Out, State> {
-  return declareSimpleDerivation({
+  return declareSimpleDerivation<{ main: Emitter<In> }, Out, State>({
     consume: unaryDerivationConsumer(
       (i, acc) => {
         const { state, output } = transformer(i, acc)
@@ -30,16 +30,12 @@ export function statefulDerivation<In, Out, State>(
       }
     ),
     open: initial,
-    close: noop,
     seal: (params) => ({
       ...defaultDerivationSeal(params),
       ...seal && {
         output: seal(params.aggregate)
       }
     }),
-    name,
-    emits: new Set(/** TODO */),
-    consumes: new Set(/** TODO */),
-    unroll: noop
+    name
   })
 }

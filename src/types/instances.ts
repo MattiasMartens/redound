@@ -25,10 +25,10 @@ export type SourceInstance<T, References> = {
   ) => Either<Error, Promise<void>>
 }
 
-export type EmitterInstanceAlias<T> = SourceInstance<T, any> | DerivationInstance<any, T, any>
-export type PayloadTypeOf<X> = X extends EmitterInstanceAlias<infer T> ? T : never
+export type Emitter<T> = SourceInstance<T, any> | DerivationInstance<any, T, any>
+export type PayloadTypeOf<X> = X extends Emitter<infer T> ? T : never
 
-type DerivationVariation<DerivationSourceType extends Record<string, EmitterInstanceAlias<any>>, Aggregate> = {
+type DerivationVariation<DerivationSourceType extends Record<string, Emitter<any>>, Aggregate> = {
   derivationSpecies: "Transform"
 } | {
   derivationSpecies: "Relay",
@@ -39,7 +39,7 @@ type DerivationVariation<DerivationSourceType extends Record<string, EmitterInst
     role: K) => Promise<void>
 }
 
-export type DerivationInstance<DerivationSourceType extends Record<string, EmitterInstanceAlias<any>>, T, Aggregate> = {
+export type DerivationInstance<DerivationSourceType extends Record<string, Emitter<any>>, T, Aggregate> = {
   prototype: Derivation<DerivationSourceType, T, Aggregate>,
   controller: Option<ControllerInstance<any>>,
   id: string,
