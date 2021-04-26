@@ -82,34 +82,6 @@ describe("async", () => {
           captured,
           stockSequence
         )
-
-        captured.splice(0)
-
-        await iterateOverAsyncResult<string>(
-          stockSequence.map(s => Promise.resolve(s)),
-          capture,
-          constFalse
-        )
-
-        deepStrictEqual(
-          captured,
-          stockSequence
-        )
-
-        captured.splice(0)
-
-        await iterateOverAsyncResult<string>(
-          Promise.resolve(
-            stockSequence.map(s => Promise.resolve(s))
-          ),
-          capture,
-          constFalse
-        )
-
-        deepStrictEqual(
-          captured,
-          stockSequence
-        )
       }
     )
 
@@ -168,21 +140,6 @@ describe("async", () => {
 
       await iterateOverAsyncResult<string>(
         Promise.resolve(stockSequence),
-        capture,
-        () => captured.length === 2
-      )
-
-      deepStrictEqual(
-        captured,
-        stockSequence.slice(0, 2)
-      )
-
-      captured.splice(0)
-
-      await iterateOverAsyncResult<string>(
-        Promise.resolve(
-          stockSequence.map(s => Promise.resolve(s))
-        ),
         capture,
         () => captured.length === 2
       )

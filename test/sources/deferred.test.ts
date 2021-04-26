@@ -1,4 +1,4 @@
-import { makeController, makeDerivation, makeSink, makeSource } from '@/core'
+import { makeController, makeDerivation, makeSink, makeSource, makeUnaryDerivation } from '@/core'
 import { declareSimpleDerivation } from '@/core/derivation'
 import { eventCollectorSink } from '@/sinks'
 import {
@@ -38,9 +38,9 @@ describe(
 
       const sequenceSource = makeSource(
         deferredSource(
-          (animalType) => iterableSource(animalType)
+          (animalType) => iterableSource(sequences[animalType])
         ),
-        { controller }
+        { controller, role: "dynamic" }
       )
 
       const composingDerivation = makeDerivation(
@@ -48,6 +48,7 @@ describe(
           postDynamicContentBuffer: string[],
           emittingDynamicContent: boolean
         }>({
+          name: "ComposingDerivation",
           consumes: {
             main: new Set(),
             dynamic: new Set()
@@ -70,7 +71,7 @@ describe(
 
             if (role === "main") {
               if (event.startsWith("{{") && event.endsWith("}}")) {
-                const dynamicContentQuery = event.slice(2, event.length - 3)
+                const dynamicContentQuery = event.slice(2, event.length - 2)
 
                 const pullResult = capabilities.pull(dynamicContentQuery, 'dynamic')
 
@@ -128,7 +129,7 @@ describe(
       const compiled = finalOutput.join(" ")
       strictEqual(
         compiled,
-        "!!!"
+        "What follows is a list of animals of a particular kind: platypus kangaroo koala I hope you enjoyed reading this list."
       )
     })
   }

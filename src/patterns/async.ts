@@ -69,7 +69,7 @@ export function isPromise(p: any): p is Promise<any> {
   }
 }
 
-export type PossiblyAsyncResult<T> = undefined | void | Promise<void | T> | Iterable<T | Promise<T>> | Promise<Iterable<T | Promise<T>>> | AsyncIterable<T> | AsyncIterable<T> | Generator<T> | AsyncGenerator<T>
+export type PossiblyAsyncResult<T> = undefined | void | Iterable<T> | Promise<undefined | void | Iterable<T>> | AsyncIterable<T> | Generator<T> | AsyncGenerator<T>
 
 /**
  * @param result A value, Iterable of values, mixed Iterable of values and Promises of values, Async Iterable, or Promise wrapping any of the above.
@@ -115,7 +115,7 @@ export async function iterateOverAsyncResult<T>(
           return
         }
       }
-    } else if (Symbol.iterator in awaited) {
+    } else {
       for (const t of awaited as Iterable<T | Promise<T>>) {
         const value = await t
 
@@ -129,8 +129,6 @@ export async function iterateOverAsyncResult<T>(
           return
         }
       }
-    } else {
-      await consumer(awaited as T)
     }
   }
 }
