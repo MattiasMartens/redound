@@ -1,5 +1,4 @@
 import { makeSink, makeSource } from "@/core"
-import { declareSimpleSink } from "@/core/sink"
 import { close, declareSimpleSource, seal } from "@/core/source"
 import { chainAsyncResults } from "@/patterns/async"
 import { pick } from "@/patterns/functions"

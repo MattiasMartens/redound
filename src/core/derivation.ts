@@ -1,12 +1,12 @@
 import { iterateOverAsyncResult, voidPromiseIterable } from '@/patterns/async'
-import { filterIterable, forEachIterable, mapIterable, tapIterable, without } from '@/patterns/iterables'
+import { filterIterable, forEachIterable, mapIterable, without } from '@/patterns/iterables'
 import {
   Derivation,
   Outcome
 } from '@/types/abstract'
 import { PossiblyAsyncResult } from "@/patterns/async"
 import { SourceInstance, GenericConsumerInstance, DerivationInstance, GenericEmitterInstance, SinkInstance, Emitter } from '@/types/instances'
-import { fold, isSome, some } from 'fp-ts/lib/Option'
+import { fold, isSome, map, some } from 'fp-ts/lib/Option'
 import { none } from 'fp-ts/lib/Option'
 import { close as consumerClose } from './consumer'
 import {
@@ -21,6 +21,8 @@ import { Either, left } from 'fp-ts/lib/Either'
 import { pipe } from 'fp-ts/lib/function'
 import { noop } from '@/patterns/functions'
 import { defaultDerivationSeal } from './helpers'
+import { Possible } from '@/types/patterns'
+import { defined } from '@/patterns/insist'
 
 export function* allSources(derivation: Record<string, Emitter<any>>) {
   for (const role in derivation) {
@@ -45,6 +47,9 @@ export function declareSimpleDerivation<SourceType extends Record<string, Emitte
       name: "AnonymousDerivation",
       open: noop,
       seal: defaultDerivationSeal,
+      querySeal: ({ aggregate }) => ({
+        aggregate, seal: false
+      }),
       unroll: noop
     } as Derivation<SourceType, T, References>,
     derivation
@@ -84,7 +89,8 @@ export function instantiateDerivation<SourceType extends Record<string, Emitter<
 
 export async function emit<T, References>(
   derivation: DerivationInstance<any, T, References>,
-  event: T | ControlEvent
+  event: T | ControlEvent,
+  tag: Possible<string>
 ) {
   // Derivations *can* emit events after they have
   // been sealed! New consumers can still query the Derivation's
@@ -96,7 +102,7 @@ export async function emit<T, References>(
       () => voidPromiseIterable(
         mapIterable(
           derivation.consumers,
-          async c => genericConsume(derivation, c, event)
+          async c => genericConsume(derivation, c, event, tag)
         )
       )
     )
@@ -107,7 +113,8 @@ export async function emit<T, References>(
 
 export async function scheduleEmissions<T, References>(
   derivation: DerivationInstance<any, T, References>,
-  result: PossiblyAsyncResult<T>
+  result: PossiblyAsyncResult<T>,
+  tag: Possible<string>
 ) {
   if (derivation.lifecycle.state === "ACTIVE" || derivation.lifecycle.state === "SEALED") {
     if (derivation.prototype.derivationSpecies === "Relay") {
@@ -122,7 +129,7 @@ export async function scheduleEmissions<T, References>(
         e => voidPromiseIterable(
           mapIterable(
             derivation.consumers,
-            async c => genericConsume(derivation, c, e),
+            async c => genericConsume(derivation, c, e, tag),
           )
         ),
         () => derivation.lifecycle.state === "ENDED"
@@ -196,19 +203,22 @@ export function unsubscribe<T>(
 function genericConsume<T, MemberOrReferences>(
   emitter: GenericEmitterInstance<T, MemberOrReferences>,
   consumer: GenericConsumerInstance<T, any>,
-  event: T | ControlEvent
+  event: T | ControlEvent,
+  tag: Possible<string>
 ) {
   if (consumer.prototype.graphComponentType === "Sink") {
     return sinkConsume(
       emitter,
       consumer as SinkInstance<T, MemberOrReferences, any>,
-      event
+      event,
+      tag
     )
   } else {
     return consume(
       emitter,
       consumer as DerivationInstance<any, any, MemberOrReferences>,
-      event
+      event,
+      tag
     )
   }
 }
@@ -229,7 +239,8 @@ export function seal<Aggregate>(
         consumer => genericConsume(
           derivation,
           consumer,
-          event
+          event,
+          undefined
         )
       )
     )
@@ -278,15 +289,55 @@ const defaultCapabilities = {
   pull: () => left(new Error("No controller present, so pull not supported"))
 }
 
+function remainingUnsealedSources(derivation: DerivationInstance<any, any, any>) {
+  return new Set(
+    without(
+      allSources(derivation.sourcesByRole),
+      derivation.sealedSources
+    )
+  )
+}
+
 export async function consume<T, MemberOrReferences>(
   source: GenericEmitterInstance<T, MemberOrReferences>,
   derivation: DerivationInstance<any, any, any>,
-  e: T | ControlEvent
+  e: T | ControlEvent,
+  tag: Possible<string>
 ) {
   if (derivation.lifecycle.state === "ACTIVE") {
     if (e === EndOfTagEvent) {
-      // TODO
-      throw new Error("Not implemented")
+      // 1. Call derivation's implementation of querySeal
+      const querySealResult = derivation.prototype.querySeal({
+        aggregate: derivation.aggregate,
+        source,
+        eventTag: defined(tag, "Received EndOfTagEvent with no attendant tag"),
+        remainingUnsealedSources: remainingUnsealedSources(derivation),
+        role: getSourceRole(derivation, source)
+      })
+
+      if ("aggregate" in querySealResult) {
+        derivation.aggregate = some(querySealResult.aggregate)
+      }
+
+      if ("output" in querySealResult) {
+        await scheduleEmissions(
+          derivation,
+          querySealResult.output,
+          tag
+        )
+      }
+
+      if (querySealResult.seal) {
+        seal(derivation, e)
+      }
+
+      // 2. Notify controller
+      pipe(
+        derivation.controller,
+        map(
+          c => c.taggedEvent(e, defined(tag, "Received EndOfTagEvent without a tag argument"), derivation)
+        )
+      )
     } else if (e === SealEvent) {
       derivation.sealedSources.add(source)
       const sealResult = derivation.prototype.seal({
@@ -296,19 +347,15 @@ export async function consume<T, MemberOrReferences>(
           derivation,
           source
         ),
-        remainingUnsealedSources: new Set(
-          without(
-            allSources(derivation.sourcesByRole),
-            derivation.sealedSources
-          )
-        )
+        remainingUnsealedSources: remainingUnsealedSources(derivation)
       })
 
       derivation.aggregate = some(sealResult.aggregate)
 
       await scheduleEmissions(
         derivation,
-        sealResult.output
+        sealResult.output,
+        tag
       )
 
       if (sealResult.seal) {
@@ -345,7 +392,8 @@ export async function consume<T, MemberOrReferences>(
 
       await scheduleEmissions(
         derivation,
-        output
+        output,
+        tag
       )
     }
   } else {

@@ -22,6 +22,8 @@ import {
 } from 'fp-ts/lib/Either'
 import { ControlEvent, EndOfTagEvent, SealEvent } from '@/types/events'
 import { getSome } from '@/patterns/options'
+import { Possible } from '@/types/patterns'
+import { registerKey } from '@/runtime'
 
 // Dependency Map:
 // source imports sink
@@ -71,14 +73,20 @@ export function instantiateSource<T, References>(source: Source<T, References>, 
     controller: controllerOption,
     id: tag,
     pull: source.pull ? (
-      (query: Query) => {
+      (query: Query, queryTag?: string) => {
+        const healedQueryTag = queryTag === undefined
+          ? initializeTag(sourceInstance.id)
+          : initializeTag(undefined, queryTag)
+
+
         if (sourceInstance.lifecycle.state === "READY" || sourceInstance.lifecycle.state === "SEALED" || sourceInstance.lifecycle.state === "ENDED") {
           throw new Error(`Attempted action pull() on source ${id} in incompatible lifecycle state: ${sourceInstance.lifecycle.state}`)
         }
 
         const result = source.pull!(
           query,
-          getSome(sourceInstance.references)
+          getSome(sourceInstance.references),
+          healedQueryTag
         )
 
         return pipe(
@@ -101,7 +109,7 @@ export function instantiateSource<T, References>(source: Source<T, References>, 
                       mapIterable(
                         sourceInstance.consumers,
                         async c => {
-                          consume(sourceInstance, c, event, tag)
+                          consume(sourceInstance, c, event, queryTag)
                         }
                       )
                     )
@@ -115,7 +123,7 @@ export function instantiateSource<T, References>(source: Source<T, References>, 
                     mapIterable(
                       sourceInstance.consumers,
                       async c => {
-                        consume(sourceInstance, c, EndOfTagEvent, tag)
+                        consume(sourceInstance, c, EndOfTagEvent, queryTag)
                       }
                     )
                   )
@@ -147,13 +155,14 @@ export function instantiateSource<T, References>(source: Source<T, References>, 
 
 export async function emit<T, References>(
   source: SourceInstance<T, References>,
-  event: T | ControlEvent
+  event: T | ControlEvent,
+  tag: Possible<string>
 ) {
   if (source.lifecycle.state === "ACTIVE") {
     return voidPromiseIterable(
       mapIterable(
         source.consumers,
-        async c => consume(source, c, event)
+        async c => consume(source, c, event, tag)
       )
     )
   } else {
@@ -168,7 +177,8 @@ export function open<T, References>(
     const sourceEmit = (e: T | ControlEvent) => {
       return emit(
         source,
-        e
+        e,
+        undefined
       )
     }
 
@@ -194,7 +204,7 @@ export function open<T, References>(
         pipe(
           source.controller,
           map(
-            /**  NOTE: This captures failures *only* from the generation of events;emitting to a consumer is a can't-fail operation because if there were an error, the consumer would send it to the controller directly. It would never return to the control of this function. */
+            /**  NOTE: This captures failures *only* from the generation of events; emitting to a consumer is a can't-fail operation because if there were an error, the consumer would send it to the controller directly. It would never return to the control of this function. */
             c => c.rescue(e, none, source)
           )
         )
@@ -244,13 +254,16 @@ export function seal<T, References>(
     return voidPromiseIterable(
       mapIterable(
         source.consumers,
-        consumer => consume(
+        consumer => {
+          debugger; return consume(
           source,
           consumer,
-          SealEvent
+            SealEvent,
+            undefined
         )
+        }
       )
-    )
+    );
   } else if (source.lifecycle.state === "ENDED") {
     // no-op
   } else {

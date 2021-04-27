@@ -2,13 +2,13 @@ import { defer } from "@/patterns/async"
 import { forEachIterable } from "@/patterns/iterables"
 import { Controller, Outcome, SealEvent } from "@/types/abstract"
 import { ControllerInstance, DerivationInstance, SinkInstance, SourceInstance } from "@/types/instances"
-import { pipe } from "fp-ts/lib/function"
+import { constUndefined, pipe } from "fp-ts/lib/function"
 import { fold, fromNullable, isNone, map, none, Option, some } from "fp-ts/lib/Option"
 import { defaultControllerRescue, defaultControllerSeal, defaultControllerTaggedEvent } from "./helpers"
 import { close } from "./source"
 import { initializeTag } from "./tags"
 import {
-  foldingGet
+  foldingGet, getOrElse
 } from "big-m"
 import { left, map as mapRight } from "fp-ts/lib/Either"
 import { noop } from "@/patterns/functions"
@@ -61,6 +61,15 @@ export function instantiateController<Finalization>(
   }
 
   const allSinksClosed = defer()
+
+  const propagateOutcome = (outcome: Outcome<any, Finalization>) => {
+    forEachIterable(
+      domain.sources,
+      sourceInstance => close(sourceInstance, outcome)
+    )
+
+    outcomePromise.resolve(outcome)
+  }
 
   const controllerInstance: ControllerInstance<Finalization> = {
     id: tag,
@@ -124,14 +133,7 @@ export function instantiateController<Finalization>(
       pipe(
         await controller.rescue(error, event, notifyingComponent, domain),
         map(
-          outcome => {
-            forEachIterable(
-              domain.sources,
-              sourceInstance => close(sourceInstance, outcome)
-            )
-
-            outcomePromise.resolve(outcome)
-          }
+          propagateOutcome
         )
       )
     },
@@ -139,14 +141,7 @@ export function instantiateController<Finalization>(
       pipe(
         await controller.seal(sealEvent, domain),
         map(
-          outcome => {
-            forEachIterable(
-              domain.sources,
-              sourceInstance => close(sourceInstance, outcome)
-            )
-
-            outcomePromise.resolve(outcome)
-          }
+          propagateOutcome
         )
       )
     },
@@ -174,24 +169,25 @@ export function instantiateController<Finalization>(
       pipe(
         controllerInstance.outcome,
         map(
-          outcome => {
-            forEachIterable(
-              domain.sources,
-              sourceInstance => close(sourceInstance, outcome)
-            )
-
-            outcomePromise.resolve(outcome)
-          }
+          propagateOutcome
         )
       )
     },
     sources: domain.sources,
     sinks: domain.sinks,
     sourcesByRole: domain.sourcesByRole,
-    taggedEvent: () => {
-      // TODO
-      throw new Error("Not implemented")
-    },
+    taggedEvent: async (event: any, tag: string, notifyingComponent) => pipe(
+      await controller.taggedEvent(
+        event,
+        tag,
+        notifyingComponent,
+        domain
+      ),
+      fold(
+        constUndefined,
+        propagateOutcome
+      )
+    ),
     close() {
       for (const sink of domain.sinks) {
         if (sink.lifecycle.state !== "ENDED") {

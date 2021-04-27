@@ -33,7 +33,7 @@ export type Source<T, References> = GenericEmitter<References> & {
     output?: PossiblyAsyncResult<T>
   },
   close: (r: References, o: Outcome<any, Finalization>) => void | Promise<void>,
-  pull?: (query: Query, r: References) => Either<
+  pull?: (query: Query, r: References, tag: string) => Either<
     Error,
     PossiblyAsyncResult<T>
   >,
@@ -87,9 +87,20 @@ export type Derivation<DerivationSourceType extends Record<string, Emitter<any>>
     role: keyof DerivationSourceType,
     remainingUnsealedSources: Set<GenericEmitterInstance<any, any>>
   }) => {
-    seal: boolean,
-    output: PossiblyAsyncResult<T>,
-    aggregate: Aggregate
+    seal?: boolean,
+    output?: PossiblyAsyncResult<T>,
+    aggregate?: Aggregate
+  },
+  querySeal: (params: {
+    aggregate: Aggregate,
+    source: Emitter<any>,
+    eventTag: string,
+    role: keyof DerivationSourceType,
+    remainingUnsealedSources: Set<GenericEmitterInstance<any, any>>
+  }) => {
+    seal?: boolean,
+    output?: PossiblyAsyncResult<T>,
+    aggregate?: Aggregate
   },
   close: (m: Aggregate, o: Outcome<any, Finalization>) => void | Promise<void>
 }
@@ -152,6 +163,7 @@ export type Controller<Finalization> = {
   ) => Promise<Option<Outcome<any, Finalization>>> | Outcome<any, Finalization>,
   taggedEvent: (
     event: any,
+    tag: string,
     notifyingComponent: SourceInstance<any, any> | DerivationInstance<any, any, any> | SinkInstance<any, any, any>,
     domain: {
       sources: Set<SourceInstance<any, any>>,

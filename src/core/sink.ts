@@ -12,6 +12,7 @@ import { ControlEvent, SealEvent, EndOfTagEvent } from '@/types/events'
 import { map } from 'fp-ts/lib/Option'
 import { defer } from '@/patterns/async'
 import { left } from 'fp-ts/lib/Either'
+import { Possible } from '@/types/patterns'
 
 /**
  * TypeScript doesn't allow mixing inferred with optional
@@ -97,7 +98,7 @@ export async function consume<T, MemberOrReferences>(
   source: GenericEmitterInstance<T, MemberOrReferences>,
   sink: SinkInstance<T, any, any>,
   event: T | ControlEvent,
-  tag?: string
+  tag: Possible<string>
 ) {
   if (sink.lifecycle.state === "ACTIVE") {
     if (event === EndOfTagEvent) {

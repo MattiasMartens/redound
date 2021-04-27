@@ -20,6 +20,8 @@ export type SourceInstance<T, References> = {
     query: Query,
     tag?: string
   ) => Either<Error, Promise<void>>,
+  // TODO tags here
+  // TODO? should push protocol be async-iterable-based?
   push?: (
     event: any
   ) => Either<Error, Promise<void>>
@@ -69,6 +71,7 @@ export type SinkInstance<T, References, SinkResult> = {
     push: (event: any, role: string) => Either<Error, void>,
     pull: (query: any, role: string) => Either<Error, void>
   }
+  // TODO semantics for pull(), which dispatches the pull() call to the controller and then returns a Promise which resolves when the EndOfTagEvent corresponding to the pull() is received.
 }
 
 export type ControllerInstance<Finalization> = {
@@ -84,9 +87,6 @@ export type ControllerInstance<Finalization> = {
   seal: (
     sealEvent: SealEvent
   ) => Promise<void>,
-  querySeal: (
-    sealEvent: QuerySealEvent
-  ) => Promise<void>,
   rescue: (
     error: Error,
     event: Option<any>,
@@ -94,6 +94,7 @@ export type ControllerInstance<Finalization> = {
   ) => Promise<void>,
   taggedEvent: (
     event: any,
+    tag: string,
     notifyingComponent: SourceInstance<any, any> | DerivationInstance<any, any, any> | SinkInstance<any, any, any>
   ) => Promise<void>,
   outcome: Option<Outcome<any, Finalization>>,

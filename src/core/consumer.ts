@@ -10,12 +10,13 @@ import {
   close as derivationClose
 } from "./derivation"
 import { ControlEvent } from "@/types/events"
+import { Possible } from "@/types/patterns"
 
 export function consume<T, MemberOrReferences>(
   emitter: GenericEmitterInstance<T, MemberOrReferences>,
   consumer: GenericConsumerInstance<T, any>,
   event: T | ControlEvent,
-  tag?: string
+  tag: Possible<string>
 ) {
   if (consumer.prototype.graphComponentType === "Sink") {
     return sinkConsume(
