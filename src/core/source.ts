@@ -255,7 +255,7 @@ export function seal<T, References>(
       mapIterable(
         source.consumers,
         consumer => {
-          debugger; return consume(
+          return consume(
           source,
           consumer,
             SealEvent,

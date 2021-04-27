@@ -73,7 +73,10 @@ describe(
               if (event.startsWith("{{") && event.endsWith("}}")) {
                 const dynamicContentQuery = event.slice(2, event.length - 2)
 
-                const pullResult = capabilities.pull(dynamicContentQuery, 'dynamic')
+                const pullResult = capabilities.pull({
+                  query: dynamicContentQuery,
+                  role: 'dynamic'
+                })
 
                 if (isLeft(pullResult)) {
                   throw pullResult.left

@@ -63,6 +63,7 @@ export type SinkInstance<T, References, SinkResult> = {
   latestTickByProvenance: Map<SourceId, number>,
   lifecycle: { state: "ACTIVE" } | { state: "SEALED" } | { state: "ENDED", outcome: Outcome<T, Finalization> },
   seal: () => Promise<void>,
+  close: (outcome: Outcome<any, any>) => Promise<void>,
   sinkResult: () => Promise<SinkResult>,
   // Initialized to 'Some' on first subscription event,
   // reverted to 'None' once closed.
@@ -113,7 +114,7 @@ export type ControllerInstance<Finalization> = {
   ) => void,
   capabilities: {
     push: (event: any, role: string) => Either<Error, void>,
-    pull: (query: any, role: string) => Either<Error, void>
+    pull: (params: { query: any, role: string, tag: string }) => Either<Error, void>
   },
   id: string
 }

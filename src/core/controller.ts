@@ -63,6 +63,7 @@ export function instantiateController<Finalization>(
   const allSinksClosed = defer()
 
   const propagateOutcome = (outcome: Outcome<any, Finalization>) => {
+    debugger;
     forEachIterable(
       domain.sources,
       sourceInstance => close(sourceInstance, outcome)
@@ -92,7 +93,7 @@ export function instantiateController<Finalization>(
     },
     // Object to pass to graph components, which should not receive the Promise returned by the Right outcome of a pull or push operation lest they await it and cause a (potential, pending event-tag tracking) deadlock.
     capabilities: {
-      pull: (query, role) => {
+      pull: ({ query, role, tag: queryTag }) => {
         return foldingGet(
           domain.sourcesByRole,
           role,
@@ -102,7 +103,7 @@ export function instantiateController<Finalization>(
             fold(
               () => left(new Error("Source does not have pull functionality")),
               pullFn => pipe(
-                pullFn(query),
+                pullFn(query, queryTag),
                 mapRight(noop)
               )
             )

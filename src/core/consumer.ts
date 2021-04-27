@@ -1,8 +1,7 @@
 import { Outcome } from "@/types/abstract"
 import { DerivationInstance, GenericConsumerInstance, GenericEmitterInstance, SinkInstance } from "@/types/instances"
 import {
-  consume as sinkConsume,
-  close as sinkClose
+  consume as sinkConsume
 } from "./sink"
 
 import {
@@ -43,8 +42,7 @@ export function close<T, MemberOrReferences>(
   outcome: Outcome<T, Finalization>
 ) {
   if (consumer.prototype.graphComponentType === "Sink") {
-    sinkClose(
-      consumer as SinkInstance<T, MemberOrReferences, any>,
+    (consumer as SinkInstance<T, MemberOrReferences, any>).close(
       outcome
     )
   } else {

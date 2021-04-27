@@ -3,7 +3,7 @@ import {
   deepStrictEqual
 } from "assert"
 import { iterableSource, UnaryDerivation, makeUnaryDerivation, makeSource, makeSink, eventCollectorSink, makeController, tupleFirst } from "@/index"
-import { PossiblyAsyncResult } from "@/patterns/async"
+import { ms, PossiblyAsyncResult } from "@/patterns/async"
 import Sinon = require("sinon")
 
 export function expectationTest<T>(expectationsImport: any, scenarioKey: string, fn: () => T) {
@@ -70,4 +70,24 @@ export async function eventual<T>(clock: Sinon.SinonFakeTimers, fn: () => Promis
     clockRunPromise
   ])
   return tupleFirst(tuple)
+}
+
+export type TestSequence<T> = (T | { tag: "throw", error: Error } | { tag: "wait", ms: number })[]
+
+async function* asyncGeneratorFromTestSequence<T>(seq: TestSequence<T>) {
+  for (const item of seq) {
+    if (("tag" in item) && item.tag === "throw") {
+      throw item.error
+    } else if (("tag" in item) && item.tag === "wait") {
+      await ms(item.ms)
+    } else {
+      yield item
+    }
+  }
+}
+
+export function testSourceSequence<T>(seq: TestSequence<T>) {
+  return iterableSource(
+    asyncGeneratorFromTestSequence(seq)
+  )
 }

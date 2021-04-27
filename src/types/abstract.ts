@@ -73,7 +73,7 @@ export type Derivation<DerivationSourceType extends Record<string, Emitter<any>>
       role: K,
       capabilities: {
         push: (event: any, role: string) => Either<Error, void>,
-        pull: (query: any, role: string) => Either<Error, void>
+        pull: (params: { query: any, role: string, tag?: string }) => Either<Error, void>
       }
     }
   ) => {

@@ -7,7 +7,7 @@ import {
 import { PossiblyAsyncResult } from "@/patterns/async"
 import { SourceInstance, GenericConsumerInstance, DerivationInstance, GenericEmitterInstance, SinkInstance, Emitter } from '@/types/instances'
 import { fold, isSome, map, some } from 'fp-ts/lib/Option'
-import { none } from 'fp-ts/lib/Option'
+import { none, Option } from 'fp-ts/lib/Option'
 import { close as consumerClose } from './consumer'
 import {
   consume as sinkConsume
@@ -298,105 +298,131 @@ function remainingUnsealedSources(derivation: DerivationInstance<any, any, any>)
   )
 }
 
-export async function consume<T, MemberOrReferences>(
+async function derivationTry<T>(
+  fn: () => Promise<T>,
+  derivation: DerivationInstance<any, any, any>,
+  event: Option<any | ControlEvent>
+) {
+  try {
+    return await fn()
+  } catch (e) {
+    return pipe(
+      derivation.controller,
+      fold(
+        () => {
+          console.error(`Uncaught error from Derivation with no controller: ${derivation.id}. Error:
+          ${e}
+          
+          To prevent errors from being logged, add Derivation ${derivation.id} to a graph with a controller.`)
+        },
+        c => c.rescue(e, event, derivation)
+      )
+    )
+  }
+}
+
+export function consume<T, MemberOrReferences>(
   source: GenericEmitterInstance<T, MemberOrReferences>,
   derivation: DerivationInstance<any, any, any>,
   e: T | ControlEvent,
   tag: Possible<string>
 ) {
-  if (derivation.lifecycle.state === "ACTIVE") {
-    if (e === EndOfTagEvent) {
-      // 1. Call derivation's implementation of querySeal
-      const querySealResult = derivation.prototype.querySeal({
-        aggregate: derivation.aggregate,
-        source,
-        eventTag: defined(tag, "Received EndOfTagEvent with no attendant tag"),
-        remainingUnsealedSources: remainingUnsealedSources(derivation),
-        role: getSourceRole(derivation, source)
-      })
+  return derivationTry(
+    async () => {
+      if (derivation.lifecycle.state === "ACTIVE") {
+        if (e === EndOfTagEvent) {
+          // 1. Call derivation's implementation of querySeal
+          const querySealResult = derivation.prototype.querySeal({
+            aggregate: derivation.aggregate,
+            source,
+            eventTag: defined(tag, "Received EndOfTagEvent with no attendant tag"),
+            remainingUnsealedSources: remainingUnsealedSources(derivation),
+            role: getSourceRole(derivation, source)
+          })
 
-      if ("aggregate" in querySealResult) {
-        derivation.aggregate = some(querySealResult.aggregate)
-      }
+          if ("aggregate" in querySealResult) {
+            derivation.aggregate = some(querySealResult.aggregate)
+          }
 
-      if ("output" in querySealResult) {
-        await scheduleEmissions(
-          derivation,
-          querySealResult.output,
-          tag
-        )
-      }
+          if ("output" in querySealResult) {
+            await scheduleEmissions(
+              derivation,
+              querySealResult.output,
+              tag
+            )
+          }
 
-      if (querySealResult.seal) {
-        seal(derivation, e)
-      }
+          if (querySealResult.seal) {
+            seal(derivation, e)
+          }
 
-      // 2. Notify controller
-      pipe(
-        derivation.controller,
-        map(
-          c => c.taggedEvent(e, defined(tag, "Received EndOfTagEvent without a tag argument"), derivation)
-        )
-      )
-    } else if (e === SealEvent) {
-      derivation.sealedSources.add(source)
-      const sealResult = derivation.prototype.seal({
-        aggregate: getSome(derivation.aggregate),
-        source,
-        role: getSourceRole(
-          derivation,
-          source
-        ),
-        remainingUnsealedSources: remainingUnsealedSources(derivation)
-      })
-
-      derivation.aggregate = some(sealResult.aggregate)
-
-      await scheduleEmissions(
-        derivation,
-        sealResult.output,
-        tag
-      )
-
-      if (sealResult.seal) {
-        seal(derivation, e)
-      }
-    } else {
-      const inAggregate = getSome(derivation.aggregate)
-
-      const role = getSourceRole(
-        derivation,
-        source
-      )
-
-      const {
-        aggregate: outAggregate,
-        output
-      } = derivation.prototype.consume({
-        event: e,
-        aggregate: inAggregate,
-        source,
-        role,
-        capabilities: pipe(
-          derivation.controller,
-          fold(
-            () => defaultCapabilities,
-            c => c.capabilities
+          // 2. Notify controller
+          pipe(
+            derivation.controller,
+            map(
+              c => c.taggedEvent(e, defined(tag, "Received EndOfTagEvent without a tag argument"), derivation)
+            )
           )
-        )
-      })
+        } else if (e === SealEvent) {
+          derivation.sealedSources.add(source)
+          const sealResult = derivation.prototype.seal({
+            aggregate: getSome(derivation.aggregate),
+            source,
+            role: getSourceRole(
+              derivation,
+              source
+            ),
+            remainingUnsealedSources: remainingUnsealedSources(derivation)
+          })
 
-      derivation.aggregate = some(
-        outAggregate
-      )
+          derivation.aggregate = some(sealResult.aggregate)
 
-      await scheduleEmissions(
-        derivation,
-        output,
-        tag
-      )
-    }
-  } else {
-    throw new Error(`Attempted action consume() on derivation ${derivation.id} in incompatible lifecycle state: ${derivation.lifecycle.state}`)
-  }
+          await scheduleEmissions(
+            derivation,
+            sealResult.output,
+            tag
+          )
+
+          if (sealResult.seal) {
+            seal(derivation, e)
+          }
+        } else {
+          const inAggregate = getSome(derivation.aggregate)
+
+          const role = getSourceRole(
+            derivation,
+            source
+          )
+
+          const {
+            aggregate: outAggregate,
+            output
+          } = derivation.prototype.consume({
+            event: e,
+            aggregate: inAggregate,
+            source,
+            role,
+            capabilities: pipe(
+              derivation.controller,
+              fold(
+                () => defaultCapabilities,
+                c => c.capabilities
+              )
+            )
+          })
+
+          derivation.aggregate = some(
+            outAggregate
+          )
+
+          await scheduleEmissions(
+            derivation,
+            output,
+            tag
+          )
+        }
+      } else {
+        throw new Error(`Attempted action consume() on derivation ${derivation.id} in incompatible lifecycle state: ${derivation.lifecycle.state}`)
+      }
+    }, derivation, some(e))
 }

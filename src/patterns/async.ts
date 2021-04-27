@@ -26,7 +26,7 @@ export function defer(): {
 }
 export function defer<T>(): {
   promise: Promise<T>,
-  resolve: (value: T) => void,
+  resolve: (value: T | Promise<T>) => void,
   reject: (error: any) => void
 }
 export function defer() {

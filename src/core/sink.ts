@@ -4,14 +4,14 @@ import {
 } from '@/types/abstract'
 import { SinkInstance, GenericEmitterInstance, ControllerInstance } from '@/types/instances'
 import { getSome } from '@/patterns/options'
-import { fold, fromNullable, none, some } from 'fp-ts/lib/Option'
+import { fold, fromNullable, none, some, Option, isSome } from 'fp-ts/lib/Option'
 import { initializeTag } from './tags'
 import { noop, noopAsync } from '@/patterns/functions'
 import { pipe } from 'fp-ts/lib/function'
 import { ControlEvent, SealEvent, EndOfTagEvent } from '@/types/events'
 import { map } from 'fp-ts/lib/Option'
 import { defer } from '@/patterns/async'
-import { left } from 'fp-ts/lib/Either'
+import { isLeft, left } from 'fp-ts/lib/Either'
 import { Possible } from '@/types/patterns'
 
 /**
@@ -47,7 +47,17 @@ export function instantiateSink<T, References, SinkResult>(sink: Sink<T, Referen
     id
   )
 
-  const sinkResult = defer<SinkResult>()
+  /**
+   * Logic here: if seal() is called on sink, and a controller is present, sink can generate sink result and broadcast it to controller.
+   * But it does not immediately resolve the sinkResult Promise.
+   * Instead, it waits for Finalization from the controller.
+   * If the controller finalizes with an error, it rejects with that.
+   * Otherwise, it resolves with the original singResult.
+   * If seal() is called on sink with no controller present, it instead resolves immediately.
+   * If close() is called on sink with or without a controller present, at a stage where seal() has not been called, it rejects with either the Outcome error if Left, or a generic "stream ended prematurely" error if Right.
+   */
+  let withheldSinkResult = none as Option<SinkResult | Promise<SinkResult>>
+  const finalizedSinkResultPromise = defer<SinkResult>()
 
   const sourceController = fromNullable(controller)
 
@@ -67,26 +77,88 @@ export function instantiateSink<T, References, SinkResult>(sink: Sink<T, Referen
       )
     )),
     controller: sourceController,
-    sinkResult: () => sinkResult.promise,
+    sinkResult: () => finalizedSinkResultPromise.promise,
     async seal() {
-      const result = await sinkInstance.prototype.seal(
+      const sinkResultPromise = sinkInstance.prototype.seal(
         getSome(sinkInstance.references)
       )
-      sinkResult.resolve(result)
-      sinkInstance.lifecycle = { state: "SEALED" }
+
+      sinkInstance.lifecycle = {
+        state: "SEALED"
+      }
 
       // TODO Same logic in other graph components
       await pipe(
         sinkInstance.controller,
         fold(
-          noopAsync,
-          controller => controller.seal({
-            graphComponentType: sinkInstance.prototype.graphComponentType,
-            instance: sinkInstance,
-            result
-          })
+          async () => {
+            finalizedSinkResultPromise.resolve(sinkResultPromise)
+          },
+          async controller => {
+            try {
+              withheldSinkResult = some(sinkResultPromise)
+              const awaitedSinkResult = await sinkResultPromise
+
+              controller.seal({
+                graphComponentType: sinkInstance.prototype.graphComponentType,
+                instance: sinkInstance,
+                result: awaitedSinkResult
+              })
+            } catch (e) {
+              finalizedSinkResultPromise.reject(e)
+
+              controller.rescue(
+                e,
+                none,
+                sinkInstance
+              )
+            }
+          }
         )
       )
+    },
+    async close(outcome: Outcome<any, any>) {
+      if (sinkInstance.lifecycle.state !== "ENDED") {
+        if (isLeft(outcome)) {
+          finalizedSinkResultPromise.reject(outcome.left)
+        } if (isSome(withheldSinkResult)) {
+          finalizedSinkResultPromise.resolve(withheldSinkResult.value)
+        } else if (sinkInstance.lifecycle.state !== "SEALED") {
+          finalizedSinkResultPromise.reject(
+            new Error(`Sink ${tag} was closed before seal event, so cannot generate a correct result`)
+          )
+        }
+
+        const references = getSome(sinkInstance.references)
+
+        await sink.close(references, outcome)
+        sinkInstance.references = none
+        sinkInstance.lifecycle = {
+          state: "ENDED",
+          outcome
+        }
+
+        pipe(
+          sinkInstance.controller,
+          map(
+            c => c.close(sinkInstance)
+          )
+        )
+      } else {
+        throw new Error(`Attempted action close() on sink ${sinkInstance.id} in incompatible lifecycle state: ${sinkInstance.lifecycle.state}`)
+      }
+
+      sinkInstance.lifecycle = { state: "ENDED", outcome }
+    },
+    capabilities: {
+      pull() {
+        // TODO
+        throw new Error("Not implemented")
+      },
+      push() {
+        // TODO
+        throw new Error("Not implemented")
+      }
     },
     id: tag
   } as SinkInstance<T, References, SinkResult>
@@ -128,29 +200,5 @@ export async function consume<T, MemberOrReferences>(
     }
   } else {
     throw new Error(`Attempted action consume() on sink ${sink.id} in incompatible lifecycle state: ${source.lifecycle.state}`)
-  }
-}
-
-export async function close<T, References, Finalization>(
-  sink: SinkInstance<T, References, any>,
-  outcome: Outcome<T, Finalization>
-) {
-  if (sink.lifecycle.state !== "ENDED") {
-    const references = getSome(sink.references)
-
-    await sink.prototype.close(references, outcome)
-    sink.references = none
-    sink.lifecycle = {
-      state: "ENDED",
-      outcome
-    }
-    pipe(
-      sink.controller,
-      map(
-        c => c.close(sink)
-      )
-    )
-  } else {
-    throw new Error(`Attempted action close() on sink ${sink.id} in incompatible lifecycle state: ${sink.lifecycle.state}`)
   }
 }
