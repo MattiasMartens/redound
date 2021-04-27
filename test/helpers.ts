@@ -1,6 +1,6 @@
 import { Possible } from "@/types/patterns"
 import {
-  deepStrictEqual
+  deepStrictEqual, doesNotReject
 } from "assert"
 import { iterableSource, UnaryDerivation, makeUnaryDerivation, makeSource, makeSink, eventCollectorSink, makeController, tupleFirst } from "@/index"
 import { ms, PossiblyAsyncResult } from "@/patterns/async"
@@ -20,7 +20,8 @@ export function expectationTest<T>(expectationsImport: any, scenarioKey: string,
 }
 
 export async function expectationTestAsync(expectationsImport: any, scenarioKey: string, fn: () => Promise<any>) {
-  const result = await fn()
+  const p = fn()
+  const result = await p
   return expectationTest(
     expectationsImport,
     scenarioKey,

@@ -15,7 +15,7 @@ export function deferredSource<T>(
   name?: string
 ) {
   const sourceInstance: Source<any, {
-    instantiatedInnerSource: Option<SourceInstance<any, any>>
+    instantiatedInnerSource: Option<AsyncIterable<T>>
   }> = declareSimpleSource(
     {
       name: name ?? "Deferred",
@@ -25,14 +25,18 @@ export function deferredSource<T>(
           references,
           pick("instantiatedInnerSource"),
           map(
-            s => close(s, outcome)
+            (s: any) => {
+              if (("prototype" in s) && ("graphComponentType" in s.prototype) && s.prototype.graphComponentType === "Source") {
+                close(s, outcome)
+              }
+            }
           )
         )
       },
       generate: () => {
         return {
           references: {
-            instantiatedInnerSource: none as Option<SourceInstance<any, any>>
+            instantiatedInnerSource: none as Option<AsyncIterable<T>>
           }
         }
       },

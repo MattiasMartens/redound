@@ -29,7 +29,7 @@ export function mainA() {
 
   end()
 
-  return controller.awaitOutcome()
+  return controller.promisedOutcome()
 }
 
 export function mainB() {
@@ -45,7 +45,7 @@ export function mainB() {
     sourceInstance
   )
 
-  return controller.awaitOutcome()
+  return controller.promisedOutcome()
 }
 
 export function mainC() {
@@ -70,5 +70,5 @@ export function mainC() {
     derivationInstance
   )
 
-  return controller.awaitOutcome()
+  return controller.promisedOutcome()
 }

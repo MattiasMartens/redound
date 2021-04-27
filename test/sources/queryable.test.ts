@@ -146,11 +146,6 @@ describe(
               }
             } else {
               const queryName = defined(tag)
-
-              if (aggregate === undefined) {
-                debugger
-              }
-
               const buffer = getOrFail(
                 aggregate.bufferingQueries,
                 queryName

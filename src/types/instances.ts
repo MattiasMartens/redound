@@ -100,7 +100,7 @@ export type ControllerInstance<Finalization> = {
     notifyingComponent: SourceInstance<any, any> | DerivationInstance<any, any, any> | SinkInstance<any, any, any>
   ) => Promise<void>,
   outcome: Option<Outcome<any, Finalization>>,
-  awaitOutcome: () => Promise<Outcome<any, Finalization>>,
+  promisedOutcome: () => Promise<Outcome<any, Finalization>>,
   // A function, intended to be generic, that the controller uses to determine that all close events have propagated fully to all sinks.
   close: (
     notifyingComponent: SourceInstance<any, any> | DerivationInstance<any, any, any> | SinkInstance<any, any, any>

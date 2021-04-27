@@ -16,7 +16,7 @@ import { initializeTag } from './tags'
 import { propagateController } from './controller'
 import { backpressure } from './backpressure'
 import { pipe } from 'fp-ts/lib/function'
-import { map } from 'fp-ts/lib/Option'
+import { map, Option } from 'fp-ts/lib/Option'
 import {
   left,
   map as mapRight,
@@ -25,7 +25,7 @@ import {
 import { ControlEvent, EndOfTagEvent, SealEvent } from '@/types/events'
 import { getSome } from '@/patterns/options'
 import { Possible } from '@/types/patterns'
-import { registerKey } from '@/runtime'
+import { fold } from 'fp-ts/lib/Option'
 
 // Dependency Map:
 // source imports sink
@@ -54,6 +54,30 @@ export function declareSimpleSource<T, References>(source: Partial<Omit<Source<T
     nullSource,
     source
   ) as Source<T, References>
+}
+
+
+async function sourceTry<T>(
+  fn: () => T | Promise<T>,
+  source: SourceInstance<any, any>,
+  event: Option<any | ControlEvent>
+) {
+  try {
+    return await fn()
+  } catch (e) {
+    return pipe(
+      source.controller,
+      fold(
+        () => {
+          console.error(`Uncaught error from Derivation with no controller: ${source.id}. Error:
+          ${e}
+          
+          To prevent errors from being logged, add Derivation ${source.id} to a graph with a controller.`)
+        },
+        c => c.rescue(e, event, source)
+      )
+    ) as void
+  }
 }
 
 export function instantiateSource<T, References>(source: Source<T, References>, { id, controller, role }: { id?: string, tick?: number, controller?: ControllerInstance<any>, role?: string } = {}): SourceInstance<T, References> {
@@ -207,69 +231,73 @@ export async function emit<T, References>(
 export function open<T, References>(
   source: SourceInstance<T, References>
 ) {
-  if (source.lifecycle.state === "READY") {
-    const sourceEmit = (e: T | ControlEvent) => {
-      return emit(
-        source,
-        e,
-        undefined
-      )
-    }
-
-    source.lifecycle.state = "ACTIVE"
-    const {
-      references,
-      output
-    } = source.prototype.generate()
-    source.references = some(references as References)
-
-    void (async () => {
-      try {
-        await iterateOverAsyncResult(
-          output,
-          sourceEmit,
-          () => source.lifecycle.state === "ENDED"
-        )
-
-        if (!source.prototype.pull) {
-          seal(source)
-        }
-      } catch (e) {
-        pipe(
-          source.controller,
-          map(
-            /**  NOTE: This captures failures *only* from the generation of events; emitting to a consumer is a can't-fail operation because if there were an error, the consumer would send it to the controller directly. It would never return to the control of this function. */
-            c => c.rescue(e, none, source)
-          )
+  sourceTry(() => {
+    if (source.lifecycle.state === "READY") {
+      const sourceEmit = (e: T | ControlEvent) => {
+        return emit(
+          source,
+          e,
+          undefined
         )
       }
 
-    })()
-  } else {
-    throw new Error(`Attempted action open() on source ${source.id} in incompatible lifecycle state: ${source.lifecycle.state}`)
-  }
+      source.lifecycle.state = "ACTIVE"
+      const {
+        references,
+        output
+      } = source.prototype.generate()
+      source.references = some(references as References)
+
+      void (async () => {
+        try {
+          await iterateOverAsyncResult(
+            output,
+            sourceEmit,
+            () => source.lifecycle.state === "ENDED"
+          )
+
+          if (!source.prototype.pull) {
+            seal(source)
+          }
+        } catch (e) {
+          pipe(
+            source.controller,
+            map(
+              /**  NOTE: This captures failures *only* from the generation of events; emitting to a consumer is a can't-fail operation because if there were an error, the consumer would send it to the controller directly. It would never return to the control of this function. */
+              c => c.rescue(e, none, source)
+            )
+          )
+        }
+
+      })()
+    } else {
+      throw new Error(`Attempted action open() on source ${source.id} in incompatible lifecycle state: ${source.lifecycle.state}`)
+    }
+  }, source, none)
 }
 
 export function subscribe<T>(
   source: SourceInstance<T, any>,
   consumer: GenericConsumerInstance<T, any>
 ) {
-  if (source.lifecycle.state !== "ENDED" && source.lifecycle.state !== "ITERATING") {
-    source.consumers.add(consumer)
+  sourceTry(() => {
+    if (source.lifecycle.state !== "ENDED" && source.lifecycle.state !== "ITERATING") {
+      source.consumers.add(consumer)
 
-    if (isSome(source.controller)) {
-      propagateController(
-        consumer,
-        source.controller.value
-      )
-    }
+      if (isSome(source.controller)) {
+        propagateController(
+          consumer,
+          source.controller.value
+        )
+      }
 
-    if (source.lifecycle.state === "READY") {
-      open(source)
+      if (source.lifecycle.state === "READY") {
+        open(source)
+      }
+    } else {
+      throw new Error(`Attempted action subscribe() on source ${source.id} in incompatible lifecycle state: ${source.lifecycle.state}`)
     }
-  } else {
-    throw new Error(`Attempted action subscribe() on source ${source.id} in incompatible lifecycle state: ${source.lifecycle.state}`)
-  }
+  }, source, none)
 }
 
 export function unsubscribe<T>(
@@ -282,27 +310,30 @@ export function unsubscribe<T>(
 export function seal<T, References>(
   source: SourceInstance<T, References>,
 ) {
-  if (source.lifecycle.state === "ACTIVE") {
-    source.lifecycle.state = "SEALED"
+  return sourceTry<void>(
+    async () => {
+      if (source.lifecycle.state === "ACTIVE") {
+        source.lifecycle.state = "SEALED"
 
-    return voidPromiseIterable(
-      mapIterable(
-        source.consumers,
-        consumer => {
-          return consume(
-          source,
-          consumer,
-            SealEvent,
-            undefined
+        return voidPromiseIterable(
+          mapIterable(
+            source.consumers,
+            consumer => {
+              return consume(
+              source,
+              consumer,
+                SealEvent,
+                undefined
+              )
+            }
           )
-        }
-      )
-    );
-  } else if (source.lifecycle.state === "ENDED") {
-    // no-op
-  } else {
-    throw new Error(`Attempted action seal() on source ${source.id} in incompatible lifecycle state: ${source.lifecycle.state}`)
-  }
+        )
+      } else if (source.lifecycle.state === "ENDED") {
+        // no-op
+      } else {
+        throw new Error(`Attempted action seal() on source ${source.id} in incompatible lifecycle state: ${source.lifecycle.state}`)
+      }
+    }, source, none)
 }
 
 type Finalization = any
@@ -310,20 +341,23 @@ export function close<T, References>(
   source: SourceInstance<T, References>,
   outcome: Outcome<T, Finalization>
 ) {
-  if (source.lifecycle.state !== "ENDED" && source.lifecycle.state !== "READY") {
-    source.lifecycle = {
-      outcome,
-      state: "ENDED"
-    };
+  sourceTry(
+    async () => {
+      if (source.lifecycle.state !== "ENDED" && source.lifecycle.state !== "READY") {
+        source.lifecycle = {
+          outcome,
+          state: "ENDED"
+        };
 
-    forEachIterable(
-      source.consumers,
-      consumer => consumerClose(
-        consumer,
-        outcome
-      )
-    )
-  } else {
-    throw new Error(`Attempted action close() on source ${source.id} in incompatible lifecycle state: ${source.lifecycle.state}`)
-  }
+        forEachIterable(
+          source.consumers,
+          consumer => consumer.lifecycle.state !== "ENDED" && consumerClose(
+            consumer,
+            outcome
+          )
+        )
+      } else {
+        throw new Error(`Attempted action close() on source ${source.id} in incompatible lifecycle state: ${source.lifecycle.state}`)
+      }
+    }, source, none)
 }

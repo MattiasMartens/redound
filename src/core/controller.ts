@@ -3,7 +3,7 @@ import { forEachIterable } from "@/patterns/iterables"
 import { Controller, Outcome, SealEvent } from "@/types/abstract"
 import { ControllerInstance, DerivationInstance, SinkInstance, SourceInstance } from "@/types/instances"
 import { constUndefined, pipe } from "fp-ts/lib/function"
-import { fold, fromNullable, isNone, map, none, Option, some } from "fp-ts/lib/Option"
+import { fold, fromNullable, isNone, isSome, map, none, Option, some } from "fp-ts/lib/Option"
 import { defaultControllerRescue, defaultControllerSeal, defaultControllerTaggedEvent } from "./helpers"
 import { close } from "./source"
 import { initializeTag } from "./tags"
@@ -12,6 +12,7 @@ import {
 } from "big-m"
 import { left, map as mapRight } from "fp-ts/lib/Either"
 import { noop } from "@/patterns/functions"
+import { getSome } from "@/patterns/options"
 
 type ControllerReceiver = DerivationInstance<any, any, any> | SourceInstance<any, any> | SinkInstance<any, any, any>
 
@@ -63,12 +64,21 @@ export function instantiateController<Finalization>(
   const allSinksClosed = defer()
 
   const propagateOutcome = (outcome: Outcome<any, Finalization>) => {
-    forEachIterable(
-      domain.sources,
-      sourceInstance => close(sourceInstance, outcome)
-    )
+    if (!isSome(controllerInstance.outcome)) {
+      controllerInstance.outcome = some(outcome)
+      forEachIterable(
+        domain.sources,
+        sourceInstance => close(sourceInstance, outcome)
+      )
 
-    outcomePromise.resolve(outcome)
+      outcomePromise.resolve(outcome)
+    } else {
+      console.error(`Attempted to close a controller with an outcome when an outcome already existed.
+      Outcome 1:`)
+      console.error(getSome(controllerInstance.outcome))
+      console.error(`Outcome 2:`)
+      console.error(outcome)
+    }
   }
 
   const controllerInstance: ControllerInstance<Finalization> = {
@@ -128,18 +138,21 @@ export function instantiateController<Finalization>(
         )
       },
     },
-    awaitOutcome: () => outcomePromise.promise,
+    promisedOutcome: () => outcomePromise.promise,
     async rescue(error: Error, event: Option<any>, notifyingComponent: SourceInstance<any, any> | DerivationInstance<any, any, any> | SinkInstance<any, any, any>) {
       pipe(
         await controller.rescue(error, event, notifyingComponent, domain),
-        x => map(
+        map(
           propagateOutcome
         )
       )
     },
     async seal(sealEvent: SealEvent) {
+      const sealResult = await controller.seal(sealEvent, domain)
+      debugger;;;;;;;;;
+
       pipe(
-        await controller.seal(sealEvent, domain),
+        sealResult,
         map(
           propagateOutcome
         )

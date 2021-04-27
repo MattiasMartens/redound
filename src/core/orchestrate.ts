@@ -8,11 +8,14 @@ import {
 } from "./derivation"
 
 export function makeSink<T, References, SinkResult>(sink: Sink<T, References, SinkResult>, sourceInstance: Emitter<T>, params: { id?: string, controller?: ControllerInstance<any> } = {}): SinkInstance<T, References, SinkResult> {
+  debugger
+
   const sinkInstance = instantiateSink(
     sink,
     params
   )
 
+  debugger
   if (sourceInstance.prototype.graphComponentType === "Source") {
     sourceSubscribe(
       sourceInstance as SourceInstance<any, any>,

@@ -256,6 +256,7 @@ export function close<References>(
   derivation: DerivationInstance<any, any, References>,
   outcome: Outcome<any, Finalization>
 ) {
+  debugger;
   if (derivation.lifecycle.state !== "ENDED" && derivation.lifecycle.state !== "READY") {
     derivation.lifecycle = {
       outcome,
@@ -264,7 +265,7 @@ export function close<References>(
 
     forEachIterable(
       derivation.consumers,
-      consumer => consumerClose(
+      consumer => consumer.lifecycle.state !== "ENDED" && consumerClose(
         consumer,
         outcome
       )
