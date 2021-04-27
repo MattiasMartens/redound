@@ -280,7 +280,7 @@ export function close<T, References>(
     source.lifecycle = {
       outcome,
       state: "ENDED"
-    }
+    };
 
     forEachIterable(
       source.consumers,

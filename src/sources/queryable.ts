@@ -1,11 +1,9 @@
-import { makeSink, makeSource } from "@/core"
-import { declareSimpleSink } from "@/core/sink"
+import { makeSource } from "@/core"
 import { close, declareSimpleSource, seal } from "@/core/source"
-import { chainAsyncResults } from "@/patterns/async"
-import { pick } from "@/patterns/functions"
 import { forEachIterable } from "@/patterns/iterables"
 import { Source } from "@/types/abstract"
 import { SourceInstance } from "@/types/instances"
+import { right } from "fp-ts/lib/Either"
 
 export function queryableSource<T>(
   sourceProducingFunction: (query: any) => Source<T, any>,
@@ -37,11 +35,12 @@ export function queryableSource<T>(
           const newSource = makeSource(sourceProducingFunction(query))
           references.set(tag, newSource)
 
+          // TODO Manage the lifecycle of the enclosed source
           const {
             output
           } = newSource.prototype.generate()
 
-          return 0 as any
+          return right(output)
         }
       }
     }

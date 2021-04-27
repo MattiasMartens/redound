@@ -36,7 +36,7 @@ async function doMocha() {
   const fileGenerator = getFiles(testDir)
 
   for await (const { file } of fileGenerator) {
-    if (file.endsWith(".js")) {
+    if (file.endsWith(".js") && file.includes("queryable")) {
       mocha.addFile(file)
     }
   }

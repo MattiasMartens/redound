@@ -38,11 +38,13 @@ export function makeUnaryDerivation<U, T>(
   return makeDerivation(derivation, { main: source }, params)
 }
 
-export function defaultControllerRescue(error: Error, event: Option<any>): Outcome<any, never> {
-  return left({
-    error,
-    event
-  })
+export function defaultControllerRescue(error: Error, event: Option<any>) {
+  return some(
+    left({
+      error,
+      event
+    })
+  )
 }
 
 export function defaultControllerSeal(

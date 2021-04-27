@@ -1,9 +1,7 @@
-import { makeController, makeDerivation, makeSink, makeSource, makeUnaryDerivation } from '@/core'
+import { makeController, makeDerivation, makeSink, makeSource } from '@/core'
 import { declareSimpleDerivation } from '@/core/derivation'
 import { eventCollectorSink } from '@/sinks'
-import {
-  deferredSource
-} from '@/sources/deferred'
+import * as expectations from './expectations.meta'
 import {
   iterableSource
 } from '@/sources/iterable'
@@ -12,6 +10,10 @@ import { isLeft } from 'fp-ts/lib/Either'
 import {
   strictEqual
 } from 'assert'
+import { queryableSource } from '@/sources/queryable'
+import { defined } from '@/patterns/insist'
+import { getOrFail } from 'big-m'
+import { expectationTestAsync } from '@test/helpers'
 
 const fragments = [
   "list 1:",
@@ -24,15 +26,48 @@ const fragments = [
 ]
 
 const sequences = {
-  fibonacci: [],
-  primes: [],
-  elements: []
+  fibonacci: ['1', '1', '2', '3', '5', '8'],
+  primes: ['2', '3', '5', '7', '11', '13'],
+  elements: ['H', 'He', 'Li', 'Be', 'B', 'C']
+}
+
+function* flushBufferedContent({
+  contentBuffer,
+  bufferingQueries
+}: {
+  contentBuffer: ({
+    tag: "content";
+    value: string;
+  } | {
+    tag: "query", name: string, buffer: string[]
+  })[];
+  bufferingQueries: Map<string, string[]>;
+}) {
+  while (contentBuffer.length) {
+    const x = contentBuffer[0]!
+
+    if (x.tag === "content") {
+      contentBuffer.shift()
+      yield x.value
+    } else {
+      const queryName = x.name
+
+      if (bufferingQueries.has(queryName)) {
+        return
+      } else {
+        contentBuffer.shift()
+        yield '\n'
+        yield* x.buffer
+        yield '\n'
+      }
+    }
+  }
 }
 
 describe(
   "queryableSource",
   () => {
-    it("Triggers the data result of a source returned by the inner function, when pull() is called downstream", async () => {
+    it("Triggers the data result of a source returned by the inner function, when pull() is called downstream", () => expectationTestAsync(expectations, "independentLists", async () => {
       const controller = makeController()
       const source = makeSource(
         iterableSource(fragments),
@@ -40,16 +75,18 @@ describe(
       )
 
       const sequenceSource = makeSource(
-        deferredSource(
-          (animalType) => iterableSource(sequences[animalType])
+        queryableSource(
+          (listType) => iterableSource(sequences[listType])
         ),
         { controller, role: "dynamic" }
       )
 
       const composingDerivation = makeDerivation(
         declareSimpleDerivation<{ main: Emitter<string>, dynamic: Emitter<string> }, string, {
-          postDynamicContentBuffer: string[],
-          emittingDynamicContent: boolean
+          contentBuffer: ({ tag: "content", value: string } | {
+            tag: "query", name: string, buffer: string[]
+          })[],
+          bufferingQueries: Map<string, string[]>
         }>({
           name: "ComposingDerivation",
           consumes: {
@@ -58,8 +95,8 @@ describe(
           },
           open() {
             return {
-              emittingDynamicContent: false,
-              postDynamicContentBuffer: []
+              contentBuffer: [],
+              bufferingQueries: new Map()
             }
           },
           consume(
@@ -67,7 +104,8 @@ describe(
               event,
               aggregate,
               capabilities,
-              role
+              role,
+              tag
             }
           ) {
             const output: string[] = []
@@ -78,6 +116,7 @@ describe(
 
                 const pullResult = capabilities.pull({
                   query: dynamicContentQuery,
+                  tag: dynamicContentQuery,
                   role: 'dynamic'
                 })
 
@@ -85,14 +124,39 @@ describe(
                   throw pullResult.left
                 }
 
-                aggregate.emittingDynamicContent = true
-              } else if (aggregate.emittingDynamicContent) {
-                aggregate.postDynamicContentBuffer.push(event)
+                const buffer = []
+
+                aggregate.bufferingQueries.set(
+                  dynamicContentQuery,
+                  buffer
+                )
+
+                aggregate.contentBuffer.push({
+                  tag: "query",
+                  name: dynamicContentQuery,
+                  buffer
+                })
+              } else if (aggregate.bufferingQueries.size) {
+                aggregate.contentBuffer.push({
+                  tag: "content",
+                  value: event
+                })
               } else {
                 output.push(event)
               }
             } else {
-              output.push(event)
+              const queryName = defined(tag)
+
+              if (aggregate === undefined) {
+                debugger
+              }
+
+              const buffer = getOrFail(
+                aggregate.bufferingQueries,
+                queryName
+              )
+
+              buffer.push(event)
             }
 
             return {
@@ -102,21 +166,19 @@ describe(
           },
           seal(
             {
-              aggregate,
-              role,
-              remainingUnsealedSources
+              aggregate
             }
           ) {
-            const output: string[] = []
-
-            if (role === "dynamic") {
-              output.push(...aggregate.postDynamicContentBuffer.splice(0))
-            }
-
+            console.log([...aggregate.bufferingQueries.keys()])
             return {
-              aggregate,
-              output,
-              seal: !remainingUnsealedSources.size
+              seal: !aggregate.bufferingQueries.size
+            }
+          },
+          querySeal({ aggregate, tag, remainingUnsealedSources }) {
+            aggregate.bufferingQueries.delete(tag)
+            return {
+              output: flushBufferedContent(aggregate),
+              seal: !aggregate.bufferingQueries.size && remainingUnsealedSources.size === 1
             }
           }
         }),
@@ -132,11 +194,8 @@ describe(
       )
 
       const finalOutput = await sink.sinkResult()
-      const compiled = finalOutput.join(" ")
-      strictEqual(
-        compiled,
-        "What follows is a list of animals of a particular kind: platypus kangaroo koala I hope you enjoyed reading this list."
-      )
-    })
+      const compiled = finalOutput.join(" ").replace(/\n /g, "\n")
+      return compiled
+    }))
   }
 )

@@ -333,9 +333,9 @@ export function consume<T, MemberOrReferences>(
         if (e === EndOfTagEvent) {
           // 1. Call derivation's implementation of querySeal
           const querySealResult = derivation.prototype.querySeal({
-            aggregate: derivation.aggregate,
+            aggregate: getSome(derivation.aggregate),
             source,
-            eventTag: defined(tag, "Received EndOfTagEvent with no attendant tag"),
+            tag: defined(tag, "Received EndOfTagEvent with no attendant tag"),
             remainingUnsealedSources: remainingUnsealedSources(derivation),
             role: getSourceRole(derivation, source)
           })
@@ -353,7 +353,7 @@ export function consume<T, MemberOrReferences>(
           }
 
           if (querySealResult.seal) {
-            seal(derivation, e)
+            seal(derivation, SealEvent)
           }
 
           // 2. Notify controller
@@ -375,7 +375,9 @@ export function consume<T, MemberOrReferences>(
             remainingUnsealedSources: remainingUnsealedSources(derivation)
           })
 
-          derivation.aggregate = some(sealResult.aggregate)
+          if ("aggregate" in sealResult) {
+            derivation.aggregate = some(sealResult.aggregate)
+          }
 
           await scheduleEmissions(
             derivation,
@@ -399,6 +401,7 @@ export function consume<T, MemberOrReferences>(
             output
           } = derivation.prototype.consume({
             event: e,
+            tag,
             aggregate: inAggregate,
             source,
             role,

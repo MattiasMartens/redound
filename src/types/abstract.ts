@@ -6,6 +6,7 @@ import {
   Option
 } from 'fp-ts/lib/Option'
 import { GenericEmitterInstance, PayloadTypeOf, SourceInstance, Emitter, SinkInstance, DerivationInstance } from './instances'
+import { Possible } from './patterns'
 
 export type Outcome<T, Finalization> = Either<{
   error: Error,
@@ -68,6 +69,7 @@ export type Derivation<DerivationSourceType extends Record<string, Emitter<any>>
   consume: <K extends keyof DerivationSourceType>(
     params: {
       event: PayloadTypeOf<DerivationSourceType[K]>,
+      tag: Possible<string>,
       aggregate: Aggregate,
       source: GenericEmitterInstance<any, unknown>,
       role: K,
@@ -94,7 +96,7 @@ export type Derivation<DerivationSourceType extends Record<string, Emitter<any>>
   querySeal: (params: {
     aggregate: Aggregate,
     source: Emitter<any>,
-    eventTag: string,
+    tag: string,
     role: keyof DerivationSourceType,
     remainingUnsealedSources: Set<GenericEmitterInstance<any, any>>
   }) => {
@@ -160,7 +162,7 @@ export type Controller<Finalization> = {
       sources: Set<SourceInstance<any, any>>,
       sinks: Set<SinkInstance<any, any, any>>
     }
-  ) => Promise<Option<Outcome<any, Finalization>>> | Outcome<any, Finalization>,
+  ) => Promise<Option<Outcome<any, Finalization>>> | Option<Outcome<any, Finalization>>,
   taggedEvent: (
     event: any,
     tag: string,

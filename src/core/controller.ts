@@ -63,7 +63,6 @@ export function instantiateController<Finalization>(
   const allSinksClosed = defer()
 
   const propagateOutcome = (outcome: Outcome<any, Finalization>) => {
-    debugger;
     forEachIterable(
       domain.sources,
       sourceInstance => close(sourceInstance, outcome)
@@ -133,7 +132,7 @@ export function instantiateController<Finalization>(
     async rescue(error: Error, event: Option<any>, notifyingComponent: SourceInstance<any, any> | DerivationInstance<any, any, any> | SinkInstance<any, any, any>) {
       pipe(
         await controller.rescue(error, event, notifyingComponent, domain),
-        map(
+        x => map(
           propagateOutcome
         )
       )
