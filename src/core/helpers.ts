@@ -61,15 +61,11 @@ export function defaultControllerSeal(
       }
     }
 
-    // Note that under the default regime, the controller's finalization is
-    // determined only by whichever Sink was the last to seal.
-    // Hence, best-suited to graphs with only one Sink, or where the finalization
-    // does not matter.
+    // Note that under the default regime, the controller's finalization is determined only by whichever Sink was the last to seal.
+    // Hence, best-suited to graphs with only one Sink, or where the finalization does not matter.
     return some(
       right(
-        {
-          finalization: sealEvent.result
-        }
+        sealEvent.result
       )
     )
   } else {

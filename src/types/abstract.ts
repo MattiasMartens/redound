@@ -11,9 +11,7 @@ import { Possible } from './patterns'
 export type Outcome<T, Finalization> = Either<{
   error: Error,
   event: Option<T>
-}, {
-  finalization: Finalization
-}>
+}, Finalization>
 
 export type GenericEmitter<References> = {
   /** In general, it should be enforced that the type of instances of Event<T> is confined to the subtypes specified in `emits`. In TypeScript it is best to offer the ability to enforce it at runtime. */

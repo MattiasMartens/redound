@@ -135,19 +135,19 @@ export async function iterateOverAsyncResult<T>(
 
 export async function* chainAsyncResults<T>(
   ...results: PossiblyAsyncResult<T>[]
-): PossiblyAsyncResult<T> {
+): AsyncGenerator<T> {
   for (const result of results) {
     if (result === undefined) {
       // noop
     } else if (Symbol.asyncIterator in result) {
-      yield* (result as AsyncIterable<T>)
+      yield* (result as any)
     } else {
       const awaited = await result
 
       if (awaited === undefined) {
         // noop
       } else {
-        yield* (awaited as Iterable<T>)
+        yield* (awaited as any)
       }
     }
   }

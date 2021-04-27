@@ -7,12 +7,13 @@ export type GenericConsumerInstance<T, MemberOrReferences> = SinkInstance<T, Mem
 
 type Finalization = any
 export type SourceInstance<T, References> = {
+  [Symbol.asyncIterator]: () => AsyncIterator<T>,
   prototype: Source<T, References>,
   controller: Option<ControllerInstance<any>>,
   id: string,
   consumers: Set<GenericConsumerInstance<T, any>>,
   backpressure: Backpressure,
-  lifecycle: { state: "READY" | "ACTIVE" | "SEALED" } | { state: "ENDED", outcome: Outcome<T, Finalization> },
+  lifecycle: { state: "READY" | "ACTIVE" | "SEALED" | "ITERATING" } | { state: "ENDED", outcome: Outcome<T, Finalization> },
   // Initialized to 'Some' on first subscription event,
   // reverted to 'None' once closed.
   references: Option<References>,

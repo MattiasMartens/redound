@@ -1,4 +1,4 @@
-import { iterateOverAsyncResult, voidPromiseIterable, wrapAsync } from '@/patterns/async'
+import { chainAsyncResults, iterateOverAsyncResult, voidPromiseIterable, wrapAsync } from '@/patterns/async'
 import { forEachIterable, mapIterable } from '@/patterns/iterables'
 import {
   Outcome,
@@ -18,7 +18,9 @@ import { backpressure } from './backpressure'
 import { pipe } from 'fp-ts/lib/function'
 import { map } from 'fp-ts/lib/Option'
 import {
-  map as mapRight
+  left,
+  map as mapRight,
+  right
 } from 'fp-ts/lib/Either'
 import { ControlEvent, EndOfTagEvent, SealEvent } from '@/types/events'
 import { getSome } from '@/patterns/options'
@@ -72,6 +74,36 @@ export function instantiateSource<T, References>(source: Source<T, References>, 
     backpressure: backpressure(),
     controller: controllerOption,
     id: tag,
+    async *[Symbol.asyncIterator]() {
+      if (isSome(sourceInstance.controller)) {
+        throw new Error("Cannot manually iterate over a source which already has a controller set")
+      } else if (sourceInstance.consumers.size) {
+        throw new Error("Cannot manually iterate over a source which is already part of a component graph")
+      } else if (sourceInstance.lifecycle.state !== "READY") {
+        throw new Error(`Tried to manually iterate over source in incompatible lifecycle state: ${sourceInstance.lifecycle.state}`)
+      }
+
+      sourceInstance.lifecycle.state = "ITERATING"
+
+      const {
+        references,
+        output
+      } = source.generate()
+      sourceInstance.references = some(references as any)
+
+      try {
+        for await (const toYield of chainAsyncResults(output)) {
+          if (sourceInstance.lifecycle.state !== "ITERATING") {
+            return
+          } else {
+            yield toYield
+          }
+        }
+        close(sourceInstance, right("Successful iteration"))
+      } catch (e) {
+        close(sourceInstance, left(e))
+      }
+    },
     pull: source.pull ? (
       (query: Query, queryTag?: string) => {
         const healedQueryTag = queryTag === undefined
@@ -79,8 +111,10 @@ export function instantiateSource<T, References>(source: Source<T, References>, 
           : initializeTag(undefined, queryTag)
 
 
-        if (sourceInstance.lifecycle.state === "READY" || sourceInstance.lifecycle.state === "SEALED" || sourceInstance.lifecycle.state === "ENDED") {
+        if (sourceInstance.lifecycle.state === "READY" || sourceInstance.lifecycle.state === "ENDED" || sourceInstance.lifecycle.state === "ITERATING") {
           throw new Error(`Attempted action pull() on source ${id} in incompatible lifecycle state: ${sourceInstance.lifecycle.state}`)
+        } else if (sourceInstance.lifecycle.state === "SEALED") {
+          return left(new Error("Cannot query this source because it is already sealed"))
         }
 
         const result = source.pull!(
@@ -220,7 +254,7 @@ export function subscribe<T>(
   source: SourceInstance<T, any>,
   consumer: GenericConsumerInstance<T, any>
 ) {
-  if (source.lifecycle.state !== "ENDED") {
+  if (source.lifecycle.state !== "ENDED" && source.lifecycle.state !== "ITERATING") {
     source.consumers.add(consumer)
 
     if (isSome(source.controller)) {
@@ -260,7 +294,7 @@ export function seal<T, References>(
           consumer,
             SealEvent,
             undefined
-        )
+          )
         }
       )
     );
