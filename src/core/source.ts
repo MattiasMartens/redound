@@ -104,7 +104,6 @@ export function instantiateSource<T, References>(source: Source<T, References>, 
       } else if (sourceInstance.consumers.size) {
         throw new Error("Cannot manually iterate over a source which is already part of a component graph")
       } else if (sourceInstance.lifecycle.state !== "READY") {
-        debugger;
         throw new Error(`Tried to manually iterate over source in incompatible lifecycle state: ${sourceInstance.lifecycle.state}`)
       }
 
