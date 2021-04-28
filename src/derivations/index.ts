@@ -5,6 +5,7 @@ import { Derivation } from "@/types/abstract"
 import { Emitter } from "@/types/instances"
 
 export * from './stateful'
+export * from './string-lines'
 
 export type UnaryDerivation<I, O> = Derivation<{ main: Emitter<I> }, O, any>
 
