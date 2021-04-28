@@ -94,6 +94,8 @@ export async function iterateOverAsyncResult<T>(
         return
       }
     }
+
+    return
   }
 
   const awaited = await result

@@ -11,7 +11,7 @@ import { some } from "fp-ts/lib/Option"
 import { fold, isSome, map, none, Option } from "fp-ts/lib/Option"
 
 export function deferredSource<T>(
-  sourceProducingFunction: (query: any) => Source<T, any>,
+  sourceProducingFunction: (query: any) => Source<T, any> | AsyncIterable<T>,
   name?: string
 ) {
   const sourceInstance: Source<any, {
@@ -48,18 +48,13 @@ export function deferredSource<T>(
           references.instantiatedInnerSource,
           fold(
             () => {
-              const newSource = makeSource(
-                sourceProducingFunction(query)
-              )
+              const producedSource = sourceProducingFunction(query)
+              const newSource: AsyncIterable<T> = ("graphComponentType" in producedSource && producedSource.graphComponentType === "Source") ? makeSource(producedSource) : producedSource as AsyncIterable<T> | SourceInstance<T, any>
               references.instantiatedInnerSource = some(newSource)
-
-              const {
-                output
-              } = newSource.prototype.generate()
 
               return right(
                 chainAsyncResults(
-                  output,
+                  newSource,
                   [SealEvent] as any
                 )
               )

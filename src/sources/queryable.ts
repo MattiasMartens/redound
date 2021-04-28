@@ -6,7 +6,7 @@ import { SourceInstance } from "@/types/instances"
 import { right } from "fp-ts/lib/Either"
 
 export function queryableSource<T>(
-  sourceProducingFunction: (query: any) => Source<T, any>,
+  sourceProducingFunction: (query: any) => Source<T, any> | SourceInstance<T, any> | AsyncIterable<T>,
   name?: string
 ) {
   const sourceInstance: Source<any, Map<string, SourceInstance<any, any>>> = declareSimpleSource(
@@ -16,7 +16,11 @@ export function queryableSource<T>(
       close: (references, outcome) => {
         forEachIterable(
           references,
-          ([, source]) => close(source, outcome)
+          ([, source]: [any, any]) => {
+            if (("prototype" in source) && ("graphComponentType" in source.prototype) && source.prototype.graphComponentType === "Source") {
+              close(source, outcome)
+            }
+          }
         )
       },
       generate: () => {
@@ -32,15 +36,11 @@ export function queryableSource<T>(
         if (references.has(tag)) {
           throw new Error(`A query tagged ${tag} was already registered`)
         } else {
-          const newSource = makeSource(sourceProducingFunction(query))
+          const producedSource = sourceProducingFunction(query)
+          const newSource: AsyncIterable<T> = ("graphComponentType" in producedSource && producedSource.graphComponentType === "Source") ? makeSource(producedSource) : producedSource as AsyncIterable<T> | SourceInstance<T, any>
           references.set(tag, newSource)
 
-          // TODO Manage the lifecycle of the enclosed source
-          const {
-            output
-          } = newSource.prototype.generate()
-
-          return right(output)
+          return right(newSource)
         }
       }
     }

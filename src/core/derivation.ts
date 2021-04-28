@@ -183,8 +183,6 @@ export function siphon(derivation: DerivationInstance<any, any, any>, sourceSubs
     genericEmitter => {
       if (genericEmitter.prototype.graphComponentType === "Derivation" && genericEmitter.lifecycle.state === "READY") {
         subscribe(genericEmitter as DerivationInstance<any, any, any>, derivation, sourceSubscribe)
-        // commented out to check if this causes error
-        // siphon(genericEmitter as DerivationInstance<any, any, any>, sourceSubscribe)
       } else if (genericEmitter.prototype.graphComponentType === "Source" && genericEmitter.lifecycle.state === "READY") {
         sourceSubscribe(genericEmitter as SourceInstance<any, any>, derivation)
       }
@@ -256,7 +254,6 @@ export function close<References>(
   derivation: DerivationInstance<any, any, References>,
   outcome: Outcome<any, Finalization>
 ) {
-  debugger;
   if (derivation.lifecycle.state !== "ENDED" && derivation.lifecycle.state !== "READY") {
     derivation.lifecycle = {
       outcome,

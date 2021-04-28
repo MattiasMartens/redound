@@ -104,6 +104,7 @@ export function instantiateSource<T, References>(source: Source<T, References>, 
       } else if (sourceInstance.consumers.size) {
         throw new Error("Cannot manually iterate over a source which is already part of a component graph")
       } else if (sourceInstance.lifecycle.state !== "READY") {
+        debugger;
         throw new Error(`Tried to manually iterate over source in incompatible lifecycle state: ${sourceInstance.lifecycle.state}`)
       }
 
@@ -133,7 +134,6 @@ export function instantiateSource<T, References>(source: Source<T, References>, 
         const healedQueryTag = queryTag === undefined
           ? initializeTag(sourceInstance.id)
           : initializeTag(undefined, queryTag)
-
 
         if (sourceInstance.lifecycle.state === "READY" || sourceInstance.lifecycle.state === "ENDED" || sourceInstance.lifecycle.state === "ITERATING") {
           throw new Error(`Attempted action pull() on source ${id} in incompatible lifecycle state: ${sourceInstance.lifecycle.state}`)
@@ -167,7 +167,7 @@ export function instantiateSource<T, References>(source: Source<T, References>, 
                       mapIterable(
                         sourceInstance.consumers,
                         async c => {
-                          consume(sourceInstance, c, event, queryTag)
+                          await consume(sourceInstance, c, event, queryTag)
                         }
                       )
                     )
@@ -258,7 +258,7 @@ export function open<T, References>(
 
           if (!source.prototype.pull) {
             seal(source)
-          }
+          };
         } catch (e) {
           pipe(
             source.controller,
@@ -291,6 +291,8 @@ export function subscribe<T>(
         )
       }
 
+      // If something subscribes, then by definition it is either a Sink or a Derivation that has a Sink downstream of it.
+      // Time to start emitting!
       if (source.lifecycle.state === "READY") {
         open(source)
       }
@@ -320,8 +322,8 @@ export function seal<T, References>(
             source.consumers,
             consumer => {
               return consume(
-              source,
-              consumer,
+                source,
+                consumer,
                 SealEvent,
                 undefined
               )
@@ -361,3 +363,4 @@ export function close<T, References>(
       }
     }, source, none)
 }
+;;;;;;

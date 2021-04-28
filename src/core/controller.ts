@@ -96,7 +96,7 @@ export function instantiateController<Finalization>(
       return foldingGet(
         domain.sourcesByRole,
         role,
-        source => source.pull ? source.pull(event) : left(new Error("Source does not have push functionality")),
+        source => source.push ? source.push(event) : left(new Error("Source does not have push functionality")),
         () => left(new Error(`Role ${role} does not exist on source`))
       )
     },
@@ -127,7 +127,7 @@ export function instantiateController<Finalization>(
             source.pull,
             fromNullable,
             fold(
-              () => left(new Error("Source does not have push functionality")),
+              () => left(new Error("Source does not have pull functionality")),
               pullFn => pipe(
                 pullFn(event),
                 mapRight(noop)
@@ -149,7 +149,6 @@ export function instantiateController<Finalization>(
     },
     async seal(sealEvent: SealEvent) {
       const sealResult = await controller.seal(sealEvent, domain)
-      debugger;;;;;;;;;
 
       pipe(
         sealResult,
@@ -227,7 +226,7 @@ export function instantiateController<Finalization>(
 export function controller<T>(
   partialController: Partial<Controller<T>> = {}
 ): Controller<T> {
-  return {
+  ; return {
     name: "Controller",
     rescue: defaultControllerRescue,
     seal: defaultControllerSeal,

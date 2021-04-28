@@ -120,7 +120,7 @@ export function instantiateSink<T, References, SinkResult>(sink: Sink<T, Referen
     async close(outcome: Outcome<any, any>) {
       if (sinkInstance.lifecycle.state !== "ENDED") {
         if (isLeft(outcome)) {
-          finalizedSinkResultPromise.reject(outcome.left)
+          finalizedSinkResultPromise.reject(outcome.left.error)
         } if (isSome(withheldSinkResult)) {
           finalizedSinkResultPromise.resolve(withheldSinkResult.value)
         } else if (sinkInstance.lifecycle.state !== "SEALED") {

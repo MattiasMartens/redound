@@ -7,9 +7,6 @@ import {
 } from '@/sources/iterable'
 import { Emitter } from '@/types/instances'
 import { isLeft } from 'fp-ts/lib/Either'
-import {
-  strictEqual
-} from 'assert'
 import { queryableSource } from '@/sources/queryable'
 import { defined } from '@/patterns/insist'
 import { getOrFail } from 'big-m'
@@ -17,9 +14,9 @@ import { expectationTestAsync } from '@test/helpers'
 
 const fragments = [
   "list 1:",
-  "{{fibonacci}}",
-  "list 2:",
   "{{primes}}",
+  "list 2:",
+  "{{fibonacci}}",
   "list 3:",
   "{{elements}}",
   "I hope you have enjoyed reading these lists."
@@ -76,7 +73,7 @@ describe(
 
       const sequenceSource = makeSource(
         queryableSource(
-          (listType) => iterableSource(sequences[listType])
+          (listType) => iterableSource(new Set(sequences[listType]))
         ),
         { controller, role: "dynamic" }
       )
@@ -122,7 +119,7 @@ describe(
 
                 if (isLeft(pullResult)) {
                   throw pullResult.left
-                }
+                };
 
                 const buffer = []
 
@@ -164,7 +161,6 @@ describe(
               aggregate
             }
           ) {
-            console.log([...aggregate.bufferingQueries.keys()])
             return {
               seal: !aggregate.bufferingQueries.size
             }
@@ -189,7 +185,7 @@ describe(
       )
 
       const finalOutput = await sink.sinkResult()
-      const compiled = finalOutput.join(" ").replace(/\n /g, "\n")
+      const compiled = finalOutput.join(" ").replace(/ \n /g, "\n")
       return compiled
     }))
   }

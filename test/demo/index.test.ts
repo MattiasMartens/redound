@@ -7,7 +7,7 @@ async function captureLogOutput(fn: () => Promise<void>) {
   const toCapture = [] as any[]
   global.console.log = (a: any) => {
     toCapture.push(a)
-  }
+  };
   try {
     await fn()
   } finally {
