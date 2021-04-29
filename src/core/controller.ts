@@ -85,7 +85,6 @@ export function instantiateController<Finalization>(
     prototype: controller,
     id: tag,
     waitForPressure,
-    waitingForPressure: waitForPressure,
     outcome: none,
     pull: ({ query, role, tag }) => {
       return foldingGet(

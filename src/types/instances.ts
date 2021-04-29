@@ -62,6 +62,7 @@ export type SinkInstance<T, References, SinkResult> = {
   prototype: Sink<T, References, SinkResult>,
   controller: Option<ControllerInstance<any>>,
   id: string,
+  siphoning: boolean,
   latestTickByProvenance: Map<SourceId, number>,
   lifecycle: { state: "ACTIVE" } | { state: "SEALED" } | { state: "ENDED", outcome: Outcome<T, Finalization> },
   seal: () => Promise<void>,
@@ -80,7 +81,6 @@ export type SinkInstance<T, References, SinkResult> = {
 export type ControllerInstance<Finalization> = {
   prototype: Controller<Finalization>,
   waitForPressure: number,
-  waitingForPressure: number,
   sources: Set<SourceInstance<any, any>>,
   sourcesByRole: Map<string, SourceInstance<any, any>>,
   sinks: Set<SinkInstance<any, any, any>>,

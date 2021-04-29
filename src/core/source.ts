@@ -1,5 +1,5 @@
 import { chainAsyncResults, iterateOverAsyncResult, voidPromiseIterable, wrapAsync } from '@/patterns/async'
-import { forEachIterable, mapIterable } from '@/patterns/iterables'
+import { countIterable, forEachIterable, mapIterable } from '@/patterns/iterables'
 import {
   Outcome,
   Query,
@@ -299,9 +299,7 @@ export function subscribe<T>(
           fold(
             () => open(source),
             c => {
-              c.waitingForPressure--
-
-              if (c.waitingForPressure <= 0) {
+              if (countIterable(c.sinks, s => s.siphoning) >= c.waitForPressure) {
                 open(source)
               }
             }

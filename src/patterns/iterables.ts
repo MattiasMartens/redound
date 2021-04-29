@@ -95,3 +95,11 @@ export function* flatMap<T, V>(
     }
   }
 }
+
+export function countIterable<T>(arr: Iterable<T>, condition: (t: T) => boolean = () => true) {
+  let inc = 0
+  for (const t of arr) {
+    condition(t) && inc++
+  }
+  return inc
+}

@@ -41,7 +41,7 @@ const defaultCapabilities = {
   pull: () => left(new Error("No controller present, so pull not supported"))
 }
 
-export function instantiateSink<T, References, SinkResult>(sink: Sink<T, References, SinkResult>, { id, controller }: { id?: string, controller?: ControllerInstance<any> } = {}): SinkInstance<T, References, SinkResult> {
+export function instantiateSink<T, References, SinkResult>(sink: Sink<T, References, SinkResult>, { id, controller, siphon = true }: { id?: string, controller?: ControllerInstance<any>, siphon?: boolean } = {}): SinkInstance<T, References, SinkResult> {
   const tag = initializeTag(
     sink.name,
     id
@@ -63,6 +63,7 @@ export function instantiateSink<T, References, SinkResult>(sink: Sink<T, Referen
 
   const sinkInstance = {
     prototype: sink,
+    siphoning: siphon,
     latestTickByProvenance: new Map(),
     lifecycle: {
       state: "ACTIVE"
