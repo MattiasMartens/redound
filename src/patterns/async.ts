@@ -1,3 +1,5 @@
+import { buildError, ErrorBuilder } from "./errors"
+
 export async function end(promise: Promise<any>) {
   try {
     await promise
@@ -153,4 +155,26 @@ export async function* chainAsyncResults<T>(
       }
     }
   }
+}
+
+export async function timeout<T>(
+  promise: Promise<T>,
+  ms: number,
+  error: ErrorBuilder<[number]> = (ms: number) => new Error(`Timeout after ${ms} ms`)
+) {
+  return new Promise<T>((resolve, reject) => {
+    const timeoutHandle = setTimeout(
+      () => {
+        reject(buildError(error, ms))
+      },
+      ms
+    )
+
+    promise.then((v) => {
+      resolve(v)
+      clearTimeout(timeoutHandle)
+    }).catch((e) => {
+      reject(e)
+    })
+  })
 }

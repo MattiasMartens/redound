@@ -28,7 +28,7 @@ describe(
     })
 
     it("Emits data that was read from a file using fs", async () => {
-      const nodeStream = createReadStream('./test/sources/sample.file',
+      const nodeStream = createReadStream('./test/unit/sources/sample.file',
         { encoding: 'utf8', highWaterMark: 1024 }
       )
 

@@ -63,7 +63,6 @@ export type SinkInstance<T, References, SinkResult> = {
   controller: Option<ControllerInstance<any>>,
   id: string,
   siphoning: boolean,
-  latestTickByProvenance: Map<SourceId, number>,
   lifecycle: { state: "ACTIVE" } | { state: "SEALED" } | { state: "ENDED", outcome: Outcome<T, Finalization> },
   seal: () => Promise<void>,
   close: (outcome: Outcome<any, any>) => Promise<void>,

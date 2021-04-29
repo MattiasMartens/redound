@@ -152,6 +152,7 @@ export type Controller<Finalization> = {
       sinks: Set<SinkInstance<any, any, any>>
     }
   ) => Promise<Option<Outcome<any, Finalization>>> | Option<Outcome<any, Finalization>>,
+  waitForPressure: number,
   rescue: (
     error: Error,
     event: Option<any>,

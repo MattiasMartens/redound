@@ -6,11 +6,9 @@ import { expectationTestAsync, eventual } from '@test/helpers'
 
 import {
   useFakeTimers,
-
   SinonFakeTimers,
   restore
 } from 'sinon'
-import { tupleFirst } from "@/sources"
 
 let clock: SinonFakeTimers
 describe("backpressure", () => {

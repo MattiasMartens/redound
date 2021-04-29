@@ -47,7 +47,7 @@ export async function propagateController(
 
 export function instantiateController<Finalization>(
   controller: Controller<Finalization>,
-  { id, sources, sourcesByRole, waitForPressure = 1 }: { id?: string, sources?: SourceInstance<any, any>[], sourcesByRole?: Record<string, SourceInstance<any, any>>, waitForPressure?: number } = {}
+  { id, sources, sourcesByRole, waitForPressure = controller.waitForPressure }: { id?: string, sources?: SourceInstance<any, any>[], sourcesByRole?: Record<string, SourceInstance<any, any>>, waitForPressure?: number } = {}
 ): ControllerInstance<Finalization> {
   const tag = initializeTag(
     controller.name,
@@ -230,6 +230,7 @@ export function controller<T>(
 ): Controller<T> {
   ; return {
     name: "Controller",
+    waitForPressure: 1,
     rescue: defaultControllerRescue,
     seal: defaultControllerSeal,
     taggedEvent: defaultControllerTaggedEvent,

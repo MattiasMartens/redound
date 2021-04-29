@@ -44,7 +44,7 @@ describe("async", () => {
     )
 
     it(
-      "Iterates over a sync array",
+      "Iterates over a sync iterable",
       async () => {
         const {
           capture,

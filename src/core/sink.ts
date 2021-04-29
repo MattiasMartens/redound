@@ -64,7 +64,6 @@ export function instantiateSink<T, References, SinkResult>(sink: Sink<T, Referen
   const sinkInstance = {
     prototype: sink,
     siphoning: siphon,
-    latestTickByProvenance: new Map(),
     lifecycle: {
       state: "ACTIVE"
     },
