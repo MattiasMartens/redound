@@ -101,26 +101,26 @@ function makeUnaryDerivationOrSinkFromArg<T, Out, R>(wrappedComponent: WrappedUn
  * Controller, source, any number of downstream transforms (sink allowed at the end)
  */
 /** TODO Extend when the need arises! */
-export function head<T, T1, T2, T3, T4, Out extends WrappedUnaryDerivation<T3, T4> | WrappedSink<T3, any>>(
+export function head<T, T1, T2, T3, Out extends WrappedUnaryDerivation<T3, any> | WrappedSink<T3, any>>(
   controller: ControllerInstance<any> | Controller<any> | "NO_CONTROLLER",
   source: WrappedSource<T>,
   ...rest: [WrappedUnaryDerivation<T, T1>, WrappedUnaryDerivation<T1, T2>, WrappedUnaryDerivation<T2, T3>, Out]
-): Out extends WrappedSink<T2, infer R> ? SinkInstance<T2, any, R> : UnaryDerivationInstance<T2, T3>
-export function head<T, T1, T2, T3, Out extends WrappedUnaryDerivation<T2, T3> | WrappedSink<T2, any>>(
+): Out extends WrappedSink<T3, infer R> ? SinkInstance<T3, any, R> : Out extends WrappedUnaryDerivation<T3, infer T4> ? UnaryDerivationInstance<T3, T4> : never
+export function head<T, T1, T2, Out extends WrappedUnaryDerivation<T2, any> | WrappedSink<T2, any>>(
   controller: ControllerInstance<any> | Controller<any> | "NO_CONTROLLER",
   source: WrappedSource<T>,
   ...rest: [WrappedUnaryDerivation<T, T1>, WrappedUnaryDerivation<T1, T2>, Out]
-): Out extends WrappedSink<T2, infer R> ? SinkInstance<T2, any, R> : UnaryDerivationInstance<T2, T3>
+): Out extends WrappedSink<T2, infer R> ? SinkInstance<T2, any, R> : Out extends WrappedUnaryDerivation<T2, infer T3> ? UnaryDerivationInstance<T2, T3> : never
 export function head<T, T1, T2, Out extends WrappedUnaryDerivation<T1, T2> | WrappedSink<T1, any>>(
   controller: ControllerInstance<any> | Controller<any> | "NO_CONTROLLER",
   source: WrappedSource<T>,
   ...rest: [WrappedUnaryDerivation<T, T1>, Out]
-): Out extends WrappedSink<T, infer R> ? SinkInstance<T1, any, R> : UnaryDerivationInstance<T1, T2>
-export function head<T, T1, Out extends WrappedUnaryDerivation<T, T1> | WrappedSink<T, any>>(
+): Out extends WrappedSink<T, infer R> ? SinkInstance<T1, any, R> : Out extends WrappedUnaryDerivation<T, infer T2> ? UnaryDerivationInstance<T1, T2> : never
+export function head<T, Out extends WrappedUnaryDerivation<T, any> | WrappedSink<T, any>>(
   controller: ControllerInstance<any> | Controller<any> | "NO_CONTROLLER",
   source: WrappedSource<T>,
   ...rest: [Out]
-): Out extends WrappedSink<T, infer R> ? SinkInstance<T, any, R> : UnaryDerivationInstance<T, T1>
+): Out extends WrappedSink<T, infer R> ? SinkInstance<T, any, R> : Out extends WrappedUnaryDerivation<T, infer T1> ? UnaryDerivationInstance<T, T1> : never
 export function head<T>(
   controller: ControllerInstance<any> | Controller<any> | "NO_CONTROLLER",
   source: WrappedSource<T>,
@@ -166,21 +166,21 @@ function makeWrappedDerivationFromArg<T extends Record<string, Emitter<any>>, Ou
 /**
  * Supply the emitters to a Derivation by role, then apply downstream transformations.
  */
-export function join<SourceType extends Record<string, Emitter<any>>, T, T1, T2, T3, Out extends WrappedUnaryDerivation<T, T1> | WrappedSink<T, any>>(
+export function join<SourceType extends Record<string, Emitter<any>>, T, T1, T2, Out extends WrappedUnaryDerivation<T, T1> | WrappedSink<T, any>>(
   emitters: SourceType,
   derivation: WrappedDerivation<SourceType, T>,
   ...rest: [WrappedUnaryDerivation<T, T1>, WrappedUnaryDerivation<T1, T2>, WrappedUnaryDerivation<T1, T2>, Out]
-): Out extends WrappedSink<T2, infer R> ? SinkInstance<T2, any, R> : UnaryDerivationInstance<T2, T3>
+): Out extends WrappedSink<T2, infer R> ? SinkInstance<T2, any, R> : Out extends WrappedUnaryDerivation<T2, infer T3> ? UnaryDerivationInstance<T2, T3> : never
 export function join<SourceType extends Record<string, Emitter<any>>, T, T1, T2, Out extends WrappedUnaryDerivation<T, T1> | WrappedSink<T, any>>(
   emitters: SourceType,
   derivation: WrappedDerivation<SourceType, T>,
   ...rest: [WrappedUnaryDerivation<T, T1>, Out]
-): Out extends WrappedSink<T1, infer R> ? SinkInstance<T1, any, R> : UnaryDerivationInstance<T1, T2>
-export function join<SourceType extends Record<string, Emitter<any>>, T, T1, Out extends WrappedUnaryDerivation<T, T1> | WrappedSink<T, any>>(
+): Out extends WrappedSink<T1, infer R> ? SinkInstance<T1, any, R> : Out extends WrappedUnaryDerivation<T1, infer T2> ? UnaryDerivationInstance<T1, T2> : never
+export function join<SourceType extends Record<string, Emitter<any>>, T, Out extends WrappedUnaryDerivation<T, any> | WrappedSink<T, any>>(
   emitters: SourceType,
   derivation: WrappedDerivation<SourceType, T>,
   ...rest: [Out]
-): Out extends WrappedSink<T, infer R> ? SinkInstance<T, any, R> : UnaryDerivationInstance<T, T1>
+): Out extends WrappedSink<T, infer R> ? SinkInstance<T, any, R> : Out extends UnaryDerivationInstance<T, infer T1> ? UnaryDerivationInstance<T, T1> : never
 export function join<SourceType extends Record<string, Emitter<any>>, T>(
   emitters: SourceType,
   derivation: WrappedDerivation<SourceType, T>,
@@ -204,22 +204,22 @@ export function join(
 /**
  * Connect a chain of unary derivations, possibly ending with a sink, to an instantiated emitter.
  */
-export function flow<T, T1, T2, T3, T4, Out extends WrappedUnaryDerivation<T3, T4> | WrappedSink<T3, any>>(
+export function flow<T, T1, T2, T3, Out extends WrappedUnaryDerivation<T3, any> | WrappedSink<T3, any>>(
   emitter: UnaryDerivationInstance<any, T> | SourceInstance<T, any>,
   ...rest: [WrappedUnaryDerivation<T, T1>, WrappedUnaryDerivation<T1, T2>, WrappedUnaryDerivation<T2, T3>, Out]
-): Out extends WrappedSink<T3, infer R> ? SinkInstance<T3, any, R> : UnaryDerivationInstance<T3, T4>
-export function flow<T, T1, T2, T3, Out extends WrappedUnaryDerivation<T2, T3> | WrappedSink<T2, any>>(
+): Out extends WrappedSink<T3, infer R> ? SinkInstance<T3, any, R> : Out extends WrappedUnaryDerivation<T3, infer T4> ? UnaryDerivationInstance<T3, T4> : never
+export function flow<T, T1, T2, Out extends WrappedUnaryDerivation<T2, any> | WrappedSink<T2, any>>(
   emitter: UnaryDerivationInstance<any, T> | SourceInstance<T, any>,
   ...rest: [WrappedUnaryDerivation<T, T1>, WrappedUnaryDerivation<T1, T2>, Out]
-): Out extends WrappedSink<T2, infer R> ? SinkInstance<T2, any, R> : UnaryDerivationInstance<T2, T3>
-export function flow<T, T1, T2, Out extends WrappedUnaryDerivation<T1, T2> | WrappedSink<T1, any>>(
+): Out extends WrappedSink<T2, infer R> ? SinkInstance<T2, any, R> : Out extends WrappedUnaryDerivation<T2, infer T3> ? UnaryDerivationInstance<T2, T3> : never
+export function flow<T, T1, Out extends WrappedUnaryDerivation<T1, any> | WrappedSink<T1, any>>(
   emitter: UnaryDerivationInstance<any, T> | SourceInstance<T, any>,
   ...rest: [WrappedUnaryDerivation<T, T1>, Out]
-): Out extends WrappedSink<T, infer R> ? SinkInstance<T1, any, R> : UnaryDerivationInstance<T1, T2>
-export function flow<T, T1, Out extends WrappedUnaryDerivation<T, T1> | WrappedSink<T, any>>(
+): Out extends WrappedSink<T1, infer R> ? SinkInstance<T1, any, R> : Out extends WrappedUnaryDerivation<T1, infer T2> ? UnaryDerivationInstance<T1, T2> : never
+export function flow<T, Out extends WrappedUnaryDerivation<T, any> | WrappedSink<T, any>>(
   emitter: UnaryDerivationInstance<any, T> | SourceInstance<T, any>,
   ...rest: [Out]
-): Out extends WrappedSink<T, infer R> ? SinkInstance<T, any, R> : UnaryDerivationInstance<T, T1>
+): Out extends WrappedSink<T, infer R> ? SinkInstance<T, any, R> : Out extends WrappedUnaryDerivation<T, infer T1> ? UnaryDerivationInstance<T, T1> : never
 export function flow<T>(
   emitter: UnaryDerivationInstance<any, T> | SourceInstance<T, any>,
   ...rest: []
