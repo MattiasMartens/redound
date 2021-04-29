@@ -1,11 +1,7 @@
-import { stringLinesDerivation } from '@/derivations/string-lines'
-import { expectationTest, expectationTestAsync, getDerivationEmitted } from '@test/helpers'
+import { expectationTestAsync } from '@test/helpers'
 import * as expectations from './expectations.meta'
-import {
-  createReadStream
-} from 'fs'
 import { makeController } from '@/core'
-import { head, join } from '@/current'
+import { head, join } from '@/river'
 import { iterableSource } from '@/sources'
 import { bundlerDerivation, namedBundlerDerivation } from '@/derivations'
 import { eventCollectorSink } from '@/sinks'

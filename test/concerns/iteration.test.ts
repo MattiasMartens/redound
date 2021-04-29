@@ -1,5 +1,5 @@
 import { controller, makeController, makeSource, makeUnaryDerivation } from "@/core"
-import { flow, head } from "@/current"
+import { flow, head } from "@/river"
 import { mappedDerivation } from "@/derivations"
 import { identity, noop } from "@/patterns/functions"
 import { forEachSink } from "@/sinks"

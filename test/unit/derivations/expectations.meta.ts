@@ -72,3 +72,26 @@ export const namedBundler = [
     "payload": 93
   }
 ]
+
+export const flatMappedDerivationIterable = [
+  "zzy",
+  "foo",
+  "bar"
+]
+
+export const flatMappedDerivationNonIterable = [
+  "JETHRO",
+  "KOALA"
+]
+
+export const flatMappedDerivationIterableAsync = [
+  "it",
+  "was",
+  "a",
+  "pleasant",
+  "day",
+  "to",
+  "begin",
+  "a",
+  "book"
+]

@@ -1,5 +1,5 @@
 import { makeController, makeSink, makeSource } from "@/core"
-import { flow, head } from "@/current"
+import { flow, head } from "@/river"
 import { mappedDerivation } from "@/derivations"
 import { getSome } from "@/patterns/options"
 import { eventCollectorSink } from "@/sinks"
