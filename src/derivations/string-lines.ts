@@ -16,7 +16,7 @@ function* justYield<T>(arr: T[]) {
 }
 
 const newlineRegex = /\r?\n/g
-export const stringLinesDerivation = statefulDerivation<string, string, string[]>(
+const stringLinesDerivationConstant = statefulDerivation<string, string, string[]>(
   (i, buffer) => {
     const incomingSplitIntoLines = i.split(newlineRegex)
 
@@ -58,3 +58,5 @@ export const stringLinesDerivation = statefulDerivation<string, string, string[]
     }
   }
 )
+
+export const stringLinesDerivation = () => stringLinesDerivationConstant

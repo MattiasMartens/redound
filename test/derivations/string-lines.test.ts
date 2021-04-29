@@ -20,7 +20,7 @@ describe('derivations', () => {
       expectations,
       "lines",
       () => getDerivationEmitted(
-        stringLinesDerivation,
+        stringLinesDerivation(),
         [
           'f',
           'oo',
@@ -36,7 +36,7 @@ describe('derivations', () => {
       expectations,
       "chunks",
       () => getDerivationEmitted(
-        stringLinesDerivation,
+        stringLinesDerivation(),
         [
           'sphinx of black quartz: \njudge',
           ' my vow\n'
@@ -48,7 +48,7 @@ describe('derivations', () => {
       expectations,
       "file",
       () => getDerivationEmitted(
-        stringLinesDerivation,
+        stringLinesDerivation(),
         createReadStream('./test/sources/sample.file',
           { encoding: 'utf8', highWaterMark: 1024 }
         )

@@ -1,5 +1,5 @@
 import { Option } from "fp-ts/lib/Option"
-import { Derivation, Outcome, Query, SealEvent, Sink, Source } from "./abstract"
+import { Controller, Derivation, Outcome, Query, SealEvent, Sink, Source } from "./abstract"
 import { Backpressure } from "@/core/backpressure"
 import { Either } from "fp-ts/lib/Either"
 
@@ -8,14 +8,13 @@ export type GenericConsumerInstance<T, MemberOrReferences> = SinkInstance<T, Mem
 type Finalization = any
 export type SourceInstance<T, References> = {
   [Symbol.asyncIterator]: () => AsyncIterator<T>,
+  id: string,
   prototype: Source<T, References>,
   controller: Option<ControllerInstance<any>>,
-  id: string,
   consumers: Set<GenericConsumerInstance<T, any>>,
   backpressure: Backpressure,
   lifecycle: { state: "READY" | "ACTIVE" | "SEALED" | "ITERATING" } | { state: "ENDED", outcome: Outcome<T, Finalization> },
-  // Initialized to 'Some' on first subscription event,
-  // reverted to 'None' once closed.
+  // Initialized to 'Some' on first subscription event, reverted to 'None' once closed.
   references: Option<References>,
   pull?: (
     query: Query,
@@ -54,6 +53,8 @@ export type DerivationInstance<DerivationSourceType extends Record<string, Emitt
   aggregate: Option<Aggregate>
 } & DerivationVariation<DerivationSourceType, Aggregate>
 
+export type UnaryDerivationInstance<T, Out> = DerivationInstance<{ main: Emitter<T> }, Out, any>
+
 export type GenericEmitterInstance<T, MemberOrReferences> = SourceInstance<T, MemberOrReferences> | DerivationInstance<any, T, MemberOrReferences>
 
 type SourceId = string
@@ -77,6 +78,7 @@ export type SinkInstance<T, References, SinkResult> = {
 }
 
 export type ControllerInstance<Finalization> = {
+  prototype: Controller<Finalization>,
   sources: Set<SourceInstance<any, any>>,
   sourcesByRole: Map<string, SourceInstance<any, any>>,
   sinks: Set<SinkInstance<any, any, any>>,
@@ -119,4 +121,3 @@ export type ControllerInstance<Finalization> = {
   },
   id: string
 }
-  ;;;

@@ -31,7 +31,7 @@ export function declareSimpleSink<T, References, SinkResult>(sink: Partial<Omit<
       consumes: new Set(),
       name: "AnonymousSink",
       open: noop
-    } as Sink<any, any, any>,
+    } as Sink<T, References, SinkResult>,
     sink
   )
 }

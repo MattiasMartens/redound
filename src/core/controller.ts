@@ -82,6 +82,7 @@ export function instantiateController<Finalization>(
   }
 
   const controllerInstance: ControllerInstance<Finalization> = {
+    prototype: controller,
     id: tag,
     outcome: none,
     pull: ({ query, role, tag }) => {

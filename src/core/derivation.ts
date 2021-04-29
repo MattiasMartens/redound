@@ -5,8 +5,8 @@ import {
   Outcome
 } from '@/types/abstract'
 import { PossiblyAsyncResult } from "@/patterns/async"
-import { SourceInstance, GenericConsumerInstance, DerivationInstance, GenericEmitterInstance, SinkInstance, Emitter } from '@/types/instances'
-import { fold, isSome, map, some } from 'fp-ts/lib/Option'
+import { SourceInstance, GenericConsumerInstance, DerivationInstance, GenericEmitterInstance, SinkInstance, Emitter, ControllerInstance } from '@/types/instances'
+import { fold, fromNullable, isSome, map, some } from 'fp-ts/lib/Option'
 import { none, Option } from 'fp-ts/lib/Option'
 import { close as consumerClose } from './consumer'
 import {
@@ -56,6 +56,24 @@ export function declareSimpleDerivation<SourceType extends Record<string, Emitte
   ) as Derivation<SourceType, T, References>
 }
 
+function getControllerFromSources(sources: Record<string, Emitter<any>>): Option<ControllerInstance<any>> {
+  let oneAndOnlyController = undefined as Possible<ControllerInstance<any>>
+
+  for (const key in sources) {
+    const sourceInstance = sources[key]
+
+    if (isSome(sourceInstance.controller)) {
+      if (oneAndOnlyController === undefined) {
+        oneAndOnlyController = sourceInstance.controller.value
+      } else if (oneAndOnlyController !== sourceInstance.controller.value) {
+        throw new Error("Tried to instantiate a derivation with sources that had different controllers")
+      }
+    }
+  }
+
+  return fromNullable(oneAndOnlyController)
+}
+
 export function instantiateDerivation<SourceType extends Record<string, Emitter<any>>, T, Aggregate>(derivation: Derivation<SourceType, T, Aggregate>, sources: SourceType, { id }: { id?: string } = {}): DerivationInstance<SourceType, T, Aggregate> {
   const tag = initializeTag(
     derivation.name,
@@ -66,6 +84,8 @@ export function instantiateDerivation<SourceType extends Record<string, Emitter<
     throw new Error("Not implemented")
   }
 
+  const sourceController: Option<ControllerInstance<any>> = getControllerFromSources(sources)
+
   return {
     prototype: derivation,
     derivationSpecies: derivation.derivationSpecies,
@@ -75,7 +95,7 @@ export function instantiateDerivation<SourceType extends Record<string, Emitter<
     aggregate: none,
     consumers: new Set(),
     backpressure: backpressure(),
-    controller: none,
+    controller: sourceController,
     sourcesByRole: sources,
     sealedSources: new Set(
       filterIterable(
@@ -427,3 +447,5 @@ export function consume<T, MemberOrReferences>(
       }
     }, derivation, some(e))
 }
+
+
