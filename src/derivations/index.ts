@@ -6,6 +6,7 @@ import { Emitter } from "@/types/instances"
 
 export * from './stateful'
 export * from './string-lines'
+export * from './bundler'
 
 export type UnaryDerivation<I, O> = Derivation<{ main: Emitter<I> }, O, any>
 
@@ -47,7 +48,7 @@ export function reducedDerivation<In, Out>(
   main: Emitter<In>
 }, Out, Out> {
   return declareSimpleDerivation<{ main: Emitter<In> }, Out, Out>({
-    consume: unaryDerivationConsumer(
+    consume: unaryDerivationConsumer<In, Out, Out>(
       (i, acc) => {
         const reduced = reducer(acc, i)
 

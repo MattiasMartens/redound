@@ -77,8 +77,8 @@ export type Derivation<DerivationSourceType extends Record<string, Emitter<any>>
       }
     }
   ) => {
-    aggregate: Aggregate,
-    output: PossiblyAsyncResult<T>
+      aggregate?: Aggregate,
+      output?: PossiblyAsyncResult<T>
   },
   open: () => Aggregate,
   seal: (params: {

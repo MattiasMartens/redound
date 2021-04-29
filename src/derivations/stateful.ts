@@ -19,7 +19,7 @@ export function statefulDerivation<In, Out, State>(
   main: Emitter<In>
 }, Out, State> {
   return declareSimpleDerivation<{ main: Emitter<In> }, Out, State>({
-    consume: unaryDerivationConsumer(
+    consume: unaryDerivationConsumer<In, Out, State>(
       (i, acc) => {
         const { state, output } = transformer(i, acc)
 

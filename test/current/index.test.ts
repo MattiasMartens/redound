@@ -1,5 +1,5 @@
-import { makeController, makeSink } from "@/core"
-import { head } from "@/current"
+import { makeController, makeSink, makeSource } from "@/core"
+import { flow, head } from "@/current"
 import { mappedDerivation } from "@/derivations"
 import { getSome } from "@/patterns/options"
 import { eventCollectorSink } from "@/sinks"
@@ -104,12 +104,89 @@ describe("current", () => {
         derivation,
         derivation,
         derivation,
-        eventCollectorSink()
+        eventCollectorSink<number>()
       )
 
       strictEqual(getSome(headed.controller), controller)
 
       const sinkResult = await headed.sinkResult()
+      deepStrictEqual(
+        sinkResult,
+        [
+          4,
+          5,
+          6
+        ]
+      )
+    })
+  })
+
+  describe("flow", () => {
+    it("links an emitter to a downstream derivation", async () => {
+      const controller = makeController()
+      const source = makeSource(iterableSource([1, 2, 3]), { controller })
+      const derivation = mappedDerivation<number, string>(i => `The number in question is ${i}`)
+
+      const flowed = flow(
+        source,
+        derivation
+      )
+
+      const sink = makeSink(
+        eventCollectorSink(),
+        flowed
+      )
+
+      const sinkResult = await sink.sinkResult()
+      deepStrictEqual(
+        sinkResult,
+        [
+          "The number in question is 1",
+          "The number in question is 2",
+          "The number in question is 3"
+        ]
+      )
+    })
+
+    it("links an emitter to a downstream sink", async () => {
+      const controller = makeController()
+      const source = makeSource(iterableSource([1, 2, 3]), { controller })
+      const derivation = mappedDerivation<number, string>(i => `The number in question is ${i}`)
+
+      const flowed = flow(
+        source,
+        derivation,
+        eventCollectorSink()
+      )
+
+      const sinkResult = await flowed.sinkResult()
+      deepStrictEqual(
+        sinkResult,
+        [
+          "The number in question is 1",
+          "The number in question is 2",
+          "The number in question is 3"
+        ]
+      )
+    })
+
+    it("creates multiple derivations with a downstream sink", async () => {
+      const controller = makeController()
+      const source = makeSource(
+        iterableSource([1, 2, 3]),
+        { controller }
+      )
+      const derivation = mappedDerivation<number, number>(i => i + 1)
+
+      const flowed = flow(
+        source,
+        derivation,
+        derivation,
+        derivation,
+        eventCollectorSink<number>()
+      )
+
+      const sinkResult = await flowed.sinkResult()
       deepStrictEqual(
         sinkResult,
         [
