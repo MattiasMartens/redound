@@ -79,6 +79,8 @@ export type SinkInstance<T, References, SinkResult> = {
 
 export type ControllerInstance<Finalization> = {
   prototype: Controller<Finalization>,
+  waitForPressure: number,
+  waitingForPressure: number,
   sources: Set<SourceInstance<any, any>>,
   sourcesByRole: Map<string, SourceInstance<any, any>>,
   sinks: Set<SinkInstance<any, any, any>>,

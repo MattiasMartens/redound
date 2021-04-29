@@ -47,7 +47,7 @@ export async function propagateController(
 
 export function instantiateController<Finalization>(
   controller: Controller<Finalization>,
-  { id, sources, sourcesByRole }: { id?: string, sources?: SourceInstance<any, any>[], sourcesByRole?: Record<string, SourceInstance<any, any>> } = {}
+  { id, sources, sourcesByRole, waitForPressure = 1 }: { id?: string, sources?: SourceInstance<any, any>[], sourcesByRole?: Record<string, SourceInstance<any, any>>, waitForPressure?: number } = {}
 ): ControllerInstance<Finalization> {
   const tag = initializeTag(
     controller.name,
@@ -84,6 +84,8 @@ export function instantiateController<Finalization>(
   const controllerInstance: ControllerInstance<Finalization> = {
     prototype: controller,
     id: tag,
+    waitForPressure,
+    waitingForPressure: waitForPressure,
     outcome: none,
     pull: ({ query, role, tag }) => {
       return foldingGet(

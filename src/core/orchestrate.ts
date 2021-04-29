@@ -7,21 +7,25 @@ import {
   subscribe as derivationSubscribeCore
 } from "./derivation"
 
-export function makeSink<T, References, SinkResult>(sink: Sink<T, References, SinkResult>, sourceInstance: Emitter<T>, params: { id?: string, controller?: ControllerInstance<any> } = {}): SinkInstance<T, References, SinkResult> {
+export function makeSink<T, References, SinkResult>(sink: Sink<T, References, SinkResult>, sourceInstance: Emitter<T>, params: { siphon?: boolean, id?: string, controller?: ControllerInstance<any> } = {}): SinkInstance<T, References, SinkResult> {
   const sinkInstance = instantiateSink(
     sink,
     params
   )
 
+  const { siphon = true } = params
+
   if (sourceInstance.prototype.graphComponentType === "Source") {
     sourceSubscribe(
       sourceInstance as SourceInstance<any, any>,
-      sinkInstance
+      sinkInstance,
+      siphon
     )
   } else {
     derivationSubscribe(
       sourceInstance as DerivationInstance<any, any, any>,
-      sinkInstance
+      sinkInstance,
+      siphon
     )
   }
 
@@ -30,12 +34,14 @@ export function makeSink<T, References, SinkResult>(sink: Sink<T, References, Si
 
 export function derivationSubscribe<T>(
   derivation: DerivationInstance<any, T, any>,
-  consumer: GenericConsumerInstance<T, any>
+  consumer: GenericConsumerInstance<T, any>,
+  siphon = true
 ) {
   return derivationSubscribeCore(
     derivation,
     consumer,
-    sourceSubscribe
+    sourceSubscribe,
+    siphon
   )
 }
 

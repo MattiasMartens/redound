@@ -175,7 +175,8 @@ export function open<SourceType extends Record<string, Emitter<any>>, T, Aggrega
 export function subscribe<T>(
   derivation: DerivationInstance<any, T, any>,
   consumer: GenericConsumerInstance<T, any>,
-  sourceSubscribe: (source: SourceInstance<any, any>, derivation: DerivationInstance<any, any, any>) => void
+  sourceSubscribe: (source: SourceInstance<any, any>, derivation: DerivationInstance<any, any, any>) => void,
+  siphonPressure = true
 ) {
   if (derivation.lifecycle.state !== "ENDED") {
     derivation.consumers.add(consumer)
@@ -188,7 +189,9 @@ export function subscribe<T>(
         )
       }
 
-      siphon(derivation, sourceSubscribe)
+      if (siphonPressure) {
+        siphon(derivation, sourceSubscribe)
+      }
     }
   } else {
     throw new Error(`Attempted action subscribe() on derivation ${derivation.id} in incompatible lifecycle state: ${derivation.lifecycle.state}`)

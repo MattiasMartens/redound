@@ -277,7 +277,8 @@ export function open<T, References>(
 
 export function subscribe<T>(
   source: SourceInstance<T, any>,
-  consumer: GenericConsumerInstance<T, any>
+  consumer: GenericConsumerInstance<T, any>,
+  siphon = true
 ) {
   sourceTry(() => {
     if (source.lifecycle.state !== "ENDED" && source.lifecycle.state !== "ITERATING") {
@@ -291,9 +292,21 @@ export function subscribe<T>(
       }
 
       // If something subscribes, then by definition it is either a Sink or a Derivation that has a Sink downstream of it.
-      // Time to start emitting!
-      if (source.lifecycle.state === "READY") {
-        open(source)
+      // Check if the subscriber is exerting siphon pressure.
+      if (source.lifecycle.state === "READY" && siphon) {
+        pipe(
+          source.controller,
+          fold(
+            () => open(source),
+            c => {
+              c.waitingForPressure--
+
+              if (c.waitingForPressure <= 0) {
+                open(source)
+              }
+            }
+          )
+        )
       }
     } else {
       throw new Error(`Attempted action subscribe() on source ${source.id} in incompatible lifecycle state: ${source.lifecycle.state}`)
