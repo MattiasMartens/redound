@@ -1,9 +1,10 @@
 import { Derivation, Outcome, SealEvent } from "@/types/abstract"
-import { DerivationInstance, Emitter, SinkInstance, SourceInstance } from "@/types/instances"
+import { DerivationInstance, Emitter, GenericEmitterInstance, PayloadTypeOf, SinkInstance, SourceInstance } from "@/types/instances"
 import { none, Option, some } from "fp-ts/lib/Option"
-import { left, right } from "fp-ts/lib/Either"
+import { Either, left, right } from "fp-ts/lib/Either"
 import { makeDerivation } from "./orchestrate"
 import { PossiblyAsyncResult } from "@/patterns/async"
+import { Possible } from "@/types/patterns"
 
 export const defaultDerivationSeal = (
   { remainingUnsealedSources, aggregate }: { remainingUnsealedSources: Set<any>, aggregate: any }
@@ -74,3 +75,39 @@ export function defaultControllerSeal(
 }
 
 export const defaultControllerTaggedEvent = () => none
+
+export function roleConsumer<DerivationSourceType extends Record<string, Emitter<any>>, T, Aggregate>(
+  consumers: { [K in keyof DerivationSourceType]: (
+    params: {
+      event: PayloadTypeOf<DerivationSourceType[K]>,
+      tag: Possible<string>,
+      aggregate: Aggregate,
+      source: GenericEmitterInstance<any, unknown>,
+      role: K,
+      capabilities: {
+        push: (event: any, role: string) => Either<Error, void>,
+        pull: (params: { query: any, role: string, tag?: string }) => Either<Error, void>
+      }
+    }
+  ) => {
+    aggregate?: Aggregate,
+    output?: PossiblyAsyncResult<T>
+  }
+  }): <K extends keyof DerivationSourceType>(
+    params: {
+      event: PayloadTypeOf<DerivationSourceType[K]>,
+      tag: Possible<string>,
+      aggregate: Aggregate,
+      source: GenericEmitterInstance<any, unknown>,
+      role: K,
+      capabilities: {
+        push: (event: any, role: string) => Either<Error, void>,
+        pull: (params: { query: any, role: string, tag?: string }) => Either<Error, void>
+      }
+    }
+  ) => {
+    aggregate?: Aggregate,
+    output?: PossiblyAsyncResult<T>
+  } {
+  return (params) => consumers[params.role](params)
+}
