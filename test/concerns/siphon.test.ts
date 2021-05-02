@@ -5,7 +5,6 @@ import { eventCollectorSink, forEachSink } from '@/sinks'
 import { iterableSource } from '@/sources'
 import { eventual } from '@test/helpers'
 import {
-  strictEqual,
   deepStrictEqual,
   rejects,
   doesNotReject

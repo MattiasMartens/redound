@@ -22,6 +22,7 @@ export type WrappedUnaryDerivation<T, Out> = Derivation<{ main: Emitter<T> }, Ou
 
 export type WrappedSink<T, R> = Sink<T, any, R> | {
   id?: string,
+  siphon?: boolean,
   wrapped: Sink<T, any, R>
 }
 
@@ -76,10 +77,12 @@ function makeUnaryDerivationOrSinkFromArg<T, Out, R>(wrappedComponent: WrappedUn
         { id }
       )
     } else {
+      const { siphon } = wrappedComponent as any
+
       return makeSink(
         wrapped,
         source,
-        { id }
+        { id, siphon }
       )
     }
   } else {
