@@ -175,7 +175,7 @@ export function instantiateSource<T, References>(source: Source<T, References>, 
                 )
 
                 // Emit query finalization event
-                if (sourceInstance.lifecycle.state !== "ENDED") {
+                if (sourceInstance.lifecycle.state !== "ENDED" && queryTag !== undefined) {
                   voidPromiseIterable(
                     mapIterable(
                       sourceInstance.consumers,

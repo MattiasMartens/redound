@@ -165,7 +165,7 @@ describe(
               seal: !aggregate.bufferingQueries.size
             }
           },
-          querySeal({ aggregate, tag, remainingUnsealedSources }) {
+          tagSeal({ aggregate, tag, remainingUnsealedSources }) {
             aggregate.bufferingQueries.delete(tag)
             return {
               output: flushBufferedContent(aggregate),

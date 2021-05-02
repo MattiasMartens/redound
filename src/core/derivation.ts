@@ -47,7 +47,7 @@ export function declareSimpleDerivation<SourceType extends Record<string, Emitte
       name: "AnonymousDerivation",
       open: noop,
       seal: defaultDerivationSeal,
-      querySeal: ({ aggregate }) => ({
+      tagSeal: ({ aggregate }) => ({
         aggregate, seal: false
       }),
       unroll: noop
@@ -352,8 +352,8 @@ export function consume<T, MemberOrReferences>(
     async () => {
       if (derivation.lifecycle.state === "ACTIVE") {
         if (e === EndOfTagEvent) {
-          // 1. Call derivation's implementation of querySeal
-          const querySealResult = derivation.prototype.querySeal({
+          // 1. Call derivation's implementation of tagSeal
+          const tagSealResult = derivation.prototype.tagSeal({
             aggregate: getSome(derivation.aggregate),
             source,
             tag: defined(tag, "Received EndOfTagEvent with no attendant tag"),
@@ -361,19 +361,19 @@ export function consume<T, MemberOrReferences>(
             role: getSourceRole(derivation, source)
           })
 
-          if ("aggregate" in querySealResult) {
-            derivation.aggregate = some(querySealResult.aggregate)
+          if ("aggregate" in tagSealResult) {
+            derivation.aggregate = some(tagSealResult.aggregate)
           }
 
-          if ("output" in querySealResult) {
+          if ("output" in tagSealResult) {
             await scheduleEmissions(
               derivation,
-              querySealResult.output,
+              tagSealResult.output,
               tag
             )
           }
 
-          if (querySealResult.seal) {
+          if (tagSealResult.seal) {
             seal(derivation, SealEvent)
           }
 
@@ -417,10 +417,7 @@ export function consume<T, MemberOrReferences>(
             source
           )
 
-          const {
-            aggregate: outAggregate,
-            output
-          } = derivation.prototype.consume({
+          const consumeResult = derivation.prototype.consume({
             event: e,
             tag,
             aggregate: inAggregate,
@@ -435,17 +432,21 @@ export function consume<T, MemberOrReferences>(
             )
           })
 
-          derivation.aggregate = some(
-            outAggregate
-          )
+          if ("aggregate" in consumeResult) {
+            derivation.aggregate = some(
+              consumeResult.aggregate
+            )
+          }
 
-          await scheduleEmissions(
-            derivation,
-            output,
-            tag
-          )
+          if (consumeResult.output !== undefined) {
+            await scheduleEmissions(
+              derivation,
+              consumeResult.output,
+              tag
+            )
+          }
         }
-      } else {
+      } else if (e !== EndOfTagEvent) {
         throw new Error(`Attempted action consume() on derivation ${derivation.id} in incompatible lifecycle state: ${derivation.lifecycle.state}`)
       }
     }, derivation, some(e))

@@ -91,7 +91,7 @@ export type Derivation<DerivationSourceType extends Record<string, Emitter<any>>
     output?: PossiblyAsyncResult<T>,
     aggregate?: Aggregate
   },
-  querySeal: (params: {
+  tagSeal: (params: {
     aggregate: Aggregate,
     source: Emitter<any>,
     tag: string,
