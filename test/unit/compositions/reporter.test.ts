@@ -48,7 +48,6 @@ describe(
       )
 
       await originalSink.sinkResult()
-      console.log(finalNotificationSink.lifecycle.state)
       const aggregation = getSome(finalNotificationSink.references)
       deepStrictEqual(
         aggregation,
