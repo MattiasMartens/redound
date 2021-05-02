@@ -1,5 +1,5 @@
 import { makeController, makeSink, makeSource } from "@/core"
-import { flow, head } from "@/river"
+import { course, head } from "@/river"
 import { mappedDerivation } from "@/derivations"
 import { getSome } from "@/patterns/options"
 import { eventCollectorSink } from "@/sinks"
@@ -121,20 +121,20 @@ describe("current", () => {
     })
   })
 
-  describe("flow", () => {
+  describe("course", () => {
     it("links an emitter to a downstream derivation", async () => {
       const controller = makeController()
       const source = makeSource(iterableSource([1, 2, 3]), { controller })
       const derivation = mappedDerivation<number, string>(i => `The number in question is ${i}`)
 
-      const flowed = flow(
+      const coursed = course(
         source,
         derivation
       )
 
       const sink = makeSink(
         eventCollectorSink(),
-        flowed
+        coursed
       )
 
       const sinkResult = await sink.sinkResult()
@@ -153,13 +153,13 @@ describe("current", () => {
       const source = makeSource(iterableSource([1, 2, 3]), { controller })
       const derivation = mappedDerivation<number, string>(i => `The number in question is ${i}`)
 
-      const flowed = flow(
+      const coursed = course(
         source,
         derivation,
         eventCollectorSink()
       )
 
-      const sinkResult = await flowed.sinkResult()
+      const sinkResult = await coursed.sinkResult()
       deepStrictEqual(
         sinkResult,
         [
@@ -178,7 +178,7 @@ describe("current", () => {
       )
       const derivation = mappedDerivation<number, number>(i => i + 1)
 
-      const flowed = flow(
+      const flowed = course(
         source,
         derivation,
         derivation,

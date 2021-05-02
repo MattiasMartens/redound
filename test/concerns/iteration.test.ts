@@ -1,5 +1,5 @@
-import { controller, makeController, makeSource, makeUnaryDerivation } from "@/core"
-import { flow, head } from "@/river"
+import { makeController } from "@/core"
+import { course, head } from "@/river"
 import { mappedDerivation } from "@/derivations"
 import { identity, noop } from "@/patterns/functions"
 import { forEachSink } from "@/sinks"
@@ -8,7 +8,6 @@ import {
   deepStrictEqual,
   fail
 } from 'assert'
-import { assert } from "sinon"
 
 const verify = it
 
@@ -44,7 +43,7 @@ describe("iteration", () => {
     const out: string[] = []
 
     const source = head("NO_CONTROLLER", iterableSource(sample))
-    flow(
+    course(
       source,
       mappedDerivation(identity),
       forEachSink(noop)
