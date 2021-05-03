@@ -1,17 +1,18 @@
 import { makeSink, makeSource } from "@/core"
+import { makeAsyncIterableSink } from "@/core/orchestrate"
 import { close, declareSimpleSource, seal } from "@/core/source"
-import { chainAsyncResults } from "@/patterns/async"
+import { chainAsyncResults, PossiblyAsyncResult } from "@/patterns/async"
 import { pick } from "@/patterns/functions"
 import { Source } from "@/types/abstract"
 import { SealEvent } from "@/types/events"
-import { SourceInstance } from "@/types/instances"
+import { Emitter, SourceInstance } from "@/types/instances"
 import { right, left } from "fp-ts/lib/Either"
 import { pipe } from "fp-ts/lib/function"
 import { some } from "fp-ts/lib/Option"
 import { fold, isSome, map, none, Option } from "fp-ts/lib/Option"
 
 export function deferredSource<T>(
-  sourceProducingFunction: (query: any) => Source<T, any> | AsyncIterable<T>,
+  sourceProducingFunction: (query: any) => Source<T, any> | SourceInstance<T, any> | AsyncIterable<T>,
   name?: string
 ) {
   const sourceInstance: Source<any, {
@@ -49,12 +50,12 @@ export function deferredSource<T>(
           fold(
             () => {
               const producedSource = sourceProducingFunction(query)
-              const newSource: AsyncIterable<T> = ("graphComponentType" in producedSource && producedSource.graphComponentType === "Source") ? makeSource(producedSource) : producedSource as AsyncIterable<T> | SourceInstance<T, any>
-              references.instantiatedInnerSource = some(newSource)
+              const newAsyncIterable = (Symbol.iterator in producedSource || Symbol.asyncIterator in producedSource) ? producedSource as PossiblyAsyncResult<T> : makeAsyncIterableSink(
+                "graphComponentType" in producedSource && producedSource.graphComponentType === "Source" ? makeSource(producedSource) : producedSource as Emitter<T>)
 
               return right(
                 chainAsyncResults(
-                  newSource,
+                  newAsyncIterable,
                   [SealEvent] as any
                 )
               )

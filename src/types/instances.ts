@@ -7,7 +7,6 @@ export type GenericConsumerInstance<T, MemberOrReferences> = SinkInstance<T, Mem
 
 type Finalization = any
 export type SourceInstance<T, References> = {
-  [Symbol.asyncIterator]: () => AsyncIterator<T>,
   id: string,
   prototype: Source<T, References>,
   controller: Option<ControllerInstance<any>>,

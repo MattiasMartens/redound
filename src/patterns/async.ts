@@ -21,6 +21,12 @@ export function encapsulatePromise<T>(promise: Promise<T>) {
   }
 }
 
+export type Deferred<T> = {
+  promise: Promise<T>,
+  resolve: (value: T | Promise<T>) => void,
+  reject: (error: any) => void
+}
+
 export function defer(): {
   promise: Promise<void>,
   resolve: () => void,

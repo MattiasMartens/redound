@@ -1,4 +1,5 @@
 import { makeController, makeDerivation, makeSink, makeSource } from "@/core"
+import { makeAsyncIterableSink } from "@/core/orchestrate"
 import { Controller, Derivation, Sink, Source } from "@/types/abstract"
 import { ControllerInstance, DerivationInstance, Emitter, SinkInstance, SourceInstance, UnaryDerivationInstance } from "@/types/instances"
 import { Possible } from "@/types/patterns"
@@ -239,4 +240,34 @@ export function course(
   }
 
   return lastOfChain
+}
+
+export function courseIntoIterable<T, T1, T2, T3>(
+  emitter: DerivationInstance<any, T, any> | SourceInstance<T, any>,
+  ...rest: [WrappedUnaryDerivation<T, T1>, WrappedUnaryDerivation<T1, T2>, WrappedUnaryDerivation<T2, T3>]
+): SinkInstance<T3, any, void> & AsyncIterable<T3>
+export function courseIntoIterable<T, T1, T2>(
+  emitter: DerivationInstance<any, T, any> | SourceInstance<T, any>,
+  ...rest: [WrappedUnaryDerivation<T, T1>, WrappedUnaryDerivation<T1, T2>]
+): SinkInstance<T2, any, void> & AsyncIterable<T2>
+export function courseIntoIterable<T, T1>(
+  emitter: DerivationInstance<any, T, any> | SourceInstance<T, any>,
+  ...rest: [WrappedUnaryDerivation<T, T1>]
+): SinkInstance<T1, any, void> & AsyncIterable<T1>
+export function courseIntoIterable<T>(
+  emitter: DerivationInstance<any, T, any> | SourceInstance<T, any>,
+  ...rest: []
+): SinkInstance<T, any, void> & AsyncIterable<T>
+export function courseIntoIterable(
+  emitter: any,
+  ...segments: any
+) {
+  let lastOfChain: any = emitter
+
+  for (const s of segments) {
+    const newComponent = makeUnaryDerivationOrSinkFromArg(s, lastOfChain)
+    lastOfChain = newComponent
+  }
+
+  return makeAsyncIterableSink(lastOfChain)
 }

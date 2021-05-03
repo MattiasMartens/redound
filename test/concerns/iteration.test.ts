@@ -1,5 +1,5 @@
 import { makeController } from "@/core"
-import { course, head } from "@/river"
+import { course, courseIntoIterable, head } from "@/river"
 import { mappedDerivation } from "@/derivations"
 import { identity, noop } from "@/patterns/functions"
 import { forEachSink } from "@/sinks"
@@ -17,47 +17,12 @@ describe("iteration", () => {
   verify("Can iterate over a bespoke source", async () => {
     const out: string[] = []
 
-    for await (const item of head("NO_CONTROLLER", iterableSource(sample))) {
+    const source = head("NO_CONTROLLER", iterableSource(sample))
+
+    for await (const item of courseIntoIterable(source)) {
       out.push(item)
     }
 
     deepStrictEqual(out, sample)
-  })
-
-  verify("Fails on a source that is already under a controller", async () => {
-    const out: string[] = []
-
-    let threw = false
-    try {
-      for await (const item of head(makeController(), iterableSource(sample))) {
-        out.push(item)
-      }
-    } catch (e) {
-      threw = true
-    }
-
-    threw || fail("Should have thrown")
-  })
-
-  verify("Fails on a source that already has subscribers", async () => {
-    const out: string[] = []
-
-    const source = head("NO_CONTROLLER", iterableSource(sample))
-    course(
-      source,
-      mappedDerivation(identity),
-      forEachSink(noop)
-    )
-
-    let threw = false
-    try {
-      for await (const item of source) {
-        out.push(item)
-      }
-    } catch (e) {
-      threw = true
-    }
-
-    threw || fail("Should have thrown")
   })
 })

@@ -1,8 +1,9 @@
 import { makeSource } from "@/core"
+import { makeAsyncIterableSink } from "@/core/orchestrate"
 import { close, declareSimpleSource, seal } from "@/core/source"
 import { forEachIterable } from "@/patterns/iterables"
 import { Source } from "@/types/abstract"
-import { SourceInstance } from "@/types/instances"
+import { Emitter, SourceInstance } from "@/types/instances"
 import { right } from "fp-ts/lib/Either"
 
 export function queryableSource<T>(
@@ -37,10 +38,11 @@ export function queryableSource<T>(
           throw new Error(`A query tagged ${tag} was already registered`)
         } else {
           const producedSource = sourceProducingFunction(query)
-          const newSource: AsyncIterable<T> = ("graphComponentType" in producedSource && producedSource.graphComponentType === "Source") ? makeSource(producedSource) : producedSource as AsyncIterable<T> | SourceInstance<T, any>
-          references.set(tag, newSource)
+          const newAsyncIterable = Symbol.asyncIterator in producedSource ? producedSource as AsyncIterable<T> : makeAsyncIterableSink(
+            "graphComponentType" in producedSource && producedSource.graphComponentType === "Source" ? makeSource(producedSource) : producedSource as Emitter<T>
+          )
 
-          return right(newSource)
+          return right(newAsyncIterable)
         }
       }
     }
