@@ -446,7 +446,7 @@ export function consume<T, MemberOrReferences>(
             )
           }
         }
-      } else if (e !== EndOfTagEvent) {
+      } else {
         throw new Error(`Attempted action consume() on derivation ${derivation.id} in incompatible lifecycle state: ${derivation.lifecycle.state}`)
       }
     }, derivation, some(e))

@@ -34,7 +34,10 @@ export type Source<T, References> = GenericEmitter<References> & {
   close: (r: References, o: Outcome<any, Finalization>) => void | Promise<void>,
   pull?: (query: Query, r: References, tag: string) => Either<
     Error,
-    PossiblyAsyncResult<T>
+    PossiblyAsyncResult<T> | {
+      output?: PossiblyAsyncResult<T>,
+      seal?: boolean
+    }
   >,
   // Experiment -- mechanism to induce an effect upstream of
   // the source, using the event paradigm. In essence, in the
@@ -77,8 +80,8 @@ export type Derivation<DerivationSourceType extends Record<string, Emitter<any>>
       }
     }
   ) => {
-      aggregate?: Aggregate,
-      output?: PossiblyAsyncResult<T>
+    aggregate?: Aggregate,
+    output?: PossiblyAsyncResult<T>
   },
   open: () => Aggregate,
   seal: (params: {

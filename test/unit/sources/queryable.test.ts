@@ -73,7 +73,7 @@ describe(
 
       const sequenceSource = makeSource(
         queryableSource(
-          (listType) => iterableSource(new Set(sequences[listType]))
+          (listType: keyof typeof sequences) => iterableSource(new Set(sequences[listType]))
         ),
         { controller, role: "dynamic" }
       )

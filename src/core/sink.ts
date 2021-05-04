@@ -322,7 +322,7 @@ export async function consume<T, MemberOrReferences>(
         )
       }
     }
-  } else if (event !== EndOfTagEvent) {
+  } else {
     throw new Error(`Attempted action consume() on sink ${sink.id} in incompatible lifecycle state: ${source.lifecycle.state}`)
   }
 }

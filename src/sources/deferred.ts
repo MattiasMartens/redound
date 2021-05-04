@@ -54,10 +54,10 @@ export function deferredSource<T>(
                 "graphComponentType" in producedSource && producedSource.graphComponentType === "Source" ? makeSource(producedSource) : producedSource as Emitter<T>)
 
               return right(
-                chainAsyncResults(
-                  newAsyncIterable,
-                  [SealEvent] as any
-                )
+                {
+                  output: newAsyncIterable,
+                  seal: true
+                }
               )
             },
             () => left(new Error("Attempted to initialize inner source of deferred source after it had already been initialized"))

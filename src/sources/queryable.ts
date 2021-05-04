@@ -2,15 +2,15 @@ import { makeSource } from "@/core"
 import { makeAsyncIterableSink } from "@/core/orchestrate"
 import { close, declareSimpleSource, seal } from "@/core/source"
 import { forEachIterable } from "@/patterns/iterables"
-import { Source } from "@/types/abstract"
+import { Derivation, Source } from "@/types/abstract"
 import { Emitter, SourceInstance } from "@/types/instances"
 import { right } from "fp-ts/lib/Either"
 
 export function queryableSource<T>(
-  sourceProducingFunction: (query: any) => Source<T, any> | SourceInstance<T, any> | AsyncIterable<T>,
+  sourceProducingFunction: (query: any) => Source<T, any> | Derivation<any, T, any> | Emitter<T> | AsyncIterable<T>,
   name?: string
 ) {
-  const sourceInstance: Source<any, Map<string, SourceInstance<any, any>>> = declareSimpleSource(
+  const sourceInstance: Source<T, Map<string, SourceInstance<any, any>>> = declareSimpleSource(
     {
       name: name ?? "Queryable",
       emits: new Set(/** TODO */),

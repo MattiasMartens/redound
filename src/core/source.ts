@@ -1,4 +1,4 @@
-import { chainAsyncResults, iterateOverAsyncResult, voidPromiseIterable, wrapAsync } from '@/patterns/async'
+import { chainAsyncResults, iterateOverAsyncResult, PossiblyAsyncResult, voidPromiseIterable, wrapAsync } from '@/patterns/async'
 import { countIterable, forEachIterable, mapIterable } from '@/patterns/iterables'
 import {
   Outcome,
@@ -149,19 +149,15 @@ export function instantiateSource<T, References>(source: Source<T, References>, 
         return pipe(
           result,
           mapRight(
-            async possiblyAsyncResult => {
+            async pullResult => {
+              const output = (pullResult !== undefined && "output" in pullResult) ? pullResult.output : pullResult as PossiblyAsyncResult<T>
+
+              const seal = (pullResult !== undefined && "seal" in pullResult) ? !!pullResult.seal : false
+
               try {
                 await iterateOverAsyncResult(
-                  possiblyAsyncResult,
+                  output,
                   event => {
-                    // This is intentionally framed as a hack.
-                    // Why?
-                    // When a query is fulfilled, there are cases where an implementation may want to finalize events for the source as a whole and confirm that no more events will be emitted.
-                    // However, these cases are so rare that we do not want to create the impression for users that emitting Seal Events from pull implementations is standard.
-                    if ((event as any) === SealEvent) {
-                      return seal(sourceInstance)
-                    }
-
                     return voidPromiseIterable(
                       mapIterable(
                         sourceInstance.consumers,
@@ -181,6 +177,18 @@ export function instantiateSource<T, References>(source: Source<T, References>, 
                       sourceInstance.consumers,
                       async c => {
                         consume(sourceInstance, c, EndOfTagEvent, queryTag)
+                      }
+                    )
+                  )
+                }
+
+                // Emit seal event if specified
+                if (sourceInstance.lifecycle.state !== "ENDED" && seal) {
+                  voidPromiseIterable(
+                    mapIterable(
+                      sourceInstance.consumers,
+                      async c => {
+                        consume(sourceInstance, c, SealEvent, queryTag)
                       }
                     )
                   )
