@@ -8,7 +8,7 @@ import { defaultControllerRescue, defaultControllerSeal, defaultControllerTagged
 import { close } from "./source"
 import { initializeTag } from "./tags"
 import {
-  foldingGet, getOrElse
+  foldingGet
 } from "big-m"
 import { left, map as mapRight } from "fp-ts/lib/Either"
 import { noop } from "@/patterns/functions"
