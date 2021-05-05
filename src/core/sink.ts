@@ -13,12 +13,15 @@ import { map } from 'fp-ts/lib/Option'
 import { defer, Deferred } from '@/patterns/async'
 import { isLeft, left, mapLeft, right } from 'fp-ts/lib/Either'
 import { Possible } from '@/types/patterns'
+import { defined } from '@/patterns/insist'
 
 /**
  * TypeScript doesn't allow mixing inferred with optional
  * types, so this allows a simpler type declaration for a
  * Source.
  */
+export function declareSimpleSink<T, References, SinkResult>(sink: Partial<Omit<Sink<T, References, SinkResult>, 'graphComponentType' | 'open'>>): Sink<T, undefined, SinkResult>
+export function declareSimpleSink<T, References, SinkResult>(sink: Partial<Omit<Sink<T, References, SinkResult>, 'graphComponentType'>>): Sink<T, References, SinkResult>
 export function declareSimpleSink<T, References, SinkResult>(sink: Partial<Omit<Sink<T, References, SinkResult>, 'graphComponentType'>>): Sink<T, References, SinkResult> {
   // @ts-ignore
   sink.graphComponentType = "Sink"
@@ -27,10 +30,10 @@ export function declareSimpleSink<T, References, SinkResult>(sink: Partial<Omit<
       graphComponentType: "Sink",
       close: noop,
       consume: noop,
-      seal: noop,
+      seal: noop as any,
       consumes: new Set(),
       name: "AnonymousSink",
-      open: noop
+      open: noop as any
     } as Sink<T, References, SinkResult>,
     sink
   )
@@ -298,8 +301,12 @@ export async function consume<T, MemberOrReferences>(
 ) {
   if (sink.lifecycle.state === "ACTIVE") {
     if (event === EndOfTagEvent) {
-      // TODO
-      throw new Error("Not implemented")
+      pipe(
+        sink.controller,
+        map(
+          c => c.taggedEvent(event, defined(tag), sink)
+        )
+      )
     } else if (event === SealEvent) {
       await sink.seal()
     } else {

@@ -152,8 +152,6 @@ export function instantiateSource<T, References>(source: Source<T, References>, 
             async pullResult => {
               const output = (pullResult !== undefined && "output" in pullResult) ? pullResult.output : pullResult as PossiblyAsyncResult<T>
 
-              const seal = (pullResult !== undefined && "seal" in pullResult) ? !!pullResult.seal : false
-
               try {
                 await iterateOverAsyncResult(
                   output,
@@ -162,7 +160,7 @@ export function instantiateSource<T, References>(source: Source<T, References>, 
                       mapIterable(
                         sourceInstance.consumers,
                         async c => {
-                          await consume(sourceInstance, c, event, queryTag)
+                          await consume(sourceInstance, c, event, healedQueryTag)
                         }
                       )
                     )
@@ -171,16 +169,18 @@ export function instantiateSource<T, References>(source: Source<T, References>, 
                 )
 
                 // Emit query finalization event
-                if (sourceInstance.lifecycle.state !== "ENDED" && queryTag !== undefined) {
+                if (sourceInstance.lifecycle.state !== "ENDED") {
                   voidPromiseIterable(
                     mapIterable(
                       sourceInstance.consumers,
                       async c => {
-                        consume(sourceInstance, c, EndOfTagEvent, queryTag)
+                        consume(sourceInstance, c, EndOfTagEvent, healedQueryTag)
                       }
                     )
                   )
                 }
+
+                const seal = sealNormalized(pullResult)
 
                 // Emit seal event if specified
                 if (sourceInstance.lifecycle.state !== "ENDED" && seal) {
@@ -265,7 +265,7 @@ export function open<T, References>(
 
           if (!source.prototype.pull) {
             seal(source)
-          };
+          }
         } catch (e) {
           pipe(
             source.controller,
@@ -380,4 +380,20 @@ export function close<T, References>(
         throw new Error(`Attempted action close() on source ${source.id} in incompatible lifecycle state: ${source.lifecycle.state}`)
       }
     }, source, none)
+}
+
+function sealNormalized(pullResult: undefined | {} | { seal?: boolean | (() => boolean) }) {
+  if (pullResult === undefined) {
+    return false
+  } else if ("seal" in pullResult) {
+    const { seal } = pullResult
+
+    if (typeof seal === "function") {
+      return seal()
+    } else {
+      return seal
+    }
+  } else {
+    return false
+  }
 }

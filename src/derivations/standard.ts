@@ -1,4 +1,4 @@
-import { defaultDerivationSeal, unaryDerivationConsumer } from "@/core"
+import { defaultDerivationSeal } from "@/core"
 import { declareSimpleDerivation } from "@/core/derivation"
 import { PossiblyAsyncResult } from "@/patterns/async"
 import { noop } from "@/patterns/functions"
@@ -16,10 +16,10 @@ export function mappedDerivation<In, Out>(
   } = {}
 ): Derivation<{
   main: Emitter<In>
-}, Out, void> {
-  return declareSimpleDerivation<{ main: Emitter<In> }, Out, void>({
-    consume: unaryDerivationConsumer(
-      i => ({ output: [mapper(i)], aggregate: noop() })
+}, Out, undefined> {
+  return declareSimpleDerivation<{ main: Emitter<In> }, Out, undefined>({
+    consume: ({ event: i }) => (
+      { output: [mapper(i)] }
     ),
     seal: defaultDerivationSeal,
     close: noop,
@@ -54,17 +54,14 @@ export function flatMappedDerivation<In, Out>(
   main: Emitter<In>
 }, Out, void> {
   return declareSimpleDerivation<{ main: Emitter<In> }, Out, void>({
-    consume: unaryDerivationConsumer(
-      i => {
-        const mapped = mapper(i)
-        const normalized = normalize(mapped)
+    consume: ({ event: i }) => {
+      const mapped = mapper(i)
+      const normalized = normalize(mapped)
 
-        return {
-          output: normalized,
-          aggregate: noop()
-        }
+      return {
+        output: normalized
       }
-    ),
+    },
     seal: defaultDerivationSeal,
     close: noop,
     name,
@@ -89,16 +86,14 @@ export function reducedDerivation<In, Out>(
   main: Emitter<In>
 }, Out, Out> {
   return declareSimpleDerivation<{ main: Emitter<In> }, Out, Out>({
-    consume: unaryDerivationConsumer<In, Out, Out>(
-      (i, acc) => {
-        const reduced = reducer(acc, i)
+    consume: ({ event: i, aggregate: acc }) => {
+      const reduced = reducer(acc, i)
 
-        return {
-          output: [reduced],
-          aggregate: reduced
-        }
+      return {
+        output: [reduced],
+        aggregate: reduced
       }
-    ),
+    },
     open: initial,
     seal: defaultDerivationSeal,
     close: noop,

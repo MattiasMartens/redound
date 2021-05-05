@@ -77,7 +77,7 @@ export function isPromise(p: any): p is Promise<any> {
   }
 }
 
-export type PossiblyAsyncResult<T> = undefined | void | Iterable<T> | Promise<undefined | void | Iterable<T>> | AsyncIterable<T> | Generator<T> | AsyncGenerator<T>
+export type PossiblyAsyncResult<T> = undefined | Iterable<T> | Promise<undefined | Iterable<T>> | AsyncIterable<T> | Generator<T> | AsyncGenerator<T>
 
 /**
  * @param result A value, Iterable of values, mixed Iterable of values and Promises of values, Async Iterable, or Promise wrapping any of the above.

@@ -1,4 +1,4 @@
-import { defaultDerivationSeal, unaryDerivationConsumer } from "@/core"
+import { defaultDerivationSeal } from "@/core"
 import { declareSimpleDerivation } from "@/core/derivation"
 import { PossiblyAsyncResult } from "@/patterns/async"
 import { noop } from "@/patterns/functions"
@@ -19,16 +19,14 @@ export function statefulDerivation<In, Out, State>(
   main: Emitter<In>
 }, Out, State> {
   return declareSimpleDerivation<{ main: Emitter<In> }, Out, State>({
-    consume: unaryDerivationConsumer<In, Out, State>(
-      (i, acc) => {
-        const { state, output } = transformer(i, acc)
+    consume: ({ event, aggregate }) => {
+      const result = transformer(event, aggregate)
 
-        return {
-          output,
-          aggregate: state
-        }
+      return {
+        ...("output" in result ? { output: result.output } : {}),
+        ...("state" in result ? { aggregate: result.state } : {})
       }
-    ),
+    },
     open: initial,
     seal: (params) => ({
       ...defaultDerivationSeal(params),

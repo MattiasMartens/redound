@@ -36,7 +36,7 @@ export type Source<T, References> = GenericEmitter<References> & {
     Error,
     PossiblyAsyncResult<T> | {
       output?: PossiblyAsyncResult<T>,
-      seal?: boolean
+      seal?: boolean | (() => boolean)
     }
   >,
   // Experiment -- mechanism to induce an effect upstream of
@@ -90,7 +90,7 @@ export type Derivation<DerivationSourceType extends Record<string, Emitter<any>>
     role: keyof DerivationSourceType,
     remainingUnsealedSources: Set<GenericEmitterInstance<any, any>>
   }) => {
-    seal?: boolean,
+    seal?: boolean | (() => boolean),
     output?: PossiblyAsyncResult<T>,
     aggregate?: Aggregate
   },
@@ -101,7 +101,7 @@ export type Derivation<DerivationSourceType extends Record<string, Emitter<any>>
     role: keyof DerivationSourceType,
     remainingUnsealedSources: Set<GenericEmitterInstance<any, any>>
   }) => {
-    seal?: boolean,
+    seal?: boolean | (() => boolean),
     output?: PossiblyAsyncResult<T>,
     aggregate?: Aggregate
   },

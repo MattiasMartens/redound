@@ -35,7 +35,9 @@ export function* allSources(derivation: Record<string, Emitter<any>>) {
  * types, so this allows a simpler type declaration for a
  * Source.
  */
-export function declareSimpleDerivation<SourceType extends Record<string, Emitter<any>>, T, References>(derivation: Partial<Omit<Derivation<SourceType, T, References>, "graphComponentType" | "derivationSpecies">>) {
+export function declareSimpleDerivation<SourceType extends Record<string, Emitter<any>>, T, References>(derivation: Partial<Omit<Derivation<SourceType, T, References>, "graphComponentType" | "derivationSpecies" | "open">>): Derivation<SourceType, T, undefined>
+export function declareSimpleDerivation<SourceType extends Record<string, Emitter<any>>, T, References>(derivation: Partial<Omit<Derivation<SourceType, T, References>, "graphComponentType" | "derivationSpecies">>): Derivation<SourceType, T, References>
+export function declareSimpleDerivation<SourceType extends Record<string, Emitter<any>>, T, References>(derivation: Partial<Omit<Derivation<SourceType, T, References>, "graphComponentType" | "derivationSpecies">>): Derivation<SourceType, T, References> {
   return Object.assign(
     {
       derivationSpecies: "Transform",
@@ -45,7 +47,7 @@ export function declareSimpleDerivation<SourceType extends Record<string, Emitte
       consumes: {},
       emits: new Set(),
       name: "AnonymousDerivation",
-      open: noop,
+      open: noop as any,
       seal: defaultDerivationSeal,
       tagSeal: ({ aggregate }) => ({
         aggregate, seal: false
@@ -373,7 +375,13 @@ export function consume<T, MemberOrReferences>(
             )
           }
 
-          if (tagSealResult.seal) {
+          await scheduleEmissions(
+            derivation,
+            [EndOfTagEvent],
+            tag
+          )
+
+          if (sealNormalized(tagSealResult)) {
             seal(derivation, SealEvent)
           }
 
@@ -406,7 +414,7 @@ export function consume<T, MemberOrReferences>(
             tag
           )
 
-          if (sealResult.seal) {
+          if (sealNormalized(sealResult)) {
             seal(derivation, e)
           }
         } else {
@@ -452,4 +460,18 @@ export function consume<T, MemberOrReferences>(
     }, derivation, some(e))
 }
 
+function sealNormalized(pullResult: undefined | {} | { seal?: boolean | (() => boolean) }) {
+  if (pullResult === undefined) {
+    return false
+  } else if ("seal" in pullResult) {
+    const { seal } = pullResult
 
+    if (typeof seal === "function") {
+      return seal()
+    } else {
+      return seal
+    }
+  } else {
+    return false
+  }
+}

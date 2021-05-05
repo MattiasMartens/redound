@@ -14,23 +14,6 @@ export const defaultDerivationSeal = (
   aggregate
 })
 
-export const unaryDerivationConsumer = <In, Out, Aggregate>(mapper: (i: In, m: Aggregate) => { output: PossiblyAsyncResult<Out>, aggregate: Aggregate }) => (
-  { event, aggregate }: {
-    event: In,
-    aggregate: Aggregate
-  }
-) => {
-  const {
-    output,
-    aggregate: newAggregate
-  } = mapper(event, aggregate)
-
-  return {
-    aggregate: newAggregate,
-    output
-  }
-}
-
 export function makeUnaryDerivation<U, T>(
   derivation: Derivation<{ main: Emitter<U> }, T, any>,
   source: Emitter<U>,
