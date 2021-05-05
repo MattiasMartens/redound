@@ -51,7 +51,8 @@ export function deferredSource<T>(
             () => {
               const producedSource = sourceProducingFunction(query)
               const newAsyncIterable = (Symbol.iterator in producedSource || Symbol.asyncIterator in producedSource) ? producedSource as PossiblyAsyncResult<T> : makeAsyncIterableSink(
-                "graphComponentType" in producedSource && producedSource.graphComponentType === "Source" ? makeSource(producedSource) : producedSource as Emitter<T>)
+                "graphComponentType" in producedSource && producedSource.graphComponentType === "Source" ? makeSource(producedSource) : producedSource as Emitter<T>
+              )
 
               return right(
                 {

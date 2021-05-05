@@ -49,7 +49,7 @@ describe('derivations', () => {
       "file",
       () => getDerivationEmitted(
         stringLinesDerivation(),
-        createReadStream('./test/unit/sources/sample.file',
+        createReadStream('./test/fixtures/sample.file',
           { encoding: 'utf8', highWaterMark: 1024 }
         )
       )

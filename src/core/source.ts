@@ -98,36 +98,6 @@ export function instantiateSource<T, References>(source: Source<T, References>, 
     backpressure: backpressure(),
     controller: controllerOption,
     id: tag,
-    async *[Symbol.asyncIterator]() {
-      if (isSome(sourceInstance.controller)) {
-        throw new Error("Cannot manually iterate over a source which already has a controller set")
-      } else if (sourceInstance.consumers.size) {
-        throw new Error("Cannot manually iterate over a source which is already part of a component graph")
-      } else if (sourceInstance.lifecycle.state !== "READY") {
-        throw new Error(`Tried to manually iterate over source in incompatible lifecycle state: ${sourceInstance.lifecycle.state}`)
-      }
-
-      sourceInstance.lifecycle.state = "ITERATING"
-
-      const {
-        references,
-        output
-      } = source.generate()
-      sourceInstance.references = some(references as any)
-
-      try {
-        for await (const toYield of chainAsyncResults(output)) {
-          if (sourceInstance.lifecycle.state !== "ITERATING") {
-            return
-          } else {
-            yield toYield
-          }
-        }
-        close(sourceInstance, right("Successful iteration"))
-      } catch (e) {
-        close(sourceInstance, left(e))
-      }
-    },
     pull: source.pull ? (
       (query: Query, queryTag?: string) => {
         const healedQueryTag = queryTag === undefined
@@ -170,11 +140,11 @@ export function instantiateSource<T, References>(source: Source<T, References>, 
 
                 // Emit query finalization event
                 if (sourceInstance.lifecycle.state !== "ENDED") {
-                  voidPromiseIterable(
+                  await voidPromiseIterable(
                     mapIterable(
                       sourceInstance.consumers,
                       async c => {
-                        consume(sourceInstance, c, EndOfTagEvent, healedQueryTag)
+                        await consume(sourceInstance, c, EndOfTagEvent, healedQueryTag)
                       }
                     )
                   )
@@ -184,11 +154,11 @@ export function instantiateSource<T, References>(source: Source<T, References>, 
 
                 // Emit seal event if specified
                 if (sourceInstance.lifecycle.state !== "ENDED" && seal) {
-                  voidPromiseIterable(
+                  await voidPromiseIterable(
                     mapIterable(
                       sourceInstance.consumers,
                       async c => {
-                        consume(sourceInstance, c, SealEvent, queryTag)
+                        await consume(sourceInstance, c, SealEvent, queryTag)
                       }
                     )
                   )
@@ -385,13 +355,13 @@ export function close<T, References>(
 function sealNormalized(pullResult: undefined | {} | { seal?: boolean | (() => boolean) }) {
   if (pullResult === undefined) {
     return false
-  } else if ("seal" in pullResult) {
+  } else if ("seal" in pullResult && !("prototype" in pullResult)) {
     const { seal } = pullResult
 
     if (typeof seal === "function") {
       return seal()
     } else {
-      return seal
+      return !!seal
     }
   } else {
     return false

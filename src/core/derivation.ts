@@ -463,13 +463,13 @@ export function consume<T, MemberOrReferences>(
 function sealNormalized(pullResult: undefined | {} | { seal?: boolean | (() => boolean) }) {
   if (pullResult === undefined) {
     return false
-  } else if ("seal" in pullResult) {
+  } else if ("seal" in pullResult && !("prototype" in pullResult)) {
     const { seal } = pullResult
 
     if (typeof seal === "function") {
       return seal()
     } else {
-      return seal
+      return !!seal
     }
   } else {
     return false

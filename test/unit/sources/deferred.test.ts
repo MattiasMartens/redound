@@ -1,4 +1,4 @@
-import { makeController, makeDerivation, makeSink, makeSource, makeUnaryDerivation } from '@/core'
+import { makeController, makeDerivation, makeSink, makeSource } from '@/core'
 import { declareSimpleDerivation } from '@/core/derivation'
 import { eventCollectorSink } from '@/sinks'
 import {
