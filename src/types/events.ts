@@ -40,3 +40,25 @@ export type MetaEvent = {
 }
 
 export type BroadEvent<T> = CoreEvent<T> | MetaEvent
+
+export const NamedEvent = Symbol("NamedEvent")
+
+export const namedEvent = <T>(params: { name: string, payload?: T, end?: boolean }) => {
+  const { name } = params
+  // @ts-ignore Get out of my business
+  delete params.name
+  return {
+    [NamedEvent]: name,
+    ...params
+  }
+}
+
+// Allows Sources to emit tagged events 'spontaneously', i.e., without a push or pull
+// EndOfTagEvents emitted by specifying `end`
+// If there is no payload and no `end`, it will be ignored
+// TODO it could emit a type of Event `NominalEvent` whose only purpose would be for Sinks to notify Controller of receipt
+export type SourceNamedEvent<T> = {
+  [NamedEvent]: string,
+  payload?: T,
+  end?: boolean
+}

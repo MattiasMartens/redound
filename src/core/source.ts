@@ -22,7 +22,7 @@ import {
   map as mapRight,
   right
 } from 'fp-ts/lib/Either'
-import { ControlEvent, EndOfTagEvent, SealEvent } from '@/types/events'
+import { ControlEvent, EndOfTagEvent, NamedEvent, namedEvent, SealEvent, SourceNamedEvent } from '@/types/events'
 import { getSome } from '@/patterns/options'
 import { Possible } from '@/types/patterns'
 import { fold } from 'fp-ts/lib/Option'
@@ -210,7 +210,27 @@ export function open<T, References>(
 ) {
   sourceTry(() => {
     if (source.lifecycle.state === "READY") {
-      const sourceEmit = (e: T | ControlEvent) => {
+      const sourceEmit = async (e: T | ControlEvent | SourceNamedEvent<T>) => {
+        if (typeof e === "object" && e !== null && NamedEvent in e) {
+          const namedEvent = e as SourceNamedEvent<T>
+
+          if ("payload" in namedEvent) {
+            await emit(
+              source,
+              namedEvent.payload,
+              namedEvent[NamedEvent]
+            )
+          }
+
+          if ("end" in namedEvent) {
+            await emit(
+              source,
+              EndOfTagEvent,
+              namedEvent[NamedEvent]
+            )
+          }
+        }
+
         return emit(
           source,
           e,

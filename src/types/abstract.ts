@@ -5,6 +5,7 @@ import {
 import {
   Option
 } from 'fp-ts/lib/Option'
+import { SourceNamedEvent } from './events'
 import { GenericEmitterInstance, PayloadTypeOf, SourceInstance, Emitter, SinkInstance, DerivationInstance } from './instances'
 import { Possible } from './patterns'
 
@@ -29,7 +30,7 @@ export type Source<T, References> = GenericEmitter<References> & {
     // Can be omitted only if the type of References is `void`
     // TODO? enforce this in the type system
     references?: References,
-    output?: PossiblyAsyncResult<T>
+    output?: PossiblyAsyncResult<T | SourceNamedEvent<T>>
   },
   close: (r: References, o: Outcome<any, Finalization>) => void | Promise<void>,
   pull?: (query: Query, r: References, tag: string) => Either<
