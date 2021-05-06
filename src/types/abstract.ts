@@ -43,7 +43,7 @@ export type Source<T, References> = GenericEmitter<References> & {
   // the source, using the event paradigm. In essence, in the
   // standard track, upstream data produces events. This
   // method would allow events to produce upstream data.
-  push?: (e: T) => Promise<T>,
+  push?: (e: PossiblyAsyncResult<T>) => PossiblyAsyncResult<T>,
   // A Source can Push anything it can Emit by definition, but it might also 
   // want to Push things it can't emit (e.g., a Data Access Object without an
   // ID).

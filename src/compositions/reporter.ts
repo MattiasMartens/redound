@@ -20,7 +20,6 @@ function normalizeControllerArg(
   }
 }
 
-
 export function makeReporter<T>(
   controller: ControllerInstance<any> | Controller<any> | "NO_CONTROLLER",
   params: { id?: string } = {}

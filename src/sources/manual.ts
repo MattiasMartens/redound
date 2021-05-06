@@ -1,46 +1,11 @@
 import { defer } from "@/patterns/async"
 import { noop } from "@/patterns/functions"
+import { manualAsyncGenerator } from "@/patterns/generators"
 import { Source } from "@/types/abstract"
 import { Possible } from "@/types/patterns"
 import {
   declareSimpleSource
 } from "../core/source"
-
-async function* innerManualGenerator<T>(
-  nextPromise: () => Promise<Possible<T>>
-) {
-  while (true) {
-    const value = await nextPromise()
-
-    if (value === undefined) {
-      return
-    } else {
-      yield value
-    }
-  }
-}
-
-function manualAsyncGenerator<T>() {
-  let currentDeferredPromise = defer<Possible<T>>()
-  const nextPromise = () => currentDeferredPromise.promise
-  const fulfillPromise = (t: T) => {
-    const toResolve = currentDeferredPromise
-    currentDeferredPromise = defer<Possible<T>>()
-    toResolve.resolve(t)
-  }
-
-  const ender = () => {
-    const toResolve = currentDeferredPromise
-    currentDeferredPromise = undefined as any
-    toResolve.resolve(undefined)
-  }
-
-  return {
-    generator: innerManualGenerator(nextPromise),
-    setter: fulfillPromise,
-    ender
-  }
-}
 
 export function manualSource<T>(
   params: {
