@@ -43,7 +43,7 @@ export type Source<T, References> = GenericEmitter<References> & {
   // the source, using the event paradigm. In essence, in the
   // standard track, upstream data produces events. This
   // method would allow events to produce upstream data.
-  push?: (e: PossiblyAsyncResult<T>) => PossiblyAsyncResult<T>,
+  push?: (e: PossiblyAsyncResult<T>, tag: string) => Either<Error, PossiblyAsyncResult<T>>,
   // A Source can Push anything it can Emit by definition, but it might also 
   // want to Push things it can't emit (e.g., a Data Access Object without an
   // ID).
@@ -113,9 +113,14 @@ export type Sink<T, References, SinkResult> = {
   graphComponentType: "Sink",
   // TODO Define consumes/emits protocol
   consumes: Set<any>,
-  consume: (e: T, r: References, capabilities: {
-    push: (event: any, role: string) => Either<Error, void>,
-    pull: (query: any, role: string) => Either<Error, void>
+  consume: (params: {
+    event: T,
+    references: References,
+    tag: Possible<string>,
+    capabilities: {
+      push: (event: any, role: string) => Either<Error, void>,
+      pull: (query: any, role: string) => Either<Error, void>
+    }
   }) => void | Promise<void>,
   open: (
     capabilities: {
@@ -123,6 +128,7 @@ export type Sink<T, References, SinkResult> = {
       pull: (query: any, role: string) => Either<Error, void>
     }
   ) => References,
+  tagSeal: (tag: string, r: References) => void,
   seal: (r: References) => SinkResult | Promise<SinkResult>,
   close: (r: References, o: Outcome<any, Finalization>) => void | Promise<void>,
   name: string

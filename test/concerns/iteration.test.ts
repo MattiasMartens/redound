@@ -15,7 +15,6 @@ describe("iteration", () => {
     const source = head("NO_CONTROLLER", iterableSource(sample))
 
     for await (const item of courseIntoIterable(source)) {
-      debugger
       out.push(item)
     }
 

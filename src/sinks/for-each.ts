@@ -20,8 +20,8 @@ export function forEachSink<T>(
     seal: noop,
     consumes: new Set(/** TODO */),
     name: name ?? "ForEach",
-    consume: (e) => {
-      return forEach(e)
+    consume: ({ event }) => {
+      return forEach(event)
     }
   })
 }

@@ -98,7 +98,7 @@ export function instantiateSource<T, References>(source: Source<T, References>, 
     backpressure: backpressure(),
     controller: controllerOption,
     id: tag,
-    pull: source.pull ? (
+    pull: source.pull && (
       (query: Query, queryTag?: string) => {
         const healedQueryTag = queryTag === undefined
           ? initializeTag(sourceInstance.id)
@@ -175,7 +175,63 @@ export function instantiateSource<T, References>(source: Source<T, References>, 
           )
         )
       }
-    ) : undefined
+    ),
+    push: source.push && ((input: PossiblyAsyncResult<any>, queryTag?: string) => {
+      const healedQueryTag = queryTag === undefined
+        ? initializeTag(sourceInstance.id)
+        : initializeTag(undefined, queryTag)
+
+      if (sourceInstance.lifecycle.state === "READY" || sourceInstance.lifecycle.state === "ENDED" || sourceInstance.lifecycle.state === "ITERATING") {
+        throw new Error(`Attempted action push() on source ${id} in incompatible lifecycle state: ${sourceInstance.lifecycle.state}`)
+      } else if (sourceInstance.lifecycle.state === "SEALED") {
+        return left(new Error("Cannot push to this source because it is already sealed"))
+      }
+
+      const result = source.push!(input, healedQueryTag)
+
+      return pipe(
+        result,
+        mapRight(
+          async output => {
+            try {
+              await iterateOverAsyncResult(
+                output,
+                event => {
+                  return voidPromiseIterable(
+                    mapIterable(
+                      sourceInstance.consumers,
+                      async c => {
+                        await consume(sourceInstance, c, event, healedQueryTag)
+                      }
+                    )
+                  )
+                },
+                () => sourceInstance.lifecycle.state === "ENDED"
+              )
+
+              // Emit query finalization event
+              if (sourceInstance.lifecycle.state !== "ENDED") {
+                await voidPromiseIterable(
+                  mapIterable(
+                    sourceInstance.consumers,
+                    async c => {
+                      await consume(sourceInstance, c, EndOfTagEvent, healedQueryTag)
+                    }
+                  )
+                )
+              }
+            } catch (e) {
+              pipe(
+                sourceInstance.controller,
+                map(
+                  c => c.rescue(e, none, sourceInstance)
+                )
+              )
+            }
+          }
+        )
+      )
+    })
   } as SourceInstance<T, References>
 
   pipe(
@@ -233,7 +289,7 @@ export function open<T, References>(
             () => source.lifecycle.state === "ENDED"
           )
 
-          if (!source.prototype.pull) {
+          if (!source.prototype.pull && !source.push) {
             seal(source)
           }
         } catch (e) {

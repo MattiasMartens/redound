@@ -23,7 +23,7 @@ import {
 } from 'sinon'
 
 describe(
-  "notifier",
+  "reporter",
   () => {
     it("Passes events from an emitter to a sink", async () => {
       const derivation = head(

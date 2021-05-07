@@ -81,6 +81,35 @@ export function instantiateSink<T, References, SinkResult>(sink: Sink<T, Referen
     )),
     controller: sourceController,
     sinkResult: () => finalizedSinkResultPromise.promise,
+    async tagSeal(tag) {
+      sinkInstance.prototype.tagSeal(
+        tag,
+        getSome(sinkInstance.references)
+      )
+
+
+      await pipe(
+        sinkInstance.controller,
+        fold(
+          noopAsync,
+          async controller => {
+            try {
+              await controller.handleTaggedEvent(
+                EndOfTagEvent,
+                tag,
+                sinkInstance
+              )
+            } catch (e) {
+              await controller.rescue(
+                e,
+                some(tag),
+                sinkInstance
+              )
+            }
+          }
+        )
+      )
+    },
     async seal() {
       const sinkResultPromise = sinkInstance.prototype.seal(
         getSome(sinkInstance.references)
@@ -102,7 +131,7 @@ export function instantiateSink<T, References, SinkResult>(sink: Sink<T, Referen
               withheldSinkResult = some(sinkResultPromise)
               const awaitedSinkResult = await sinkResultPromise
 
-              controller.seal({
+              await controller.seal({
                 graphComponentType: sinkInstance.prototype.graphComponentType,
                 instance: sinkInstance,
                 result: awaitedSinkResult
@@ -110,7 +139,7 @@ export function instantiateSink<T, References, SinkResult>(sink: Sink<T, Referen
             } catch (e) {
               finalizedSinkResultPromise.reject(e)
 
-              controller.rescue(
+              await controller.rescue(
                 e,
                 none,
                 sinkInstance
@@ -144,7 +173,7 @@ export function instantiateSink<T, References, SinkResult>(sink: Sink<T, Referen
         pipe(
           sinkInstance.controller,
           map(
-            c => c.close(sinkInstance)
+            c => c.handleClose(sinkInstance)
           )
         )
       } else {
@@ -195,11 +224,11 @@ export function instantiateAsyncIterableSink<T>(subscribeToEmitter: (sinkInstanc
           l => references.nextToYieldDeferred.reject(l)
         )
       ),
-      consume: async (i, r) => {
-        r.nextToYieldDeferred.resolve(some(i))
-        r.controlReturnedDeferred = defer()
-        r.nextToYieldDeferred = defer<any>()
-        await r.controlReturnedDeferred.promise
+      consume: async ({ event, references }) => {
+        references.nextToYieldDeferred.resolve(some(event))
+        references.controlReturnedDeferred = defer()
+        references.nextToYieldDeferred = defer<any>()
+        await references.controlReturnedDeferred.promise
       },
       consumes: new Set(),
       graphComponentType: "Sink",
@@ -208,6 +237,7 @@ export function instantiateAsyncIterableSink<T>(subscribeToEmitter: (sinkInstanc
         nextToYieldDeferred: defer<Option<T>>(),
         controlReturnedDeferred: defer()
       }),
+      tagSeal: noopAsync,
       seal: (r) => {
         r.nextToYieldDeferred.resolve(none)
         r.controlReturnedDeferred.resolve()
@@ -223,6 +253,7 @@ export function instantiateAsyncIterableSink<T>(subscribeToEmitter: (sinkInstanc
     }),
     controller: none,
     sinkResult: () => finalizedSinkResultPromise.promise,
+    tagSeal: noopAsync,
     async seal() {
       sinkInstance.prototype.seal(
         getSome(sinkInstance.references)
@@ -301,18 +332,21 @@ export async function consume<T, MemberOrReferences>(
 ) {
   if (sink.lifecycle.state === "ACTIVE") {
     if (event === EndOfTagEvent) {
-      pipe(
+      await sink.tagSeal(defined(tag), getSome(sink.references))
+
+      await pipe(
         sink.controller,
-        map(
-          c => c.taggedEvent(event, defined(tag), sink)
+        fold(
+          noopAsync,
+          c => c.handleTaggedEvent(event, defined(tag), sink)
         )
       )
     } else if (event === SealEvent) {
-      await sink.seal()
+      await sink.seal(getSome(sink.references))
     } else {
       const references = getSome(sink.references)
       try {
-        await sink.prototype.consume(event as T, references, sink.capabilities)
+        await sink.prototype.consume({ event: event as T, references, capabilities: sink.capabilities, tag })
       } catch (e) {
         await pipe(
           sink.controller,

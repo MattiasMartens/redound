@@ -1,3 +1,4 @@
+import { constFalse } from "fp-ts/lib/function"
 import { buildError, ErrorBuilder } from "./errors"
 
 export async function end(promise: Promise<any>) {
@@ -183,4 +184,16 @@ export async function timeout<T>(
       reject(e)
     })
   })
+}
+
+export async function collectAsyncResult<T>(r: PossiblyAsyncResult<T>) {
+  const output: T[] = []
+
+  await iterateOverAsyncResult(
+    r,
+    t => void output.push(t),
+    constFalse
+  )
+
+  return output
 }

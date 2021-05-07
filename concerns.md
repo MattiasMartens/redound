@@ -42,3 +42,4 @@
 2. For every other event the component receives, it first fully processes the event, then checks `condition()`. If `condition()` is true, the condition is cleared, `upon()` is called, all results from the call to `upon()` are emitted with the same tag as the original input, and `EndOfTagEvent` for the tag is emitted if it was received previously.
 3. If in processing an event the component receives `seal()` with conditions still pending, it checks `ignoreNonFulfillment` for those conditions. If for any of them `ignoreNonFulfillment` is not present or false, it panics and calls the controller with a non-fulfillment error. Otherwise, for all of them, it emits `EndOfTagEvent` before emitting `SealEvent`.
 - More options for creating 'tagged' events outside of push() and pull() semantics.
+- River semantics should work when provided with prototypes or instances.

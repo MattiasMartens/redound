@@ -22,7 +22,8 @@ export type SourceInstance<T, References> = {
   // TODO tags here
   // TODO? should push protocol be async-iterable-based?
   push?: (
-    event: any
+    event: any,
+    tag?: string
   ) => Either<Error, Promise<void>>
 }
 
@@ -63,7 +64,8 @@ export type SinkInstance<T, References, SinkResult> = {
   id: string,
   siphoning: boolean,
   lifecycle: { state: "ACTIVE" } | { state: "SEALED" } | { state: "ENDED", outcome: Outcome<T, Finalization> },
-  seal: () => Promise<void>,
+  tagSeal: (tag: string, r: References) => Promise<void>,
+  seal: (r: References) => Promise<void>,
   close: (outcome: Outcome<any, any>) => Promise<void>,
   sinkResult: () => Promise<SinkResult>,
   // Initialized to 'Some' on first subscription event,
@@ -96,7 +98,7 @@ export type ControllerInstance<Finalization> = {
     event: Option<any>,
     notifyingComponent: SourceInstance<any, any> | DerivationInstance<any, any, any> | SinkInstance<any, any, any>
   ) => Promise<void>,
-  taggedEvent: (
+  handleTaggedEvent: (
     event: any,
     tag: string,
     notifyingComponent: SourceInstance<any, any> | DerivationInstance<any, any, any> | SinkInstance<any, any, any>
@@ -104,7 +106,7 @@ export type ControllerInstance<Finalization> = {
   outcome: Option<Outcome<any, Finalization>>,
   promisedOutcome: () => Promise<Outcome<any, Finalization>>,
   // A function, intended to be generic, that the controller uses to determine that all close events have propagated fully to all sinks.
-  close: (
+  handleClose: (
     notifyingComponent: SourceInstance<any, any> | DerivationInstance<any, any, any> | SinkInstance<any, any, any>
   ) => void,
   // A Promise that resolves only when all Sinks have closed.
@@ -119,5 +121,6 @@ export type ControllerInstance<Finalization> = {
     push: (event: any, role: string) => Either<Error, void>,
     pull: (params: { query: any, role: string, tag: string }) => Either<Error, void>
   },
+  close: (outcome?: any) => void,
   id: string
 }

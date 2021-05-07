@@ -11,8 +11,8 @@ export function eventCollectorSink<T>(
     seal: collected => collected,
     consumes: new Set(/** TODO */),
     name: name ?? "Collector",
-    consume: (e, r) => {
-      r.push(e)
+    consume: ({ event, references }) => {
+      references.push(event)
     }
   })
 }

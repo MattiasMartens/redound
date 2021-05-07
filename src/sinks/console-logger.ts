@@ -11,6 +11,6 @@ export function consoleLogSink<T>(
     seal: noop,
     consumes: new Set(/** TODO */),
     name: name ?? "LogToConsole",
-    consume: (e) => console.log(e)
+    consume: ({ event }) => console.log(event)
   })
 }

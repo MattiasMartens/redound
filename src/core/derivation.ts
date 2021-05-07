@@ -389,7 +389,7 @@ export function consume<T, MemberOrReferences>(
           pipe(
             derivation.controller,
             map(
-              c => c.taggedEvent(e, defined(tag, "Received EndOfTagEvent without a tag argument"), derivation)
+              c => c.handleTaggedEvent(e, defined(tag, "Received EndOfTagEvent without a tag argument"), derivation)
             )
           )
         } else if (e === SealEvent) {

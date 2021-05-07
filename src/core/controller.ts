@@ -190,7 +190,7 @@ export function instantiateController<Finalization>(
     sources: domain.sources,
     sinks: domain.sinks,
     sourcesByRole: domain.sourcesByRole,
-    taggedEvent: async (event: any, tag: string, notifyingComponent) => pipe(
+    handleTaggedEvent: async (event: any, tag: string, notifyingComponent) => pipe(
       await controller.taggedEvent(
         event,
         tag,
@@ -202,7 +202,7 @@ export function instantiateController<Finalization>(
         propagateOutcome
       )
     ),
-    close() {
+    handleClose() {
       for (const sink of domain.sinks) {
         if (sink.lifecycle.state !== "ENDED") {
           return
@@ -212,6 +212,9 @@ export function instantiateController<Finalization>(
       }
     },
     allSinksClosed: () => allSinksClosed.promise,
+    close: (a: any) => {
+      propagateOutcome(a)
+    }
   }
 
   forEachIterable(
