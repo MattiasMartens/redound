@@ -7,7 +7,7 @@ import { Emitter, SourceInstance } from "@/types/instances"
 import { right } from "fp-ts/lib/Either"
 
 export function queryableSource<T>(
-  sourceProducingFunction: (query: any) => Source<T, any> | Derivation<any, T, any> | Emitter<T> | AsyncIterable<T>,
+  sourceProducingFunction: (query: any) => Source<T, any> | Derivation<any, T, any> | Emitter<T> | AsyncIterable<T> | Iterable<T>,
   name?: string
 ) {
   const sourceInstance: Source<T, Map<string, SourceInstance<any, any>>> = declareSimpleSource(
@@ -38,7 +38,7 @@ export function queryableSource<T>(
           throw new Error(`A query tagged ${tag} was already registered`)
         } else {
           const producedSource = sourceProducingFunction(query)
-          const newAsyncIterable = Symbol.asyncIterator in producedSource ? producedSource as AsyncIterable<T> : makeAsyncIterableSink(
+          const newAsyncIterable = Symbol.asyncIterator in producedSource ? producedSource as AsyncIterable<T> : Symbol.iterator in producedSource ? producedSource as Iterable<T> : makeAsyncIterableSink(
             "graphComponentType" in producedSource && producedSource.graphComponentType === "Source" ? makeSource(producedSource) : producedSource as Emitter<T>
           )
 

@@ -83,9 +83,6 @@ async function sourceTry<T>(
 
 export function instantiateSource<T, References>(source: Source<T, References>, { id, controller }: { id?: string, controller?: ControllerInstance<any> } = {}): SourceInstance<T, References> {
   const healedId = id || uuid()
-  if (healedId === 'dynamic') {
-    debugger
-  }
 
   const controllerOption = fromNullable(controller)
 
@@ -101,10 +98,10 @@ export function instantiateSource<T, References>(source: Source<T, References>, 
     id: healedId,
     pull: source.pull && (
       (query: Query, queryTag?: string) => {
-        debugger
         const healedQueryTag = queryTag === undefined
           ? initializeTag(sourceInstance.id)
-          : initializeTag(undefined, queryTag)
+          // NOTE It is permissible to duplicate an existing query tag, but it should only be done to hold up the release of EndOfTagEvent until the result of this effect is propagated.
+          : queryTag
 
         if (sourceInstance.lifecycle.state === "READY" || sourceInstance.lifecycle.state === "ENDED" || sourceInstance.lifecycle.state === "ITERATING") {
           throw new Error(`Attempted action pull() on source ${id} in incompatible lifecycle state: ${sourceInstance.lifecycle.state}`)
@@ -181,10 +178,11 @@ export function instantiateSource<T, References>(source: Source<T, References>, 
     push: source.push && ((input: PossiblyAsyncResult<any>, queryTag?: string) => {
       const healedQueryTag = queryTag === undefined
         ? initializeTag(sourceInstance.id)
-        : initializeTag(undefined, queryTag)
+        // NOTE It is permissible to duplicate an existing query tag, but it should only be done to hold up the release of EndOfTagEvent until the result of this effect is propagated.
+        : queryTag
 
       if (sourceInstance.lifecycle.state === "READY" || sourceInstance.lifecycle.state === "ENDED" || sourceInstance.lifecycle.state === "ITERATING") {
-        throw new Error(`Attempted action push() on source ${id} in incompatible lifecycle state: ${sourceInstance.lifecycle.state}`)
+        throw new Error(`Attempted action push() on source ${sourceInstance.id} in incompatible lifecycle state: ${sourceInstance.lifecycle.state}`)
       } else if (sourceInstance.lifecycle.state === "SEALED") {
         return left(new Error("Cannot push to this source because it is already sealed"))
       }
@@ -236,9 +234,6 @@ export function instantiateSource<T, References>(source: Source<T, References>, 
     })
   } as SourceInstance<T, References>
 
-  if (sourceInstance.id === 'dynamic') {
-    debugger;
-  }
   pipe(
     controllerOption,
     map(

@@ -18,12 +18,12 @@ import { getSome } from '@/patterns/options'
 import { applyToBackpressure, backpressure } from './backpressure'
 import { ControlEvent, EndOfTagEvent, SealEvent } from '@/types/events'
 import { Either, left, right, map as mapRight, filterOrElse, flatten, mapLeft } from 'fp-ts/lib/Either'
-import { pipe } from 'fp-ts/lib/function'
+import { identity, pipe } from 'fp-ts/lib/function'
 import { noop } from '@/patterns/functions'
 import { defaultDerivationSeal } from './helpers'
 import { Possible } from '@/types/patterns'
 import { defined } from '@/patterns/insist'
-import { foldingGet } from 'big-m'
+import { foldingGet, reconcileAdd, reconcileCount, reconcileEntryInto, reconcileFold } from 'big-m'
 
 export function* allSources(derivation: Record<string, Emitter<any>>) {
   for (const role in derivation) {
@@ -97,6 +97,7 @@ export function instantiateDerivation<SourceType extends Record<string, Emitter<
     },
     aggregate: none,
     consumers: new Set(),
+    queryExtensionCount: new Map(),
     backpressure: backpressure(),
     controller: sourceController,
     sourcesByRole: sources,
@@ -359,6 +360,20 @@ export function consume<T, MemberOrReferences>(
     async () => {
       if (derivation.lifecycle.state === "ACTIVE") {
         if (e === EndOfTagEvent) {
+          const endingTag = defined(tag)
+
+          if (derivation.queryExtensionCount.has(endingTag)) {
+            const oldValue = derivation.queryExtensionCount.get(endingTag)!
+
+            const newValue = oldValue - 1
+
+            newValue === 0 ? derivation.queryExtensionCount.delete(endingTag) : derivation.queryExtensionCount.set(endingTag, newValue)
+
+            if (oldValue > 0) {
+              return
+            }
+          }
+
           // 1. Call derivation's implementation of tagSeal
           const tagSealResult = derivation.prototype.tagSeal({
             aggregate: getSome(derivation.aggregate),
@@ -449,11 +464,22 @@ export function consume<T, MemberOrReferences>(
 
             effects.forEach(
               effect => {
+                const { eventTag } = effect
+
+                if (eventTag !== undefined && eventTag === tag) {
+                  reconcileEntryInto(
+                    derivation.queryExtensionCount,
+                    eventTag,
+                    1,
+                    reconcileAdd()
+                  )
+                }
+
+
                 if (effect.tag === "push") {
                   const {
                     component,
-                    events,
-                    eventTag
+                    events
                   } = effect
 
                   pipe(
@@ -480,13 +506,8 @@ export function consume<T, MemberOrReferences>(
                 } else {
                   const {
                     component,
-                    query,
-                    eventTag
+                    query
                   } = effect
-
-                  if (derivation.controller._tag === "Some" && !derivation.controller.value.componentsById.has(component)) {
-                    debugger
-                  }
 
                   pipe(
                     derivation.controller,

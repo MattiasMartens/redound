@@ -1,7 +1,7 @@
-import { Derivation, Outcome, SealEvent } from "@/types/abstract"
+import { Derivation, GraphEffect, Outcome, PullEffect, PushEffect, SealEvent } from "@/types/abstract"
 import { DerivationInstance, Emitter, GenericEmitterInstance, PayloadTypeOf, SinkInstance, SourceInstance } from "@/types/instances"
 import { none, Option, some } from "fp-ts/lib/Option"
-import { Either, left, right } from "fp-ts/lib/Either"
+import { left, right } from "fp-ts/lib/Either"
 import { makeDerivation } from "./orchestrate"
 import { PossiblyAsyncResult } from "@/patterns/async"
 import { Possible } from "@/types/patterns"
@@ -70,7 +70,8 @@ export function roleConsumer<DerivationSourceType extends Record<string, Emitter
     }
   ) => {
     aggregate?: Aggregate,
-    output?: PossiblyAsyncResult<T>
+    output?: PossiblyAsyncResult<T>,
+    effects?: GraphEffect<any, any>[]
   }
   }): <K extends keyof DerivationSourceType>(
     params: {
@@ -82,7 +83,49 @@ export function roleConsumer<DerivationSourceType extends Record<string, Emitter
     }
   ) => {
     aggregate?: Aggregate,
-    output?: PossiblyAsyncResult<T>
+    output?: PossiblyAsyncResult<T>,
+    effects?: GraphEffect<any, any>[]
   } {
   return (params) => consumers[params.role](params)
+}
+
+
+export function pullEffect<Pull>({ component, query, eventTag }: { component: string, query: Pull, eventTag?: string }): [PullEffect<Pull>] {
+  return [
+    {
+      tag: "pull",
+      component,
+      query,
+      eventTag
+    }
+  ]
+}
+
+export function pullEffects(effects: { component: string, query: any, eventTag?: string }[]): PullEffect<any>[] {
+  return effects.map(({ component, query, eventTag }) => ({
+    tag: "pull",
+    component: component,
+    query,
+    eventTag
+  }))
+}
+
+export function pushEffect<Push>({ component, events, eventTag }: { component: string, events: PossiblyAsyncResult<Push>, eventTag?: string }): [PushEffect<Push>] {
+  return [
+    {
+      tag: "push",
+      component: component,
+      events,
+      eventTag
+    }
+  ]
+}
+
+export function pushEffects(effects: { component: string, events: PossiblyAsyncResult<any>, eventTag?: string }[]): PushEffect<any>[] {
+  return effects.map(({ component, events, eventTag }) => ({
+    tag: "push",
+    component: component,
+    events,
+    eventTag
+  }))
 }

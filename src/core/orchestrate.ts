@@ -32,7 +32,11 @@ export function makeSink<T, References, SinkResult>(sink: Sink<T, References, Si
   return sinkInstance
 }
 
-const asyncIterableSubscribe = <T>(sourceInstance: Emitter<T>,) => (sinkInstance: SinkInstance<T, any, any>) => {
+const asyncIterableSubscribe = <T>(sourceInstance: Emitter<T>) => (sinkInstance: SinkInstance<T, any, any>) => {
+  if (!sourceInstance.prototype) {
+    debugger;;;;;;;;;
+  }
+
   if (sourceInstance.prototype.graphComponentType === "Source") {
     sourceSubscribe(
       sourceInstance as SourceInstance<any, any>,
@@ -49,6 +53,7 @@ const asyncIterableSubscribe = <T>(sourceInstance: Emitter<T>,) => (sinkInstance
 }
 
 export function makeAsyncIterableSink<T>(emitter: Emitter<T>, params: { id?: string } = {}) {
+  debugger
   return instantiateAsyncIterableSink(
     asyncIterableSubscribe(emitter),
     params

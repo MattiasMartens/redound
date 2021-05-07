@@ -128,7 +128,8 @@ export type Sink<T, References, SinkResult> = {
     event: T,
     references: References,
     tag: Possible<string>
-  }) => Possible<GraphEffect<any, any>[]> | Promise<Possible<GraphEffect<any, any>[]>>,
+    // TODO Could emit processable graph effects
+  }) => undefined | Promise<undefined>,
   open: () => References,
   tagSeal: (tag: string, r: References) => void,
   seal: (r: References) => SinkResult | Promise<SinkResult>,

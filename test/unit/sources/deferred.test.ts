@@ -12,7 +12,7 @@ import { isLeft } from 'fp-ts/lib/Either'
 import {
   strictEqual
 } from 'assert'
-import { pullEffect } from '@test/helpers'
+import { pullEffect } from '@/core/helpers'
 
 const fragments = [
   "What follows",
