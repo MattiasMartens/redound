@@ -12,7 +12,7 @@ export function eventCollectorSink<T>(
     consumes: new Set(/** TODO */),
     name: name ?? "Collector",
     consume: ({ event, references }) => {
-      references.push(event)
+      return void references.push(event)
     }
   })
 }

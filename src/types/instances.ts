@@ -2,6 +2,7 @@ import { Option } from "fp-ts/lib/Option"
 import { Controller, Derivation, Outcome, Query, SealEvent, Sink, Source } from "./abstract"
 import { Backpressure } from "@/core/backpressure"
 import { Either } from "fp-ts/lib/Either"
+import { PossiblyAsyncResult } from "@/patterns/async"
 
 export type GenericConsumerInstance<T, MemberOrReferences> = SinkInstance<T, MemberOrReferences, any> | DerivationInstance<any, any, MemberOrReferences>
 
@@ -71,10 +72,6 @@ export type SinkInstance<T, References, SinkResult> = {
   // Initialized to 'Some' on first subscription event,
   // reverted to 'None' once closed.
   references: Option<References>,
-  capabilities: {
-    push: (event: any, role: string) => Either<Error, void>,
-    pull: (query: any, role: string) => Either<Error, void>
-  }
   // TODO semantics for pull(), which dispatches the pull() call to the controller and then returns a Promise which resolves when the EndOfTagEvent corresponding to the pull() is received.
 }
 
@@ -82,12 +79,16 @@ export type ControllerInstance<Finalization> = {
   prototype: Controller<Finalization>,
   waitForPressure: number,
   sources: Set<SourceInstance<any, any>>,
-  sourcesByRole: Map<string, SourceInstance<any, any>>,
+  componentsById: Map<string, Emitter<any> | SinkInstance<any, any, any>>,
   sinks: Set<SinkInstance<any, any, any>>,
-  push: (event: any, role: string) => Either<Error, Promise<void>>,
+  push: (params: {
+    events: PossiblyAsyncResult<any>,
+    id: string,
+    tag?: string
+  }) => Either<Error, Promise<void>>,
   pull: (params: {
     query: any,
-    role: string,
+    id: string,
     tag?: string
   }) => Either<Error, Promise<void>>,
   seal: (
@@ -113,14 +114,9 @@ export type ControllerInstance<Finalization> = {
   // WARNING: This Promise will not wait for the closing of Derivations.
   // TODO: Maybe it should?
   allSinksClosed: () => Promise<void>,
-  registerSource: (
-    sourceInstance: SourceInstance<any, any>,
-    role?: string
+  registerComponent: (
+    sourceInstance: Emitter<any> | SinkInstance<any, any, any>
   ) => void,
-  capabilities: {
-    push: (event: any, role: string) => Either<Error, void>,
-    pull: (params: { query: any, role: string, tag: string }) => Either<Error, void>
-  },
   close: (outcome?: any) => void,
   id: string
 }

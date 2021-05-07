@@ -20,7 +20,6 @@ import { defined } from '@/patterns/insist'
  * types, so this allows a simpler type declaration for a
  * Source.
  */
-export function declareSimpleSink<T, References, SinkResult>(sink: Partial<Omit<Sink<T, References, SinkResult>, 'graphComponentType' | 'open'>>): Sink<T, undefined, SinkResult>
 export function declareSimpleSink<T, References, SinkResult>(sink: Partial<Omit<Sink<T, References, SinkResult>, 'graphComponentType'>>): Sink<T, References, SinkResult>
 export function declareSimpleSink<T, References, SinkResult>(sink: Partial<Omit<Sink<T, References, SinkResult>, 'graphComponentType'>>): Sink<T, References, SinkResult> {
   // @ts-ignore
@@ -31,17 +30,13 @@ export function declareSimpleSink<T, References, SinkResult>(sink: Partial<Omit<
       close: noop,
       consume: noop,
       seal: noop as any,
+      tagSeal: noop,
       consumes: new Set(),
       name: "AnonymousSink",
       open: noop as any
     } as Sink<T, References, SinkResult>,
     sink
   )
-}
-
-const defaultCapabilities = {
-  push: () => left(new Error("No controller present, so push not supported")),
-  pull: () => left(new Error("No controller present, so pull not supported"))
 }
 
 export function instantiateSink<T, References, SinkResult>(sink: Sink<T, References, SinkResult>, { id, controller, siphon = true }: { id?: string, controller?: ControllerInstance<any>, siphon?: boolean } = {}): SinkInstance<T, References, SinkResult> {
@@ -70,15 +65,7 @@ export function instantiateSink<T, References, SinkResult>(sink: Sink<T, Referen
     lifecycle: {
       state: "ACTIVE"
     },
-    references: some(sink.open(
-      pipe(
-        sourceController,
-        fold(
-          () => defaultCapabilities,
-          c => c.capabilities
-        )
-      )
-    )),
+    references: some(sink.open()),
     controller: sourceController,
     sinkResult: () => finalizedSinkResultPromise.promise,
     async tagSeal(tag) {
@@ -182,16 +169,6 @@ export function instantiateSink<T, References, SinkResult>(sink: Sink<T, Referen
 
       sinkInstance.lifecycle = { state: "ENDED", outcome }
     },
-    capabilities: {
-      pull() {
-        // TODO
-        throw new Error("Not implemented")
-      },
-      push() {
-        // TODO
-        throw new Error("Not implemented")
-      }
-    },
     id: tag
   } as SinkInstance<T, References, SinkResult>
 
@@ -285,14 +262,6 @@ export function instantiateAsyncIterableSink<T>(subscribeToEmitter: (sinkInstanc
 
       sinkInstance.lifecycle = { state: "ENDED", outcome }
     },
-    capabilities: {
-      pull() {
-        throw new Error("Not implemented")
-      },
-      push() {
-        throw new Error("Not implemented")
-      }
-    },
     id: tag,
     [Symbol.asyncIterator]: async function* () {
       if (isSome(sinkInstance.controller)) {
@@ -346,7 +315,7 @@ export async function consume<T, MemberOrReferences>(
     } else {
       const references = getSome(sink.references)
       try {
-        await sink.prototype.consume({ event: event as T, references, capabilities: sink.capabilities, tag })
+        await sink.prototype.consume({ event: event as T, references, tag })
       } catch (e) {
         await pipe(
           sink.controller,

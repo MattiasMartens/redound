@@ -66,11 +66,7 @@ export function roleConsumer<DerivationSourceType extends Record<string, Emitter
       tag: Possible<string>,
       aggregate: Aggregate,
       source: GenericEmitterInstance<any, unknown>,
-      role: K,
-      capabilities: {
-        push: (event: any, role: string) => Either<Error, void>,
-        pull: (params: { query: any, role: string, tag?: string }) => Either<Error, void>
-      }
+      role: K
     }
   ) => {
     aggregate?: Aggregate,
@@ -82,11 +78,7 @@ export function roleConsumer<DerivationSourceType extends Record<string, Emitter
       tag: Possible<string>,
       aggregate: Aggregate,
       source: GenericEmitterInstance<any, unknown>,
-      role: K,
-      capabilities: {
-        push: (event: any, role: string) => Either<Error, void>,
-        pull: (params: { query: any, role: string, tag?: string }) => Either<Error, void>
-      }
+      role: K
     }
   ) => {
     aggregate?: Aggregate,

@@ -2,7 +2,7 @@ import { Possible } from "@/types/patterns"
 import {
   deepStrictEqual, doesNotReject
 } from "assert"
-import { iterableSource, UnaryDerivation, makeUnaryDerivation, makeSource, makeSink, eventCollectorSink, makeController, tupleFirst } from "@/index"
+import { iterableSource, UnaryDerivation, makeUnaryDerivation, makeSource, makeSink, eventCollectorSink, makeController, tupleFirst, PullEffect, PushEffect } from "@/index"
 import { ms, PossiblyAsyncResult } from "@/patterns/async"
 import Sinon = require("sinon")
 
@@ -92,3 +92,44 @@ export function testSourceSequence<T>(seq: TestSequence<T>) {
     asyncGeneratorFromTestSequence(seq)
   )
 }
+
+export function pullEffect<Pull>({ component, query, eventTag }: { component: string, query: Pull, eventTag?: string }): [PullEffect<Pull>] {
+  return [
+    {
+      tag: "pull",
+      component,
+      query,
+      eventTag
+    }
+  ]
+}
+
+export function pullEffects(effects: { component: string, query: any, eventTag?: string }[]): PullEffect<any>[] {
+  return effects.map(({ component, query, eventTag }) => ({
+    tag: "pull",
+    component: component,
+    query,
+    eventTag
+  }))
+}
+
+export function pushEffect<Push>({ component, events, eventTag }: { component: string, events: PossiblyAsyncResult<Push>, eventTag?: string }): [PushEffect<Push>] {
+  return [
+    {
+      tag: "push",
+      component: component,
+      events,
+      eventTag
+    }
+  ]
+}
+
+export function pushEffects(effects: { component: string, events: PossiblyAsyncResult<any>, eventTag?: string }[]): PushEffect<any>[] {
+  return effects.map(({ component, events, eventTag }) => ({
+    tag: "push",
+    component: component,
+    events,
+    eventTag
+  }))
+}
+

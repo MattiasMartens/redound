@@ -19,7 +19,7 @@ export function nodeWritableSink<T>(
     consumes: new Set(/** TODO */),
     name: name ?? "ForEach",
     consume: ({ event, references }) => {
-      references.write(event)
+      return void references.write(event)
     }
   })
 }

@@ -26,6 +26,7 @@ import { ControlEvent, EndOfTagEvent, SealEvent } from '@/types/events'
 import { getSome } from '@/patterns/options'
 import { Possible } from '@/types/patterns'
 import { fold } from 'fp-ts/lib/Option'
+import { v4 as uuid } from 'uuid'
 
 // Dependency Map:
 // source imports sink
@@ -80,11 +81,11 @@ async function sourceTry<T>(
   }
 }
 
-export function instantiateSource<T, References>(source: Source<T, References>, { id, controller, role }: { id?: string, controller?: ControllerInstance<any>, role?: string } = {}): SourceInstance<T, References> {
-  const tag = initializeTag(
-    source.name,
-    id
-  )
+export function instantiateSource<T, References>(source: Source<T, References>, { id, controller }: { id?: string, controller?: ControllerInstance<any> } = {}): SourceInstance<T, References> {
+  const healedId = id || uuid()
+  if (healedId === 'dynamic') {
+    debugger
+  }
 
   const controllerOption = fromNullable(controller)
 
@@ -97,9 +98,10 @@ export function instantiateSource<T, References>(source: Source<T, References>, 
     references: none,
     backpressure: backpressure(),
     controller: controllerOption,
-    id: tag,
+    id: healedId,
     pull: source.pull && (
       (query: Query, queryTag?: string) => {
+        debugger
         const healedQueryTag = queryTag === undefined
           ? initializeTag(sourceInstance.id)
           : initializeTag(undefined, queryTag)
@@ -234,10 +236,13 @@ export function instantiateSource<T, References>(source: Source<T, References>, 
     })
   } as SourceInstance<T, References>
 
+  if (sourceInstance.id === 'dynamic') {
+    debugger;
+  }
   pipe(
     controllerOption,
     map(
-      controller => controller.registerSource(sourceInstance, role)
+      controller => controller.registerComponent(sourceInstance)
     )
   )
 

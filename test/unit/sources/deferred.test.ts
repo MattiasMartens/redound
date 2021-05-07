@@ -12,6 +12,7 @@ import { isLeft } from 'fp-ts/lib/Either'
 import {
   strictEqual
 } from 'assert'
+import { pullEffect } from '@test/helpers'
 
 const fragments = [
   "What follows",
@@ -40,7 +41,7 @@ describe(
         deferredSource(
           (animalType) => iterableSource(sequences[animalType])
         ),
-        { controller, role: "dynamic" }
+        { controller, id: "dynamic" }
       )
 
       const composingDerivation = makeDerivation(
@@ -63,7 +64,6 @@ describe(
             {
               event,
               aggregate,
-              capabilities,
               role
             }
           ) {
@@ -73,28 +73,35 @@ describe(
               if (event.startsWith("{{") && event.endsWith("}}")) {
                 const dynamicContentQuery = event.slice(2, event.length - 2)
 
-                const pullResult = capabilities.pull({
-                  query: dynamicContentQuery,
-                  role: 'dynamic'
-                })
-
-                if (isLeft(pullResult)) {
-                  throw pullResult.left
-                }
-
                 aggregate.emittingDynamicContent = true
+
+                return {
+                  aggregate,
+                  output,
+                  effects: pullEffect({ component: 'dynamic', query: dynamicContentQuery })
+                }
               } else if (aggregate.emittingDynamicContent) {
                 aggregate.postDynamicContentBuffer.push(event)
+
+                return {
+                  aggregate,
+                  output
+                }
               } else {
                 output.push(event)
+
+                return {
+                  aggregate,
+                  output
+                }
               }
             } else {
               output.push(event)
-            }
 
-            return {
-              aggregate,
-              output
+              return {
+                aggregate,
+                output
+              }
             }
           },
           seal(
@@ -147,7 +154,7 @@ describe(
         deferredSource(
           (animalType) => sequences[animalType]
         ),
-        { controller, role: "dynamic" }
+        { controller, id: "dynamic" }
       )
 
       const composingDerivation = makeDerivation(
@@ -170,7 +177,6 @@ describe(
             {
               event,
               aggregate,
-              capabilities,
               role
             }
           ) {
@@ -179,28 +185,38 @@ describe(
               if (event.startsWith("{{") && event.endsWith("}}")) {
                 const dynamicContentQuery = event.slice(2, event.length - 2)
 
-                const pullResult = capabilities.pull({
-                  query: dynamicContentQuery,
-                  role: 'dynamic'
-                })
-
-                if (isLeft(pullResult)) {
-                  throw pullResult.left
-                }
-
                 aggregate.emittingDynamicContent = true
+
+                return {
+                  aggregate,
+                  output,
+                  effects: pullEffect({
+                    component: 'dynamic',
+                    query: dynamicContentQuery
+                  })
+                }
               } else if (aggregate.emittingDynamicContent) {
                 aggregate.postDynamicContentBuffer.push(event)
+
+                return {
+                  aggregate,
+                  output
+                }
               } else {
                 output.push(event)
+
+                return {
+                  aggregate,
+                  output
+                }
               }
             } else {
               output.push(event)
-            }
 
-            return {
-              aggregate,
-              output
+              return {
+                aggregate,
+                output
+              }
             }
           },
           seal(

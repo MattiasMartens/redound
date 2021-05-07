@@ -10,7 +10,7 @@ import { isLeft } from 'fp-ts/lib/Either'
 import { queryableSource } from '@/sources/queryable'
 import { defined } from '@/patterns/insist'
 import { getOrFail } from 'big-m'
-import { expectationTestAsync } from '@test/helpers'
+import { expectationTestAsync, pullEffect } from '@test/helpers'
 
 const fragments = [
   "list 1:",
@@ -75,7 +75,7 @@ describe(
         queryableSource(
           (listType: keyof typeof sequences) => iterableSource(new Set(sequences[listType]))
         ),
-        { controller, role: "dynamic" }
+        { controller, id: "dynamic" }
       )
 
       const composingDerivation = makeDerivation(
@@ -100,7 +100,6 @@ describe(
             {
               event,
               aggregate,
-              capabilities,
               role,
               tag
             }
@@ -110,16 +109,6 @@ describe(
             if (role === "main") {
               if (event.startsWith("{{") && event.endsWith("}}")) {
                 const dynamicContentQuery = event.slice(2, event.length - 2)
-
-                const pullResult = capabilities.pull({
-                  query: dynamicContentQuery,
-                  tag: dynamicContentQuery,
-                  role: 'dynamic'
-                })
-
-                if (isLeft(pullResult)) {
-                  throw pullResult.left
-                };
 
                 const buffer = []
 
@@ -133,13 +122,33 @@ describe(
                   name: dynamicContentQuery,
                   buffer
                 })
+
+                return {
+                  aggregate,
+                  output,
+                  effects: pullEffect({
+                    component: 'dynamic',
+                    query: dynamicContentQuery,
+                    eventTag: dynamicContentQuery
+                  })
+                }
               } else if (aggregate.bufferingQueries.size) {
                 aggregate.contentBuffer.push({
                   tag: "content",
                   value: event
                 })
+
+                return {
+                  aggregate,
+                  output
+                }
               } else {
                 output.push(event)
+
+                return {
+                  aggregate,
+                  output
+                }
               }
             } else {
               const queryName = defined(tag)
@@ -149,11 +158,11 @@ describe(
               )
 
               buffer.push(event)
-            }
 
-            return {
-              aggregate,
-              output
+              return {
+                aggregate,
+                output
+              }
             }
           },
           seal(

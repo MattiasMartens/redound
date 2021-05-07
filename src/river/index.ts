@@ -5,7 +5,6 @@ import { ControllerInstance, DerivationInstance, Emitter, SinkInstance, SourceIn
 import { Possible } from "@/types/patterns"
 
 export type WrappedSource<T> = Source<T, any> | {
-  role?: string,
   id?: string,
   wrapped: Source<T, any>
 }
@@ -43,13 +42,12 @@ function makeSourceFromArg<T>(wrappedSource: WrappedSource<T>, controller: Possi
   if ("wrapped" in wrappedSource) {
     const {
       wrapped,
-      id,
-      role
+      id
     } = wrappedSource
 
     return makeSource(
       wrapped,
-      { id, controller, role }
+      { id, controller }
     )
   } else {
     return makeSource(

@@ -17,12 +17,13 @@ import { propagateController } from './controller'
 import { getSome } from '@/patterns/options'
 import { applyToBackpressure, backpressure } from './backpressure'
 import { ControlEvent, EndOfTagEvent, SealEvent } from '@/types/events'
-import { Either, left } from 'fp-ts/lib/Either'
+import { Either, left, right, map as mapRight, filterOrElse, flatten, mapLeft } from 'fp-ts/lib/Either'
 import { pipe } from 'fp-ts/lib/function'
 import { noop } from '@/patterns/functions'
 import { defaultDerivationSeal } from './helpers'
 import { Possible } from '@/types/patterns'
 import { defined } from '@/patterns/insist'
+import { foldingGet } from 'big-m'
 
 export function* allSources(derivation: Record<string, Emitter<any>>) {
   for (const role in derivation) {
@@ -88,7 +89,7 @@ export function instantiateDerivation<SourceType extends Record<string, Emitter<
 
   const sourceController: Option<ControllerInstance<any>> = getControllerFromSources(sources)
 
-  return {
+  const derivationInstance = {
     prototype: derivation,
     derivationSpecies: derivation.derivationSpecies,
     lifecycle: {
@@ -106,7 +107,16 @@ export function instantiateDerivation<SourceType extends Record<string, Emitter<
       )
     ),
     id: tag
-  }
+  } as DerivationInstance<SourceType, T, Aggregate>
+
+  pipe(
+    sourceController,
+    map(
+      c => c.registerComponent(derivationInstance)
+    )
+  )
+
+  return derivationInstance
 }
 
 export async function emit<T, References>(
@@ -307,11 +317,6 @@ function getSourceRole<SourceType extends Record<string, Emitter<any>>>(derivati
   throw new Error(`Emitter ${source.id} yielded event to derivation ${derivation.id} but no role had been registered for that emitter`)
 }
 
-const defaultCapabilities = {
-  push: () => left(new Error("No controller present, so push not supported")),
-  pull: () => left(new Error("No controller present, so pull not supported"))
-}
-
 function remainingUnsealedSources(derivation: DerivationInstance<any, any, any>) {
   return new Set(
     without(
@@ -430,19 +435,82 @@ export function consume<T, MemberOrReferences>(
             tag,
             aggregate: inAggregate,
             source,
-            role,
-            capabilities: pipe(
-              derivation.controller,
-              fold(
-                () => defaultCapabilities,
-                c => c.capabilities
-              )
-            )
+            role
           })
 
           if ("aggregate" in consumeResult) {
             derivation.aggregate = some(
               consumeResult.aggregate
+            )
+          }
+
+          if (consumeResult.effects !== undefined) {
+            const { effects } = consumeResult
+
+            effects.forEach(
+              effect => {
+                if (effect.tag === "push") {
+                  const {
+                    component,
+                    events,
+                    eventTag
+                  } = effect
+
+                  pipe(
+                    derivation.controller,
+                    fold(
+                      () => left("Tried to push with no controller to facilitate"),
+                      c => foldingGet(
+                        c.componentsById,
+                        component,
+                        instance => right(instance),
+                        () => left(`Component with ID ${component} not found on controller`)
+                      )
+                    ),
+                    mapRight(
+                      instance => ("push" in instance && instance.push ? right(void instance.push(events, eventTag)) : left(`Component ${component} has no push functionality`)) as Either<string, undefined>
+                    ),
+                    flatten,
+                    mapLeft(
+                      s => {
+                        throw new Error(s)
+                      }
+                    )
+                  )
+                } else {
+                  const {
+                    component,
+                    query,
+                    eventTag
+                  } = effect
+
+                  if (derivation.controller._tag === "Some" && !derivation.controller.value.componentsById.has(component)) {
+                    debugger
+                  }
+
+                  pipe(
+                    derivation.controller,
+                    fold(
+                      () => left("Tried to pull with no controller to facilitate"),
+                      c => foldingGet(
+                        c.componentsById,
+                        component,
+                        instance => right(instance),
+                        () => left(`Component with ID ${component} not found on controller`)
+                      )
+                    ),
+                    mapRight(
+                      instance => ("pull" in instance && instance.pull ? right(void instance.pull(query, eventTag)) : left(`Component ${component} has no pull functionality`)) as Either<string, undefined>
+                    ),
+                    flatten,
+                    mapLeft(
+                      s => {
+                        throw new Error(s)
+                      }
+                    )
+                  )
+                }
+              }
             )
           }
 

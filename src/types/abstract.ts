@@ -20,6 +20,22 @@ export type GenericEmitter<References> = {
   name: string
 }
 
+export type PullEffect<T> = {
+  tag: "pull",
+  component: string,
+  query: T,
+  eventTag?: string
+}
+
+export type PushEffect<T> = {
+  tag: "push",
+  component: string,
+  events: PossiblyAsyncResult<T>,
+  eventTag?: string
+}
+
+export type GraphEffect<Pull, Push> = PullEffect<Pull> | PushEffect<Push>
+
 // TODO Finalize query semantics
 export type Query = any
 
@@ -44,9 +60,7 @@ export type Source<T, References> = GenericEmitter<References> & {
   // standard track, upstream data produces events. This
   // method would allow events to produce upstream data.
   push?: (e: PossiblyAsyncResult<T>, tag: string) => Either<Error, PossiblyAsyncResult<T>>,
-  // A Source can Push anything it can Emit by definition, but it might also 
-  // want to Push things it can't emit (e.g., a Data Access Object without an
-  // ID).
+  // A Source can Push anything it can Emit by definition, but it might also want to Push things it can't emit (e.g., a Data Access Object without an ID).
   pushes?: Set<any>
 }
 
@@ -74,14 +88,11 @@ export type Derivation<DerivationSourceType extends Record<string, Emitter<any>>
       aggregate: Aggregate,
       source: GenericEmitterInstance<any, unknown>,
       role: K,
-      capabilities: {
-        push: (event: any, role: string) => Either<Error, void>,
-        pull: (params: { query: any, role: string, tag?: string }) => Either<Error, void>
-      }
     }
   ) => {
     aggregate?: Aggregate,
-    output?: PossiblyAsyncResult<T>
+    output?: PossiblyAsyncResult<T>,
+    effects?: GraphEffect<any, any>[]
   },
   open: () => Aggregate,
   seal: (params: {
@@ -116,18 +127,9 @@ export type Sink<T, References, SinkResult> = {
   consume: (params: {
     event: T,
     references: References,
-    tag: Possible<string>,
-    capabilities: {
-      push: (event: any, role: string) => Either<Error, void>,
-      pull: (query: any, role: string) => Either<Error, void>
-    }
-  }) => void | Promise<void>,
-  open: (
-    capabilities: {
-      push: (event: any, role: string) => Either<Error, void>,
-      pull: (query: any, role: string) => Either<Error, void>
-    }
-  ) => References,
+    tag: Possible<string>
+  }) => Possible<GraphEffect<any, any>[]> | Promise<Possible<GraphEffect<any, any>[]>>,
+  open: () => References,
   tagSeal: (tag: string, r: References) => void,
   seal: (r: References) => SinkResult | Promise<SinkResult>,
   close: (r: References, o: Outcome<any, Finalization>) => void | Promise<void>,

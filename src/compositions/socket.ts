@@ -1,15 +1,11 @@
-import { makeController, makeSink, makeSource } from "@/core";
-import { declareSimpleSink } from "@/core/sink";
-import { declareSimpleSource } from "@/core/source";
-import { PossiblyAsyncResult } from "@/patterns/async";
-import { identity } from "@/patterns/functions";
-import { manualAsyncGenerator } from "@/patterns/generators";
-import { forEachSink } from "@/sinks";
-import { Controller, Sink, Source } from "@/types/abstract";
-import { ControllerInstance, SinkInstance, SourceInstance } from "@/types/instances";
-import { getOrFail } from "big-m";
-import { right } from "fp-ts/lib/Either";
-import { none, Option } from "fp-ts/lib/Option";
+import { makeController, makeSource } from "@/core"
+import { declareSimpleSink } from "@/core/sink"
+import { declareSimpleSource } from "@/core/source"
+import { manualAsyncGenerator } from "@/patterns/generators"
+import { Controller, Sink } from "@/types/abstract";
+import { ControllerInstance, SourceInstance } from "@/types/instances"
+import { getOrFail } from "big-m"
+import { right } from "fp-ts/lib/Either"
 
 function normalizeControllerArg(
   controller: ControllerInstance<any> | Controller<any> | "NO_CONTROLLER"
@@ -62,7 +58,7 @@ export function socket<In, Out>(
         tag
       )
 
-      write(event)
+      return void write(event)
     },
     tagSeal(tag) {
       const { end } = getOrFail(

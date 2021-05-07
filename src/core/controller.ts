@@ -1,7 +1,7 @@
 import { defer } from "@/patterns/async"
 import { forEachIterable } from "@/patterns/iterables"
 import { Controller, Outcome, SealEvent } from "@/types/abstract"
-import { ControllerInstance, DerivationInstance, SinkInstance, SourceInstance } from "@/types/instances"
+import { ControllerInstance, DerivationInstance, Emitter, SinkInstance, SourceInstance } from "@/types/instances"
 import { constUndefined, pipe } from "fp-ts/lib/function"
 import { fold, fromNullable, isNone, isSome, map, none, Option, some } from "fp-ts/lib/Option"
 import { defaultControllerRescue, defaultControllerSeal, defaultControllerTaggedEvent } from "./helpers"
@@ -22,6 +22,7 @@ export async function propagateController(
 ) {
   if (isNone(component.controller)) {
     component.controller = some(controller)
+    controller.registerComponent(component)
 
     if ("consumers" in component) {
       forEachIterable(
@@ -47,7 +48,7 @@ export async function propagateController(
 
 export function instantiateController<Finalization>(
   controller: Controller<Finalization>,
-  { id, sources, sourcesByRole, waitForPressure = controller.waitForPressure }: { id?: string, sources?: SourceInstance<any, any>[], sourcesByRole?: Record<string, SourceInstance<any, any>>, waitForPressure?: number } = {}
+  { id, waitForPressure = controller.waitForPressure }: { id?: string, waitForPressure?: number } = {}
 ): ControllerInstance<Finalization> {
   const tag = initializeTag(
     controller.name,
@@ -56,9 +57,9 @@ export function instantiateController<Finalization>(
 
   const outcomePromise = defer<Outcome<any, Finalization>>()
   const domain = {
-    sources: new Set([...sources || [], ...Object.values(sourcesByRole || {})]),
+    sources: new Set<SourceInstance<any, any>>(),
     sinks: new Set<SinkInstance<any, any, any>>(),
-    sourcesByRole: new Map(Object.entries(sourcesByRole || {}))
+    componentsById: new Map<string, Emitter<any> | SinkInstance<any, any, any>>()
   }
 
   const allSinksClosed = defer()
@@ -86,59 +87,22 @@ export function instantiateController<Finalization>(
     id: tag,
     waitForPressure,
     outcome: none,
-    pull: ({ query, role, tag }) => {
+    componentsById: domain.componentsById,
+    pull: ({ query, id, tag }) => {
       return foldingGet(
-        domain.sourcesByRole,
-        role,
-        source => source.pull ? source.pull(query, tag) : left(new Error("Source does not have pull functionality")),
-        () => left(new Error(`Role ${role} does not exist on source`))
+        domain.componentsById,
+        id,
+        source => ("pull" in source && source.pull) ? source.pull(query, tag) : left(new Error("Component does not have pull functionality")),
+        () => left(new Error(`Graph component with ID ${id} does not exist`))
       )
     },
-    push: (event, role) => {
+    push: ({ events, id, tag }) => {
       return foldingGet(
-        domain.sourcesByRole,
-        role,
-        source => source.push ? source.push(event) : left(new Error("Source does not have push functionality")),
-        () => left(new Error(`Role ${role} does not exist on source`))
+        domain.componentsById,
+        id,
+        source => ("push" in source && source.push) ? source.push(events, tag) : left(new Error("Component does not have push functionality")),
+        () => left(new Error(`Graph component with ID ${id} does not exist`))
       )
-    },
-    // Object to pass to graph components, which should not receive the Promise returned by the Right outcome of a pull or push operation lest they await it and cause a (potential, pending event-tag tracking) deadlock.
-    capabilities: {
-      pull: ({ query, role, tag: queryTag }) => {
-        return foldingGet(
-          domain.sourcesByRole,
-          role,
-          source => pipe(
-            source.pull,
-            fromNullable,
-            fold(
-              () => left(new Error("Source does not have pull functionality")),
-              pullFn => pipe(
-                pullFn(query, queryTag),
-                mapRight(noop)
-              )
-            )
-          )
-        )
-      },
-      push: (event, role) => {
-        return foldingGet(
-          domain.sourcesByRole,
-          role,
-          source => pipe(
-            source.pull,
-            fromNullable,
-            fold(
-              () => left(new Error("Source does not have pull functionality")),
-              pullFn => pipe(
-                pullFn(event),
-                mapRight(noop)
-              )
-            )
-          ),
-          () => left(new Error(`Role ${role} does not exist on source`))
-        )
-      },
     },
     promisedOutcome: () => outcomePromise.promise,
     async rescue(error: Error, event: Option<any>, notifyingComponent: SourceInstance<any, any> | DerivationInstance<any, any, any> | SinkInstance<any, any, any>) {
@@ -159,24 +123,25 @@ export function instantiateController<Finalization>(
         )
       )
     },
-    registerSource(
-      sourceInstance,
-      role?: string
+    registerComponent(
+      component
     ) {
-      if (role !== undefined) {
-        if (domain.sourcesByRole.has(role)) {
-          if (domain.sourcesByRole.get(role) !== sourceInstance) {
-            throw new Error(`Tried to add source ${sourceInstance.id} to controller on role ${role} but it was already specified`)
-          }
-        } else {
-          domain.sourcesByRole.set(role, sourceInstance)
+      const { id } = component
+
+      if (domain.componentsById.has(id)) {
+        if (domain.componentsById.get(id) !== component) {
+          throw new Error(`Tried to add ${component.prototype.graphComponentType} ${id} to controller but it was already specified`)
         }
+      } else {
+        domain.componentsById.set(id, component)
       }
 
-      domain.sources.add(sourceInstance)
+      if (component.prototype.graphComponentType === "Source") {
+        domain.sources.add(component as SourceInstance<any, any>)
+      }
 
       propagateController(
-        sourceInstance,
+        component,
         controllerInstance
       )
 
@@ -189,7 +154,6 @@ export function instantiateController<Finalization>(
     },
     sources: domain.sources,
     sinks: domain.sinks,
-    sourcesByRole: domain.sourcesByRole,
     handleTaggedEvent: async (event: any, tag: string, notifyingComponent) => pipe(
       await controller.taggedEvent(
         event,
