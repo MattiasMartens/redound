@@ -7,3 +7,6 @@ export * from './sinks'
 export * from './derivations'
 export * as river from './river'
 export * from './compositions'
+export {
+  readableStreamFromAsyncIterable
+} from './patterns/generators'

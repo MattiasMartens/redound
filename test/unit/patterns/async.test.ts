@@ -1,12 +1,10 @@
-import { chainAsyncResults, iterateOverAsyncResult, ms, PossiblyAsyncResult } from "@/patterns/async"
-import { eventual, unaryCapture } from "@test/helpers"
-import { constFalse } from "fp-ts/lib/function"
-import { useFakeTimers, reset, SinonFakeTimers, restore } from "sinon"
+import { chainAsyncResults, iterateOverAsyncResult, ms, PossiblyAsyncResult } from '@/patterns/async'
+import { eventual, unaryCapture } from '@test/helpers'
+import { constFalse } from 'fp-ts/lib/function'
+import { useFakeTimers, SinonFakeTimers, restore } from 'sinon'
 import {
   deepStrictEqual
 } from 'assert'
-import { identity } from "@/patterns/functions"
-import { mapIterable } from "@/patterns/iterables"
 
 const stockSequence = ["durian", "lovage", "kohlrabi", "soapberry", "dragonfruit", "parsnip"]
 

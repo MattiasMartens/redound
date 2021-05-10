@@ -1,7 +1,5 @@
 import { makeController, makeSource } from "@/core"
 import { forEachIterable } from "@/patterns/iterables"
-import { getSome } from "@/patterns/options"
-import { manualSource } from "@/sources"
 import { Controller } from "@/types/abstract"
 import { ControllerInstance, SourceInstance } from "@/types/instances"
 import { foldingGet } from "big-m"

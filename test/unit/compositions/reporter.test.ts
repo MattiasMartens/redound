@@ -12,15 +12,8 @@ import { iterableSource } from '@/sources'
 import {
   strictEqual,
   deepStrictEqual,
-  notStrictEqual,
-  rejects,
-  doesNotReject
+  notStrictEqual
 } from 'assert'
-import {
-  useFakeTimers,
-  SinonFakeTimers,
-  restore
-} from 'sinon'
 
 describe(
   "reporter",

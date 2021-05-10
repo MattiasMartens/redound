@@ -1,4 +1,5 @@
 import { makeController, makeSource } from "@/core"
+import { lazy } from "@/patterns/functions"
 import { getSome } from "@/patterns/options"
 import { manualSource } from "@/sources"
 import { Controller } from "@/types/abstract"
@@ -21,10 +22,9 @@ export function makeManual<T>(
   params: { id?: string } = {}
 ) {
   const source = makeSource(manualSource<T>(), { ...params, controller: normalizeControllerArg(controller) })
-  const {
-    end,
-    set
-  } = getSome(source.references)
+  const methods = lazy(() => getSome(source.references, 'Tried to write to a manual source before it was opened. Attach a sink to this source first.'))
+  const set = (t: T) => methods().set(t)
+  const end = () => methods().end()
 
   return {
     source,

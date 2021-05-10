@@ -51,4 +51,3 @@ export function makeReporter<T>(
     stopListening: () => manualControls().end()
   }
 }
-

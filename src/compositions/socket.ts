@@ -6,6 +6,7 @@ import { Controller, Sink } from "@/types/abstract";
 import { ControllerInstance, SourceInstance } from "@/types/instances"
 import { getOrFail } from "big-m"
 import { right } from "fp-ts/lib/Either"
+import { v4 as uuid } from "uuid";
 
 function normalizeControllerArg(
   controller: ControllerInstance<any> | Controller<any> | "NO_CONTROLLER"
@@ -26,7 +27,7 @@ function normalizeControllerArg(
  */
 export function socket<In, Out>(
   controllerArg: ControllerInstance<any> | Controller<any> | "NO_CONTROLLER",
-  params: { sourceId?: string, sinkId?: string } = {}
+  params: { sourceId?: string } = {}
 ) {
   const controller = normalizeControllerArg(controllerArg)
 
@@ -75,24 +76,26 @@ export function socket<In, Out>(
   return {
     sourceInstance,
     sink,
-    send: (i: In, tag: string) => {
+    send: (i: In, tag?: string) => {
+      const healedTag = tag === undefined ? uuid() : tag
+
       const {
         generator,
         setter,
         ender
       } = manualAsyncGenerator<Out>()
 
-      activeQueries.set(tag, {
+      activeQueries.set(healedTag, {
         end: ender,
         write: setter
       })
-      sourceInstance.push!([i], tag)
+      sourceInstance.push!([i], healedTag)
 
       return generator
     }
   } as {
     sourceInstance: SourceInstance<In, any>,
     sink: Sink<Out, any, any>,
-    send: (i: In, tag: string) => AsyncIterable<Out>
+    send: (i: In, tag?: string) => AsyncIterable<Out>
   }
 }

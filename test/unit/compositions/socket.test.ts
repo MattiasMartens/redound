@@ -1,5 +1,5 @@
 import {
-  makeReporter, socket
+  socket
 } from '@/compositions'
 import { makeController, roleConsumer } from '@/core'
 import { declareSimpleDerivation } from '@/core/derivation'

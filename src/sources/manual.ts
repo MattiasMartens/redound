@@ -1,8 +1,6 @@
-import { defer } from "@/patterns/async"
 import { noop } from "@/patterns/functions"
 import { manualAsyncGenerator } from "@/patterns/generators"
 import { Source } from "@/types/abstract"
-import { Possible } from "@/types/patterns"
 import {
   declareSimpleSource
 } from "../core/source"
