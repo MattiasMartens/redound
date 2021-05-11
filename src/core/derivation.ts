@@ -52,11 +52,32 @@ export function declareSimpleDerivation<SourceType extends Record<string, Emitte
       seal: defaultDerivationSeal,
       tagSeal: ({ aggregate }) => ({
         aggregate, seal: false
-      }),
-      unroll: noop
+      })
     } as Derivation<SourceType, T, References>,
     derivation
   ) as Derivation<SourceType, T, References>
+}
+
+export function declareUnaryDerivation<Emitted, T, References>(derivation: Partial<Omit<Derivation<{ main: Emitter<Emitted> }, T, References>, "graphComponentType" | "derivationSpecies" | "open">>): Derivation<{ main: Emitter<Emitted> }, T, undefined>
+export function declareUnaryDerivation<Emitted, T, References>(derivation: Partial<Omit<Derivation<{ main: Emitter<Emitted> }, T, References>, "graphComponentType" | "derivationSpecies">>): Derivation<{ main: Emitter<Emitted> }, T, References>
+export function declareUnaryDerivation<Emitted, T, References>(derivation: Partial<Omit<Derivation<{ main: Emitter<Emitted> }, T, References>, "graphComponentType" | "derivationSpecies">>): Derivation<{ main: Emitter<Emitted> }, T, References> {
+  return Object.assign(
+    {
+      derivationSpecies: "Transform",
+      graphComponentType: "Derivation",
+      close: noop,
+      consume: ({ aggregate }) => ({ aggregate }),
+      consumes: {},
+      emits: new Set(),
+      name: "AnonymousDerivation",
+      open: noop as any,
+      seal: defaultDerivationSeal,
+      tagSeal: ({ aggregate }) => ({
+        aggregate, seal: false
+      })
+    } as Derivation<{ main: Emitter<Emitted> }, T, References>,
+    derivation
+  ) as Derivation<{ main: Emitter<Emitted> }, T, References>
 }
 
 function getControllerFromSources(sources: Record<string, Emitter<any>>): Option<ControllerInstance<any>> {
@@ -194,17 +215,15 @@ export function subscribe<T>(
   if (derivation.lifecycle.state !== "ENDED") {
     derivation.consumers.add(consumer)
 
-    if (derivation.lifecycle.state === "READY") {
-      if (isSome(derivation.controller)) {
-        propagateController(
-          consumer,
-          derivation.controller.value
-        )
-      }
+    if (isSome(derivation.controller)) {
+      propagateController(
+        consumer,
+        derivation.controller.value
+      )
+    }
 
-      if (siphonPressure) {
-        siphon(derivation, sourceSubscribe)
-      }
+    if (siphonPressure) {
+      siphon(derivation, sourceSubscribe)
     }
   } else {
     throw new Error(`Attempted action subscribe() on derivation ${derivation.id} in incompatible lifecycle state: ${derivation.lifecycle.state}`)
@@ -212,7 +231,9 @@ export function subscribe<T>(
 }
 
 export function siphon(derivation: DerivationInstance<any, any, any>, sourceSubscribe: (source: SourceInstance<any, any>, derivation: DerivationInstance<any, any, any>) => void) {
-  open(derivation)
+  if (derivation.lifecycle.state === 'READY') {
+    open(derivation)
+  }
 
   forEachIterable(
     allSources(derivation.sourcesByRole),
@@ -358,7 +379,7 @@ export function consume<T, MemberOrReferences>(
 ) {
   return derivationTry(
     async () => {
-      if (derivation.lifecycle.state === "ACTIVE") {
+      if (derivation.lifecycle.state === 'ACTIVE') {
         if (e === EndOfTagEvent) {
           const endingTag = defined(tag)
 
@@ -369,7 +390,7 @@ export function consume<T, MemberOrReferences>(
 
             newValue === 0 ? derivation.queryExtensionCount.delete(endingTag) : derivation.queryExtensionCount.set(endingTag, newValue)
 
-            if (oldValue > 0) {
+            if (newValue > 0) {
               return
             }
           }
@@ -380,7 +401,8 @@ export function consume<T, MemberOrReferences>(
             source,
             tag: defined(tag, "Received EndOfTagEvent with no attendant tag"),
             remainingUnsealedSources: remainingUnsealedSources(derivation),
-            role: getSourceRole(derivation, source)
+            role: getSourceRole(derivation, source),
+            remainingUnsealedTags: new Set(derivation.queryExtensionCount.keys())
           })
 
           if ("aggregate" in tagSealResult) {
@@ -421,7 +443,8 @@ export function consume<T, MemberOrReferences>(
               derivation,
               source
             ),
-            remainingUnsealedSources: remainingUnsealedSources(derivation)
+            remainingUnsealedSources: remainingUnsealedSources(derivation),
+            remainingUnsealedTags: new Set(derivation.queryExtensionCount.keys())
           })
 
           if ("aggregate" in sealResult) {
@@ -438,6 +461,10 @@ export function consume<T, MemberOrReferences>(
             seal(derivation, e)
           }
         } else {
+          if (tag !== undefined && !derivation.queryExtensionCount.has(tag)) {
+            derivation.queryExtensionCount.set(tag, 1)
+          }
+
           const inAggregate = getSome(derivation.aggregate)
 
           const role = getSourceRole(

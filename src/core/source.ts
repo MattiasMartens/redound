@@ -1,4 +1,4 @@
-import { chainAsyncResults, iterateOverAsyncResult, PossiblyAsyncResult, voidPromiseIterable, wrapAsync } from '@/patterns/async'
+import { iterateOverAsyncResult, PossiblyAsyncResult, voidPromiseIterable } from '@/patterns/async'
 import { countIterable, forEachIterable, mapIterable } from '@/patterns/iterables'
 import {
   Outcome,
@@ -266,6 +266,18 @@ export function open<T, References>(
 ) {
   sourceTry(() => {
     if (source.lifecycle.state === "READY") {
+      source.lifecycle.state = "ACTIVE"
+      const {
+        references,
+        output
+      } = source.prototype.generate()
+      source.references = some(references as References)
+
+      forEachIterable(
+        source.consumers,
+        c => c.lifecycle.state === 'READY' && open
+      )
+
       const sourceEmit = (e: T | ControlEvent) => {
         return emit(
           source,
@@ -273,13 +285,6 @@ export function open<T, References>(
           undefined
         )
       }
-
-      source.lifecycle.state = "ACTIVE"
-      const {
-        references,
-        output
-      } = source.prototype.generate()
-      source.references = some(references as References)
 
       void (async () => {
         try {
@@ -301,7 +306,6 @@ export function open<T, References>(
             )
           )
         }
-
       })()
     } else {
       throw new Error(`Attempted action open() on source ${source.id} in incompatible lifecycle state: ${source.lifecycle.state}`)
@@ -311,8 +315,7 @@ export function open<T, References>(
 
 export function subscribe<T>(
   source: SourceInstance<T, any>,
-  consumer: GenericConsumerInstance<T, any>,
-  siphon = true
+  consumer: GenericConsumerInstance<T, any>
 ) {
   sourceTry(() => {
     if (source.lifecycle.state !== "ENDED" && source.lifecycle.state !== "ITERATING") {
@@ -327,7 +330,7 @@ export function subscribe<T>(
 
       // If something subscribes, then by definition it is either a Sink or a Derivation that has a Sink downstream of it.
       // Check if the subscriber is exerting siphon pressure.
-      if (source.lifecycle.state === "READY" && siphon) {
+      if (source.lifecycle.state === "READY") {
         pipe(
           source.controller,
           fold(

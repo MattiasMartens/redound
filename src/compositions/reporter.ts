@@ -32,6 +32,7 @@ export function makeReporter<T>(
     if (sourceInstance.lifecycle.state === "READY") {
       open(sourceInstance)
     }
+
     return getSome(sourceInstance.references)
   })
 

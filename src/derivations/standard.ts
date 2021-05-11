@@ -28,8 +28,7 @@ export function mappedDerivation<In, Out>(
     consumes: {
       main: new Set(/** TODO */)
     },
-    open: noop,
-    unroll: noop
+    open: noop
   })
 }
 
@@ -69,8 +68,7 @@ export function flatMappedDerivation<In, Out>(
     consumes: {
       main: new Set(/** TODO */)
     },
-    open: noop,
-    unroll: noop
+    open: noop
   })
 }
 
@@ -101,7 +99,6 @@ export function reducedDerivation<In, Out>(
     emits: new Set(/** TODO */),
     consumes: {
       main: new Set(/** TODO */)
-    },
-    unroll: noop
+    }
   })
 }

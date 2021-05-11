@@ -89,6 +89,7 @@ export function socket<In, Out>(
         end: ender,
         write: setter
       })
+
       sourceInstance.push!([i], healedTag)
 
       return generator

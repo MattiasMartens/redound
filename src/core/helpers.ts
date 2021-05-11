@@ -1,10 +1,15 @@
-import { Derivation, GraphEffect, Outcome, PullEffect, PushEffect, SealEvent } from "@/types/abstract"
-import { DerivationInstance, Emitter, GenericEmitterInstance, PayloadTypeOf, SinkInstance, SourceInstance } from "@/types/instances"
+import { Controller, Derivation, GraphEffect, Outcome, PullEffect, PushEffect, SealEvent } from "@/types/abstract"
+import { ControllerInstance, DerivationInstance, Emitter, GenericEmitterInstance, PayloadTypeOf, SinkInstance, SourceInstance } from "@/types/instances"
 import { none, Option, some } from "fp-ts/lib/Option"
 import { left, right } from "fp-ts/lib/Either"
 import { makeDerivation } from "./orchestrate"
 import { PossiblyAsyncResult } from "@/patterns/async"
 import { Possible } from "@/types/patterns"
+import { makeController } from "./controller"
+import { defined } from "@/patterns/insist"
+import { forEachIterable } from "@/patterns/iterables"
+import { open } from "./source"
+import { course, head, join } from "@/river"
 
 export const defaultDerivationSeal = (
   { remainingUnsealedSources, aggregate }: { remainingUnsealedSources: Set<any>, aggregate: any }
@@ -128,4 +133,50 @@ export function pushEffects(effects: { component: string, events: PossiblyAsyncR
     events,
     eventTag
   }))
+}
+
+export function normalizeControllerArg(
+  controller: ControllerInstance<any> | Controller<any> | "GENERIC"
+) {
+  if (controller === "GENERIC") {
+    return makeController()
+  } else if ("prototype" in controller) {
+    return controller
+  } else {
+    return makeController(controller)
+  }
+}
+
+/**
+ * @param controllerArg The controller the components will be assigned to.
+ * @param waterway Function that defines the relationships between components using the river idiom.
+ * Can return anything at all, as the caller's context requires.
+ * It makes sense for it to return the graph's sinks.
+ * @returns The result of calling waterway().
+ */
+export function makeGraph<T>(
+  controllerArg: ControllerInstance<any> | Controller<any> | "GENERIC",
+  waterway: (c: ControllerInstance<any>, river: {
+    head: typeof head,
+    course: typeof course,
+    join: typeof join
+  }) => T
+) {
+  const controller = normalizeControllerArg(controllerArg)
+
+  controller.waitForPressure = Infinity
+  const ret = waterway(
+    controller,
+    {
+      head,
+      course,
+      join
+    }
+  )
+  forEachIterable(
+    controller.sources,
+    open
+  )
+
+  return ret
 }

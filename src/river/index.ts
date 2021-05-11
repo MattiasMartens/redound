@@ -27,11 +27,13 @@ export type WrappedSink<T, R> = Sink<T, any, R> | {
 }
 
 function normalizeControllerArg(
-  controller: ControllerInstance<any> | Controller<any> | "NO_CONTROLLER"
+  controller: ControllerInstance<any> | Controller<any> | 'NO_CONTROLLER' | 'GENERIC'
 ) {
-  if (controller === "NO_CONTROLLER") {
+  if (controller === 'NO_CONTROLLER') {
     return undefined
-  } else if ("prototype" in controller) {
+  } else if (controller === 'GENERIC') {
+    return makeController()
+  } else if ('prototype' in controller) {
     return controller
   } else {
     return makeController(controller)
@@ -39,7 +41,7 @@ function normalizeControllerArg(
 }
 
 function makeSourceFromArg<T>(wrappedSource: WrappedSource<T>, controller: Possible<ControllerInstance<any>>) {
-  if ("wrapped" in wrappedSource) {
+  if ('wrapped' in wrappedSource) {
     const {
       wrapped,
       id
@@ -104,27 +106,27 @@ function makeUnaryDerivationOrSinkFromArg<T, Out, R>(wrappedComponent: WrappedUn
  */
 /** TODO Extend when the need arises! */
 export function head<T, T1, T2, T3, Out extends WrappedUnaryDerivation<T3, any> | WrappedSink<T3, any>>(
-  controller: ControllerInstance<any> | Controller<any> | "NO_CONTROLLER",
+  controller: ControllerInstance<any> | Controller<any> | 'NO_CONTROLLER' | 'GENERIC',
   source: WrappedSource<T>,
   ...rest: [WrappedUnaryDerivation<T, T1>, WrappedUnaryDerivation<T1, T2>, WrappedUnaryDerivation<T2, T3>, Out]
 ): Out extends WrappedSink<T3, infer R> ? SinkInstance<T3, any, R> : Out extends WrappedUnaryDerivation<T3, infer T4> ? UnaryDerivationInstance<T3, T4> : never
 export function head<T, T1, T2, Out extends WrappedUnaryDerivation<T2, any> | WrappedSink<T2, any>>(
-  controller: ControllerInstance<any> | Controller<any> | "NO_CONTROLLER",
+  controller: ControllerInstance<any> | Controller<any> | 'NO_CONTROLLER' | 'GENERIC',
   source: WrappedSource<T>,
   ...rest: [WrappedUnaryDerivation<T, T1>, WrappedUnaryDerivation<T1, T2>, Out]
 ): Out extends WrappedSink<T2, infer R> ? SinkInstance<T2, any, R> : Out extends WrappedUnaryDerivation<T2, infer T3> ? UnaryDerivationInstance<T2, T3> : never
 export function head<T, T1, T2, Out extends WrappedUnaryDerivation<T1, T2> | WrappedSink<T1, any>>(
-  controller: ControllerInstance<any> | Controller<any> | "NO_CONTROLLER",
+  controller: ControllerInstance<any> | Controller<any> | 'NO_CONTROLLER' | 'GENERIC',
   source: WrappedSource<T>,
   ...rest: [WrappedUnaryDerivation<T, T1>, Out]
 ): Out extends WrappedSink<T, infer R> ? SinkInstance<T1, any, R> : Out extends WrappedUnaryDerivation<T, infer T2> ? UnaryDerivationInstance<T1, T2> : never
 export function head<T, Out extends WrappedUnaryDerivation<T, any> | WrappedSink<T, any>>(
-  controller: ControllerInstance<any> | Controller<any> | "NO_CONTROLLER",
+  controller: ControllerInstance<any> | Controller<any> | 'NO_CONTROLLER' | 'GENERIC',
   source: WrappedSource<T>,
   ...rest: [Out]
 ): Out extends WrappedSink<T, infer R> ? SinkInstance<T, any, R> : Out extends WrappedUnaryDerivation<T, infer T1> ? UnaryDerivationInstance<T, T1> : never
 export function head<T>(
-  controller: ControllerInstance<any> | Controller<any> | "NO_CONTROLLER",
+  controller: ControllerInstance<any> | Controller<any> | 'NO_CONTROLLER' | 'GENERIC',
   source: WrappedSource<T>,
   ...rest: []
 ): SourceInstance<T, any>

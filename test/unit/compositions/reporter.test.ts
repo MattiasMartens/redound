@@ -20,7 +20,7 @@ describe(
   () => {
     it("Passes events from an emitter to a sink", async () => {
       const derivation = head(
-        "NO_CONTROLLER",
+        'GENERIC',
         iterableSource(["A", "B", "C"]),
         mappedDerivation((s: string) => s + s)
       )
@@ -82,7 +82,7 @@ describe(
 
     it("Does not couple lifecycle", async () => {
       const derivation = head(
-        "NO_CONTROLLER",
+        'GENERIC',
         iterableSource(["A", "B", "C"]),
         mappedDerivation((s: string) => s + s)
       )

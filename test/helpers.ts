@@ -1,8 +1,8 @@
 import { Possible } from "@/types/patterns"
 import {
-  deepStrictEqual, doesNotReject
+  deepStrictEqual
 } from "assert"
-import { iterableSource, UnaryDerivation, makeUnaryDerivation, makeSource, makeSink, eventCollectorSink, makeController, tupleFirst, PullEffect, PushEffect } from "@/index"
+import { iterableSource, UnaryDerivation, makeUnaryDerivation, makeSource, makeSink, eventCollectorSink, makeController, tupleFirst } from "@/index"
 import { ms, PossiblyAsyncResult } from "@/patterns/async"
 import Sinon = require("sinon")
 

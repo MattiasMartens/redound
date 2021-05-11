@@ -74,8 +74,7 @@ export type SourceType = {
 export type Derivation<DerivationSourceType extends Record<string, Emitter<any>>, T, Aggregate> = GenericEmitter<Aggregate> & {
   graphComponentType: "Derivation",
   derivationSpecies: "Relay" | "Transform",
-  // TODO Define query protocol
-  unroll: (aggregate: Aggregate, query: any) => PossiblyAsyncResult<T>,
+  // TODO Handle push-pull capability on Derivations
   // TODO define consumes/emits protocol
   consumes: {
     [k in keyof DerivationSourceType]: Set<any>
@@ -99,7 +98,8 @@ export type Derivation<DerivationSourceType extends Record<string, Emitter<any>>
     aggregate: Aggregate,
     source: Emitter<any>,
     role: keyof DerivationSourceType,
-    remainingUnsealedSources: Set<GenericEmitterInstance<any, any>>
+    remainingUnsealedSources: Set<GenericEmitterInstance<any, any>>,
+    remainingUnsealedTags: Set<string>
   }) => {
     seal?: boolean | (() => boolean),
     output?: PossiblyAsyncResult<T>,
@@ -110,7 +110,8 @@ export type Derivation<DerivationSourceType extends Record<string, Emitter<any>>
     source: Emitter<any>,
     tag: string,
     role: keyof DerivationSourceType,
-    remainingUnsealedSources: Set<GenericEmitterInstance<any, any>>
+    remainingUnsealedSources: Set<GenericEmitterInstance<any, any>>,
+    remainingUnsealedTags: Set<string>
   }) => {
     seal?: boolean | (() => boolean),
     output?: PossiblyAsyncResult<T>,

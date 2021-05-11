@@ -2,7 +2,7 @@ import {
   Outcome,
   Sink
 } from '@/types/abstract'
-import { SinkInstance, GenericEmitterInstance, ControllerInstance, Emitter } from '@/types/instances'
+import { SinkInstance, GenericEmitterInstance, ControllerInstance } from '@/types/instances'
 import { getSome } from '@/patterns/options'
 import { fold, fromNullable, none, some, Option, isSome, isNone } from 'fp-ts/lib/Option'
 import { initializeTag } from './tags'
@@ -37,6 +37,127 @@ export function declareSimpleSink<T, References, SinkResult>(sink: Partial<Omit<
     } as Sink<T, References, SinkResult>,
     sink
   )
+}
+
+type AsyncIterableSinkState<T> = {
+  nextToYieldDeferred: Deferred<Option<T>>,
+  controlReturnedDeferred: Deferred<void>
+}
+
+const AsyncIterableSinkSymbol = Symbol('AsyncIterableSinkSymbol')
+export const AsyncIterableSink = () => AsyncIterableSinkSymbol
+
+/**
+ * A special-case sink which can be iterated over only once with
+ * for-await-of, and which does not subscribe to its emitter until
+ * this iteration has begun.
+ */
+export function instantiateAsyncIterableSink<T>(subscribeToEmitter: (sinkInstance: SinkInstance<T, any, any>) => void, { id }: { id?: string } = {}) {
+  const tag = initializeTag(
+    "AsyncIterable",
+    id
+  )
+
+  const finalizedSinkResultPromise = defer<void>()
+
+  const sinkInstance = {
+    prototype: {
+      close: (references, outcome) => void pipe(
+        outcome,
+        mapLeft(
+          l => references.nextToYieldDeferred.reject(l)
+        )
+      ),
+      consume: async ({ event, references }) => {
+        references.nextToYieldDeferred.resolve(some(event))
+        references.controlReturnedDeferred = defer()
+        references.nextToYieldDeferred = defer<any>()
+        await references.controlReturnedDeferred.promise
+      },
+      consumes: new Set(),
+      graphComponentType: "Sink",
+      name: "AsyncIterable",
+      open: () => ({
+        nextToYieldDeferred: defer<Option<T>>(),
+        controlReturnedDeferred: defer()
+      }),
+      tagSeal: noopAsync,
+      seal: (r) => {
+        r.nextToYieldDeferred.resolve(none)
+        r.controlReturnedDeferred.resolve()
+      }
+    },
+    siphoning: true,
+    lifecycle: {
+      state: "ACTIVE"
+    },
+    references: some({
+      controlReturnedDeferred: defer(),
+      nextToYieldDeferred: defer<any>()
+    }),
+    controller: none,
+    sinkResult: () => finalizedSinkResultPromise.promise,
+    tagSeal: noopAsync,
+    async seal() {
+      sinkInstance.prototype.seal(
+        getSome(sinkInstance.references)
+      )
+
+      finalizedSinkResultPromise.resolve()
+
+      sinkInstance.lifecycle = {
+        state: "SEALED"
+      }
+    },
+    async close(outcome: Outcome<any, any>) {
+      if (sinkInstance.lifecycle.state !== "ENDED") {
+        if (isLeft(outcome)) {
+          finalizedSinkResultPromise.reject(outcome.left.error)
+        }
+
+        const references = getSome(sinkInstance.references)
+
+        sinkInstance.prototype.close(references, outcome)
+        sinkInstance.references = none
+        sinkInstance.lifecycle = {
+          state: "ENDED",
+          outcome
+        }
+      } else {
+        throw new Error(`Attempted action close() on sink ${sinkInstance.id} in incompatible lifecycle state: ${sinkInstance.lifecycle.state}`)
+      }
+
+      sinkInstance.lifecycle = { state: "ENDED", outcome }
+    },
+    id: tag,
+    [Symbol.asyncIterator]: async function* () {
+      if (isSome(sinkInstance.controller)) {
+        throw new Error("Cannot iterate more than once over a sink")
+      }
+
+      subscribeToEmitter(sinkInstance)
+      const references = getSome(sinkInstance.references)
+
+      try {
+        let consumed: Option<T> = none
+        while (!isNone(consumed = await references.nextToYieldDeferred.promise)) {
+          yield getSome(consumed)
+          // This promise is set by consume(); if we're here, then by definition control has returned to the async iterable sink's code.
+          references.controlReturnedDeferred.resolve()
+        }
+      } catch (e) {
+        sinkInstance.close(left(e))
+        throw e
+      } finally {
+        references.controlReturnedDeferred.resolve()
+        if (sinkInstance.lifecycle.state !== "ENDED") {
+          sinkInstance.close(right(undefined))
+        }
+      }
+    }
+  } as SinkInstance<T, AsyncIterableSinkState<T>, void> & AsyncIterable<T>
+
+  return sinkInstance
 }
 
 export function instantiateSink<T, References, SinkResult>(sink: Sink<T, References, SinkResult>, { id, controller, siphon = true }: { id?: string, controller?: ControllerInstance<any>, siphon?: boolean } = {}): SinkInstance<T, References, SinkResult> {
@@ -175,131 +296,13 @@ export function instantiateSink<T, References, SinkResult>(sink: Sink<T, Referen
   return sinkInstance
 }
 
-type AsyncIterableSinkState<T> = {
-  nextToYieldDeferred: Deferred<Option<T>>,
-  controlReturnedDeferred: Deferred<void>
-}
-
-/**
- * A special-case sink which can be iterated over only once with
- * for-await-of, and which does not subscribe to its emitter until
- * this iteration has begun.
- */
-export function instantiateAsyncIterableSink<T>(subscribeToEmitter: (sinkInstance: SinkInstance<T, any, any>) => void, { id }: { id?: string } = {}) {
-  const tag = initializeTag(
-    "AsyncIterable",
-    id
-  )
-
-  const finalizedSinkResultPromise = defer<void>()
-
-  const sinkInstance = {
-    prototype: {
-      close: (references, outcome) => void pipe(
-        outcome,
-        mapLeft(
-          l => references.nextToYieldDeferred.reject(l)
-        )
-      ),
-      consume: async ({ event, references }) => {
-        references.nextToYieldDeferred.resolve(some(event))
-        references.controlReturnedDeferred = defer()
-        references.nextToYieldDeferred = defer<any>()
-        await references.controlReturnedDeferred.promise
-      },
-      consumes: new Set(),
-      graphComponentType: "Sink",
-      name: "AsyncIterable",
-      open: () => ({
-        nextToYieldDeferred: defer<Option<T>>(),
-        controlReturnedDeferred: defer()
-      }),
-      tagSeal: noopAsync,
-      seal: (r) => {
-        r.nextToYieldDeferred.resolve(none)
-        r.controlReturnedDeferred.resolve()
-      }
-    },
-    siphoning: true,
-    lifecycle: {
-      state: "ACTIVE"
-    },
-    references: some({
-      controlReturnedDeferred: defer(),
-      nextToYieldDeferred: defer<any>()
-    }),
-    controller: none,
-    sinkResult: () => finalizedSinkResultPromise.promise,
-    tagSeal: noopAsync,
-    async seal() {
-      sinkInstance.prototype.seal(
-        getSome(sinkInstance.references)
-      )
-
-      finalizedSinkResultPromise.resolve()
-
-      sinkInstance.lifecycle = {
-        state: "SEALED"
-      }
-    },
-    async close(outcome: Outcome<any, any>) {
-      if (sinkInstance.lifecycle.state !== "ENDED") {
-        if (isLeft(outcome)) {
-          finalizedSinkResultPromise.reject(outcome.left.error)
-        }
-
-        const references = getSome(sinkInstance.references)
-
-        sinkInstance.prototype.close(references, outcome)
-        sinkInstance.references = none
-        sinkInstance.lifecycle = {
-          state: "ENDED",
-          outcome
-        }
-      } else {
-        throw new Error(`Attempted action close() on sink ${sinkInstance.id} in incompatible lifecycle state: ${sinkInstance.lifecycle.state}`)
-      }
-
-      sinkInstance.lifecycle = { state: "ENDED", outcome }
-    },
-    id: tag,
-    [Symbol.asyncIterator]: async function* () {
-      if (isSome(sinkInstance.controller)) {
-        throw new Error("Cannot iterate more than once over a sink")
-      }
-
-      subscribeToEmitter(sinkInstance)
-      const references = getSome(sinkInstance.references)
-
-      try {
-        let consumed: Option<T> = none
-        while (!isNone(consumed = await references.nextToYieldDeferred.promise)) {
-          yield getSome(consumed)
-          // This promise is set by consume(); if we're here, then by definition control has returned to the async iterable sink's code.
-          references.controlReturnedDeferred.resolve()
-        }
-      } catch (e) {
-        sinkInstance.close(left(e))
-        throw e
-      } finally {
-        references.controlReturnedDeferred.resolve()
-        if (sinkInstance.lifecycle.state !== "ENDED") {
-          sinkInstance.close(right(undefined))
-        }
-      }
-    }
-  } as SinkInstance<T, AsyncIterableSinkState<T>, void> & AsyncIterable<T>
-
-  return sinkInstance
-}
-
 export async function consume<T, MemberOrReferences>(
   source: GenericEmitterInstance<T, MemberOrReferences>,
   sink: SinkInstance<T, any, any>,
   event: T | ControlEvent,
   tag: Possible<string>
 ) {
-  if (sink.lifecycle.state === "ACTIVE") {
+  if (sink.lifecycle.state === 'ACTIVE') {
     if (event === EndOfTagEvent) {
       await sink.tagSeal(defined(tag), getSome(sink.references))
 
