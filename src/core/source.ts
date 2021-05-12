@@ -100,8 +100,7 @@ export function instantiateSource<T, References>(source: Source<T, References>, 
       (query: Query, queryTag?: string) => {
         const healedQueryTag = queryTag === undefined
           ? initializeTag(sourceInstance.id)
-          // NOTE It is permissible to duplicate an existing query tag, but it should only be done to hold up the release of EndOfTagEvent until the result of this effect is propagated.
-          : queryTag
+          : initializeTag(undefined, queryTag)
 
         if (sourceInstance.lifecycle.state === "READY" || sourceInstance.lifecycle.state === "ENDED" || sourceInstance.lifecycle.state === "ITERATING") {
           throw new Error(`Attempted action pull() on source ${id} in incompatible lifecycle state: ${sourceInstance.lifecycle.state}`)
@@ -178,8 +177,7 @@ export function instantiateSource<T, References>(source: Source<T, References>, 
     push: source.push && ((input: PossiblyAsyncResult<any>, queryTag?: string) => {
       const healedQueryTag = queryTag === undefined
         ? initializeTag(sourceInstance.id)
-        // NOTE It is permissible to duplicate an existing query tag, but it should only be done to hold up the release of EndOfTagEvent until the result of this effect is propagated.
-        : queryTag
+        : initializeTag(undefined, queryTag)
 
       if (sourceInstance.lifecycle.state === "READY" || sourceInstance.lifecycle.state === "ENDED" || sourceInstance.lifecycle.state === "ITERATING") {
         throw new Error(`Attempted action push() on source ${sourceInstance.id} in incompatible lifecycle state: ${sourceInstance.lifecycle.state}`)

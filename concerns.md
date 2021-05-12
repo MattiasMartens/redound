@@ -38,3 +38,4 @@
 - Hadn't considered what happens when close() implementations produce errors. Should they supersede the controller's outcome? allSinksClosed() and outcomePromise() should be merged: the Promise should only resolve to the outer when close() is processed throughout, and then it should resolve with either the original Outcome if close() worked, or a Left with an object encapsulating both the components that failed to close and their Errors, and the original Outcome.
 - More options for creating 'tagged' events outside of push() and pull() semantics.
 - River semantics should work when provided with prototypes or instances.
+- Purpose of registerId is to ensure an ID is never duplicated.However, the fact that it is scoped to the runtime is inconvenient. It should be scoped to the controller.

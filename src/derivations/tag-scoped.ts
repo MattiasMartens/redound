@@ -22,22 +22,26 @@ export function tagScopedDerivation<DerivationSourceType extends Record<string, 
     consume(params) {
       const {
         aggregate,
-        tag = null
+        tag,
+        extendedTag
       } = params
+
+      const scopingTag = extendedTag ?? tag
 
       const scopedAggregate = getOrFill(
         aggregate,
-        tag,
+        scopingTag ?? null,
         () => derivation.open()
       )
 
       const consumptionResult = derivation.consume({
         ...params,
+        extendedTag: undefined,
         aggregate: scopedAggregate
       })
 
       if ('aggregate' in consumptionResult) {
-        aggregate.set(tag, consumptionResult.aggregate!)
+        aggregate.set(scopingTag ?? null, consumptionResult.aggregate!)
         delete consumptionResult.aggregate
       }
 
@@ -48,7 +52,7 @@ export function tagScopedDerivation<DerivationSourceType extends Record<string, 
 
       const sealResult = derivation.seal({
         ...params,
-        aggregate: getOrElse(aggregate, undefined, () => derivation.open())
+        aggregate: getOrElse(aggregate, null, () => derivation.open())
       })
 
       if ('aggregate' in sealResult) {
@@ -61,28 +65,44 @@ export function tagScopedDerivation<DerivationSourceType extends Record<string, 
     tagSeal(params) {
       const {
         tag,
+        extendedTag,
         aggregate
       } = params
 
+      const scopingTag = extendedTag ?? tag
+
       const scopedAggregate = getOrElse(
         aggregate,
-        tag,
+        scopingTag,
         () => derivation.open()
       )
 
-      aggregate.delete(tag)
+      if (scopingTag !== undefined && scopingTag === tag) {
+        const sealResult = derivation.seal({
+          ...params,
+          aggregate: scopedAggregate
+        })
 
-      const tagSealResult = derivation.tagSeal({
-        ...params,
-        aggregate: scopedAggregate
-      })
+        if ('aggregate' in sealResult) {
+          aggregate.set(scopingTag, sealResult.aggregate!)
+          delete sealResult.aggregate
+        }
 
-      if ('aggregate' in tagSealResult) {
-        aggregate.set(tag, tagSealResult.aggregate!)
-        delete tagSealResult.aggregate
+        return sealResult as Omit<typeof sealResult, 'aggregate'>
+      } else {
+        const tagSealResult = derivation.tagSeal({
+          ...params,
+          extendedTag: undefined,
+          aggregate: scopedAggregate
+        })
+
+        if ('aggregate' in tagSealResult) {
+          aggregate.set(scopingTag, tagSealResult.aggregate!)
+          delete tagSealResult.aggregate
+        }
+
+        return tagSealResult as Omit<typeof tagSealResult, 'aggregate'>
       }
-
-      return tagSealResult as Omit<typeof tagSealResult, 'aggregate'>
     }
   })
 }

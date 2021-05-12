@@ -147,11 +147,7 @@ export async function emit<T, References>(
   event: T | ControlEvent,
   tag: Possible<string>
 ) {
-  // Derivations *can* emit events after they have
-  // been sealed! New consumers can still query the Derivation's
-  // existing aggregated data, unless and until the graph is
-  // finally closed.
-  if (derivation.lifecycle.state === "ACTIVE" || derivation.lifecycle.state === "SEALED") {
+  if (derivation.lifecycle.state === "ACTIVE") {
     return applyToBackpressure(
       derivation.backpressure,
       () => voidPromiseIterable(

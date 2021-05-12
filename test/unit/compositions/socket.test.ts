@@ -149,13 +149,13 @@ describe(
         sink
       )
       const output1Promise = collectAsyncResult(
-        send("fibonacci", "B1000")
+        send("fibonacci", "C1000")
       )
       const output2Promise = collectAsyncResult(
-        send("square", "B1001")
+        send("square", "C1001")
       )
       const output3Promise = collectAsyncResult(
-        send("cube", "B1002")
+        send("cube", "C1002")
       )
 
       const [
