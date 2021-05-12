@@ -58,7 +58,6 @@ export function declareSimpleDerivation<SourceType extends Record<string, Emitte
   ) as Derivation<SourceType, T, References>
 }
 
-export function declareUnaryDerivation<Emitted, T, References>(derivation: Partial<Omit<Derivation<{ main: Emitter<Emitted> }, T, References>, "graphComponentType" | "derivationSpecies" | "open">>): Derivation<{ main: Emitter<Emitted> }, T, undefined>
 export function declareUnaryDerivation<Emitted, T, References>(derivation: Partial<Omit<Derivation<{ main: Emitter<Emitted> }, T, References>, "graphComponentType" | "derivationSpecies">>): Derivation<{ main: Emitter<Emitted> }, T, References>
 export function declareUnaryDerivation<Emitted, T, References>(derivation: Partial<Omit<Derivation<{ main: Emitter<Emitted> }, T, References>, "graphComponentType" | "derivationSpecies">>): Derivation<{ main: Emitter<Emitted> }, T, References> {
   return Object.assign(
@@ -501,7 +500,6 @@ export function consume<T, MemberOrReferences>(
                     reconcileAdd()
                   )
                 }
-
 
                 if (effect.tag === "push") {
                   const {

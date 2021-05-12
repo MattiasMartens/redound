@@ -164,6 +164,29 @@ export async function* chainAsyncResults<T>(
   }
 }
 
+export async function* transformAsyncResult<T, O>(
+  result: PossiblyAsyncResult<T>,
+  transform: (t: T) => O
+): AsyncGenerator<O> {
+  if (result === undefined) {
+    // noop
+  } else if (Symbol.asyncIterator in result) {
+    for await (const yielded of result as AsyncIterable<T>) {
+      yield transform(yielded)
+    }
+  } else {
+    const awaited = await result
+
+    if (awaited === undefined) {
+      // noop
+    } else if (Symbol.iterator in result) {
+      for (const yielded of result as Iterable<T>) {
+        yield transform(yielded)
+      }
+    }
+  }
+}
+
 export async function timeout<T>(
   promise: Promise<T>,
   ms: number,

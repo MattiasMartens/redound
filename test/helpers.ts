@@ -30,7 +30,7 @@ export async function expectationTestAsync(expectationsImport: any, scenarioKey:
 }
 
 export function getDerivationEmitted<I, O>(
-  derivation: UnaryDerivation<I, O>,
+  derivation: UnaryDerivation<I, O, any>,
   input: PossiblyAsyncResult<I>
 ) {
   const controllerInstance = makeController(

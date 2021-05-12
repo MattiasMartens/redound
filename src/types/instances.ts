@@ -3,6 +3,7 @@ import { Controller, Derivation, Outcome, Query, SealEvent, Sink, Source } from 
 import { Backpressure } from "@/core/backpressure"
 import { Either } from "fp-ts/lib/Either"
 import { PossiblyAsyncResult } from "@/patterns/async"
+import { OneToManyBinMap } from "@/patterns/maps"
 
 export type GenericConsumerInstance<T, MemberOrReferences> = SinkInstance<T, MemberOrReferences, any> | DerivationInstance<any, any, MemberOrReferences>
 

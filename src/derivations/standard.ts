@@ -5,7 +5,7 @@ import { noop } from "@/patterns/functions"
 import { Derivation } from "@/types/abstract"
 import { Emitter } from "@/types/instances"
 
-export type UnaryDerivation<I, O> = Derivation<{ main: Emitter<I> }, O, any>
+export type UnaryDerivation<I, O, Aggregate> = Derivation<{ main: Emitter<I> }, O, Aggregate>
 
 export function mappedDerivation<In, Out>(
   mapper: (i: In) => Out,
