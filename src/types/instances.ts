@@ -48,7 +48,7 @@ export type DerivationInstance<DerivationSourceType extends Record<string, Emitt
   controller: Option<ControllerInstance<any>>,
   id: string,
   // Track when push or pull effects mean an EndOfTagEvent should be suppressed until that push or pull operation has propagated its result.
-  queryExtensionCount: Map<string, number>,
+  queryExtensions: OneToManyBinMap<string, string>,
   sourcesByRole: DerivationSourceType,
   sealedSources: Set<GenericEmitterInstance<any, any>>,
   consumers: Set<GenericConsumerInstance<T, any>>,

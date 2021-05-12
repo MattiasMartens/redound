@@ -124,27 +124,30 @@ describe(
           main: sourceInstance,
           other: otherSource
         },
-        declareSimpleDerivation({
-          consume: roleConsumer({
-            main({ event, tag }) {
-              return {
-                effects: pullEffect({
-                  component: "sampleProvider",
-                  query: event,
-                  eventTag: tag
-                })
+        {
+          wrapped: declareSimpleDerivation({
+            consume: roleConsumer({
+              main({ event, tag }) {
+                return {
+                  effects: pullEffect({
+                    component: "sampleProvider",
+                    query: event,
+                    eventTag: `${tag}_${event}`,
+                    extendOperation: true
+                  })
+                }
+              },
+              other({ event, tag }) {
+                return {
+                  output: [event]
+                }
               }
-            },
-            other({ event, tag }) {
-              return {
-                output: [event]
-              }
-            }
-          })
-        }),
+            })
+          }),
+          id: 'puller'
+        },
         sink
       )
-
       const output1Promise = collectAsyncResult(
         send("fibonacci", "B1000")
       )

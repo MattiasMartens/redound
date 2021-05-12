@@ -17,7 +17,6 @@ export function OneToManyBinMap<A1, A2>() {
     if (lookupMap.has(a2)) {
       const valAt = lookupMap.get(a2)
       if (valAt !== a1) {
-        debugger;;;
         throw new Error("Value cannot occupy more than one bin")
       }
     } else {
@@ -61,7 +60,7 @@ export type OneToManyBinMap<A1, A2> = {
   addPair: (a1: A1, a2: A2) => Set<A2>,
   deletePair: (a1: A1, a2: A2) => Possible<Set<A2>>,
   getBin: (a1: A1) => Possible<Set<A2>>,
-  findBinOwner: (a2: A2) => A1,
+  findBinOwner: (a2: A2) => Possible<A1>,
   binOwners: () => Set<A1>,
   binOccupants: () => Set<A2>
 }

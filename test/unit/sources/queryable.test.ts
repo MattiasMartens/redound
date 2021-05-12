@@ -68,7 +68,7 @@ describe(
       const controller = makeController()
       const source = makeSource(
         iterableSource(fragments),
-        { controller }
+        { controller, id: "fragments" }
       )
 
       const sequenceSource = makeSource(

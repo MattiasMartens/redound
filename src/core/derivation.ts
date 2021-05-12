@@ -24,6 +24,8 @@ import { defaultDerivationSeal } from './helpers'
 import { Possible } from '@/types/patterns'
 import { defined } from '@/patterns/insist'
 import { foldingGet, reconcileAdd, reconcileCount, reconcileEntryInto, reconcileFold } from 'big-m'
+import { reconcileHashSet } from '@/sources/maps'
+import { OneToManyBinMap } from '@/patterns/maps'
 
 export function* allSources(derivation: Record<string, Emitter<any>>) {
   for (const role in derivation) {
@@ -117,7 +119,7 @@ export function instantiateDerivation<SourceType extends Record<string, Emitter<
     },
     aggregate: none,
     consumers: new Set(),
-    queryExtensionCount: new Map(),
+    queryExtensions: OneToManyBinMap(),
     backpressure: backpressure(),
     controller: sourceController,
     sourcesByRole: sources,
@@ -381,58 +383,71 @@ export function consume<T, MemberOrReferences>(
       if (derivation.lifecycle.state === 'ACTIVE') {
         if (e === EndOfTagEvent) {
           const endingTag = defined(tag)
+          const extendedTag = derivation.queryExtensions.findBinOwner(endingTag)
 
-          if (derivation.queryExtensionCount.has(endingTag)) {
-            const oldValue = derivation.queryExtensionCount.get(endingTag)!
-
-            const newValue = oldValue - 1
-
-            newValue === 0 ? derivation.queryExtensionCount.delete(endingTag) : derivation.queryExtensionCount.set(endingTag, newValue)
-
-            if (newValue > 0) {
-              return
+          const updatedSet = (() => {
+            if (extendedTag !== undefined) {
+              return derivation.queryExtensions.deletePair(extendedTag, endingTag)
+            } else {
+              return undefined
             }
+          })()
+
+          const extendedTagOutcome = extendedTag === undefined ? 'NONE' as 'NONE' : updatedSet?.size ? 'TAGS_REMAINING' as 'TAGS_REMAINING' : 'NO_TAGS_EXTENDING' as 'NO_TAGS_EXTENDING'
+
+          const toSeal = [
+            defined(tag, "Received EndOfTagEvent with no attendant tag"),
+            ...extendedTagOutcome === 'NO_TAGS_EXTENDING' ? [defined(extendedTag)] : []
+          ]
+
+          let willSeal = false
+          const downstreamTag = extendedTag === undefined ? tag : extendedTag
+          for (const sealingTag of toSeal) {
+            // 1. Call derivation's implementation of tagSeal
+            const tagSealResult = derivation.prototype.tagSeal({
+              aggregate: getSome(derivation.aggregate),
+              source,
+              tag: sealingTag,
+              extendedTag,
+              remainingUnsealedSources: remainingUnsealedSources(derivation),
+              role: getSourceRole(derivation, source),
+              remainingUnsealedTags: derivation.queryExtensions.binOccupants()
+            })
+
+            if ("aggregate" in tagSealResult) {
+              derivation.aggregate = some(tagSealResult.aggregate)
+            }
+
+            if ("output" in tagSealResult) {
+              await scheduleEmissions(
+                derivation,
+                tagSealResult.output,
+                downstreamTag
+              )
+            }
+
+            willSeal = willSeal || sealNormalized(tagSealResult)
+
+            // 2. Notify controller
+            pipe(
+              derivation.controller,
+              map(
+                c => c.handleTaggedEvent(e, defined(tag, "Received EndOfTagEvent without a tag argument"), derivation)
+              )
+            )
           }
 
-          // 1. Call derivation's implementation of tagSeal
-          const tagSealResult = derivation.prototype.tagSeal({
-            aggregate: getSome(derivation.aggregate),
-            source,
-            tag: defined(tag, "Received EndOfTagEvent with no attendant tag"),
-            remainingUnsealedSources: remainingUnsealedSources(derivation),
-            role: getSourceRole(derivation, source),
-            remainingUnsealedTags: new Set(derivation.queryExtensionCount.keys())
-          })
-
-          if ("aggregate" in tagSealResult) {
-            derivation.aggregate = some(tagSealResult.aggregate)
-          }
-
-          if ("output" in tagSealResult) {
+          if (extendedTagOutcome === 'NO_TAGS_EXTENDING') {
             await scheduleEmissions(
               derivation,
-              tagSealResult.output,
-              tag
+              [EndOfTagEvent],
+              downstreamTag
             )
           }
 
-          await scheduleEmissions(
-            derivation,
-            [EndOfTagEvent],
-            tag
-          )
-
-          if (sealNormalized(tagSealResult)) {
-            seal(derivation, SealEvent)
+          if (willSeal) {
+            await seal(derivation, SealEvent)
           }
-
-          // 2. Notify controller
-          pipe(
-            derivation.controller,
-            map(
-              c => c.handleTaggedEvent(e, defined(tag, "Received EndOfTagEvent without a tag argument"), derivation)
-            )
-          )
         } else if (e === SealEvent) {
           derivation.sealedSources.add(source)
           const sealResult = derivation.prototype.seal({
@@ -443,7 +458,7 @@ export function consume<T, MemberOrReferences>(
               source
             ),
             remainingUnsealedSources: remainingUnsealedSources(derivation),
-            remainingUnsealedTags: new Set(derivation.queryExtensionCount.keys())
+            remainingUnsealedTags: derivation.queryExtensions.binOwners()
           })
 
           if ("aggregate" in sealResult) {
@@ -453,16 +468,19 @@ export function consume<T, MemberOrReferences>(
           await scheduleEmissions(
             derivation,
             sealResult.output,
-            tag
+            undefined
           )
 
           if (sealNormalized(sealResult)) {
             seal(derivation, e)
           }
         } else {
-          if (tag !== undefined && !derivation.queryExtensionCount.has(tag)) {
-            derivation.queryExtensionCount.set(tag, 1)
+          const extendedTag = tag === undefined ? undefined : derivation.queryExtensions.findBinOwner(tag)
+          if (tag !== undefined && extendedTag === undefined) {
+            derivation.queryExtensions.addPair(tag, tag)
           }
+
+          const healedExtendedTag = extendedTag === undefined && tag !== undefined ? tag : extendedTag
 
           const inAggregate = getSome(derivation.aggregate)
 
@@ -474,6 +492,7 @@ export function consume<T, MemberOrReferences>(
           const consumeResult = derivation.prototype.consume({
             event: e,
             tag,
+            extendedTag: healedExtendedTag,
             aggregate: inAggregate,
             source,
             role
@@ -490,15 +509,11 @@ export function consume<T, MemberOrReferences>(
 
             effects.forEach(
               effect => {
-                const { eventTag } = effect
+                const { eventTag, extendOperation } = effect
 
-                if (eventTag !== undefined && eventTag === tag) {
-                  reconcileEntryInto(
-                    derivation.queryExtensionCount,
-                    eventTag,
-                    1,
-                    reconcileAdd()
-                  )
+                if (tag !== undefined && eventTag !== undefined && extendOperation) {
+
+                  derivation.queryExtensions.addPair(tag, eventTag)
                 }
 
                 if (effect.tag === "push") {
@@ -564,7 +579,7 @@ export function consume<T, MemberOrReferences>(
             await scheduleEmissions(
               derivation,
               consumeResult.output,
-              tag
+              healedExtendedTag
             )
           }
         }

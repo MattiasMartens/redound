@@ -95,13 +95,14 @@ export function roleConsumer<DerivationSourceType extends Record<string, Emitter
 }
 
 
-export function pullEffect<Pull>({ component, query, eventTag }: { component: string, query: Pull, eventTag?: string }): [PullEffect<Pull>] {
+export function pullEffect<Pull>({ component, query, eventTag, extendOperation }: { component: string, query: Pull, eventTag?: string, extendOperation?: boolean }): [PullEffect<Pull>] {
   return [
     {
       tag: "pull",
       component,
       query,
-      eventTag
+      eventTag,
+      extendOperation
     }
   ]
 }
@@ -115,23 +116,25 @@ export function pullEffects(effects: { component: string, query: any, eventTag?:
   }))
 }
 
-export function pushEffect<Push>({ component, events, eventTag }: { component: string, events: PossiblyAsyncResult<Push>, eventTag?: string }): [PushEffect<Push>] {
+export function pushEffect<Push>({ component, events, eventTag, extendOperation }: { component: string, events: PossiblyAsyncResult<Push>, eventTag?: string, extendOperation?: boolean }): [PushEffect<Push>] {
   return [
     {
       tag: "push",
       component: component,
       events,
-      eventTag
+      eventTag,
+      extendOperation
     }
   ]
 }
 
-export function pushEffects(effects: { component: string, events: PossiblyAsyncResult<any>, eventTag?: string }[]): PushEffect<any>[] {
-  return effects.map(({ component, events, eventTag }) => ({
+export function pushEffects(effects: { component: string, events: PossiblyAsyncResult<any>, eventTag?: string, extendOperation?: boolean }[]): PushEffect<any>[] {
+  return effects.map(({ component, events, eventTag, extendOperation }) => ({
     tag: "push",
     component: component,
     events,
-    eventTag
+    eventTag,
+    extendOperation
   }))
 }
 

@@ -24,14 +24,16 @@ export type PullEffect<T> = {
   tag: "pull",
   component: string,
   query: T,
-  eventTag?: string
+  eventTag?: string,
+  extendOperation?: boolean
 }
 
 export type PushEffect<T> = {
   tag: "push",
   component: string,
   events: PossiblyAsyncResult<T>,
-  eventTag?: string
+  eventTag?: string,
+  extendOperation?: boolean
 }
 
 export type GraphEffect<Pull, Push> = PullEffect<Pull> | PushEffect<Push>
@@ -84,6 +86,7 @@ export type Derivation<DerivationSourceType extends Record<string, Emitter<any>>
     params: {
       event: PayloadTypeOf<DerivationSourceType[K]>,
       tag: Possible<string>,
+      extendedTag: Possible<string>,
       aggregate: Aggregate,
       source: GenericEmitterInstance<any, unknown>,
       role: K,
@@ -109,6 +112,7 @@ export type Derivation<DerivationSourceType extends Record<string, Emitter<any>>
     aggregate: Aggregate,
     source: Emitter<any>,
     tag: string,
+    extendedTag: Possible<string>,
     role: keyof DerivationSourceType,
     remainingUnsealedSources: Set<GenericEmitterInstance<any, any>>,
     remainingUnsealedTags: Set<string>
