@@ -39,13 +39,42 @@ export function declareSimpleSink<T, References, SinkResult>(sink: Partial<Omit<
   )
 }
 
-type AsyncIterableSinkState<T> = {
+export type AsyncIterableSinkState<T> = {
   nextToYieldDeferred: Deferred<Option<T>>,
   controlReturnedDeferred: Deferred<void>
 }
 
-const AsyncIterableSinkSymbol = Symbol('AsyncIterableSinkSymbol')
-export const AsyncIterableSink = () => AsyncIterableSinkSymbol
+export type AsyncIterableSinkInstance<T> = SinkInstance<T, AsyncIterableSinkState<T>, void> & AsyncIterable<T> & { isAsyncIterableSink: true }
+export type AsyncIterableSink<T> = Sink<T, AsyncIterableSinkState<T>, undefined> & { isAsyncIterableSink: true }
+
+export const AsyncIterableSinkPrototype = {
+  isAsyncIterableSink: true,
+  close: (references, outcome) => void pipe(
+    outcome,
+    map(
+      l => references.nextToYieldDeferred.reject(l)
+    )
+  ),
+  consume: async ({ event, references }) => {
+    references.nextToYieldDeferred.resolve(some(event))
+    references.controlReturnedDeferred = defer()
+    references.nextToYieldDeferred = defer<any>()
+    await references.controlReturnedDeferred.promise
+  },
+  consumes: new Set(),
+  graphComponentType: "Sink",
+  name: "AsyncIterable",
+  open: () => ({
+    nextToYieldDeferred: defer<Option<any>>(),
+    controlReturnedDeferred: defer()
+  }),
+  tagSeal: noopAsync,
+  seal: (r) => {
+    r.nextToYieldDeferred.resolve(none)
+    r.controlReturnedDeferred.resolve()
+  }
+} as AsyncIterableSink<any>
+export const asyncIterableSink = <T>() => AsyncIterableSinkPrototype as AsyncIterableSink<T>
 
 /**
  * A special-case sink which can be iterated over only once with
@@ -61,32 +90,7 @@ export function instantiateAsyncIterableSink<T>(subscribeToEmitter: (sinkInstanc
   const finalizedSinkResultPromise = defer<void>()
 
   const sinkInstance = {
-    prototype: {
-      close: (references, outcome) => void pipe(
-        outcome,
-        map(
-          l => references.nextToYieldDeferred.reject(l)
-        )
-      ),
-      consume: async ({ event, references }) => {
-        references.nextToYieldDeferred.resolve(some(event))
-        references.controlReturnedDeferred = defer()
-        references.nextToYieldDeferred = defer<any>()
-        await references.controlReturnedDeferred.promise
-      },
-      consumes: new Set(),
-      graphComponentType: "Sink",
-      name: "AsyncIterable",
-      open: () => ({
-        nextToYieldDeferred: defer<Option<T>>(),
-        controlReturnedDeferred: defer()
-      }),
-      tagSeal: noopAsync,
-      seal: (r) => {
-        r.nextToYieldDeferred.resolve(none)
-        r.controlReturnedDeferred.resolve()
-      }
-    },
+    prototype: asyncIterableSink(),
     siphoning: true,
     lifecycle: {
       state: "ACTIVE"

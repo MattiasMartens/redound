@@ -1,18 +1,18 @@
 import { Sink } from "@/types/abstract"
 import { ControllerInstance, DerivationInstance, Emitter, GenericConsumerInstance, GenericEmitterInstance, SinkInstance, SourceInstance } from "@/types/instances"
 import { instantiateDerivation as makeDerivation } from "./derivation"
-import { AsyncIterableSink, instantiateAsyncIterableSink, instantiateSink } from "./sink"
+import { asyncIterableSink, instantiateAsyncIterableSink, instantiateSink } from "./sink"
 import { subscribe as sourceSubscribe } from "./source"
 import {
   subscribe as derivationSubscribeCore
 } from "./derivation"
 import { isNone } from "fp-ts/lib/Option"
 
-export function makeSink<T>(sink: ReturnType<typeof AsyncIterableSink>, sourceInstance: Emitter<T>, params?: { siphon?: boolean, id?: string, controller?: ControllerInstance<any> }): SinkInstance<T, void, void>
-export function makeSink<T, References, SinkResult>(sink: Sink<T, References, SinkResult> | ReturnType<typeof AsyncIterableSink>, sourceInstance: Emitter<T>, params?: { siphon?: boolean, id?: string, controller?: ControllerInstance<any> }): SinkInstance<T, References, SinkResult>
-export function makeSink<T, References, SinkResult>(sink: Sink<T, References, SinkResult> | ReturnType<typeof AsyncIterableSink>, sourceInstance: Emitter<T>, params: { siphon?: boolean, id?: string, controller?: ControllerInstance<any> } = {}): SinkInstance<T, References, SinkResult> {
+export function makeSink<T>(sink: ReturnType<typeof asyncIterableSink>, sourceInstance: Emitter<T>, params?: { siphon?: boolean, id?: string, controller?: ControllerInstance<any> }): SinkInstance<T, void, void>
+export function makeSink<T, References, SinkResult>(sink: Sink<T, References, SinkResult> | ReturnType<typeof asyncIterableSink>, sourceInstance: Emitter<T>, params?: { siphon?: boolean, id?: string, controller?: ControllerInstance<any> }): SinkInstance<T, References, SinkResult>
+export function makeSink<T, References, SinkResult>(sink: Sink<T, References, SinkResult> | ReturnType<typeof asyncIterableSink>, sourceInstance: Emitter<T>, params: { siphon?: boolean, id?: string, controller?: ControllerInstance<any> } = {}): SinkInstance<T, References, SinkResult> {
 
-  const sinkInstance = sink === AsyncIterableSink() ? makeAsyncIterableSink(sourceInstance, params) : instantiateSink(
+  const sinkInstance = sink === asyncIterableSink() ? makeAsyncIterableSink(sourceInstance, params) : instantiateSink(
     sink as Sink<T, References, SinkResult>,
     params
   )

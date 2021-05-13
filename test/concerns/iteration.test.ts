@@ -1,4 +1,5 @@
-import { courseIntoIterable, head } from "@/river"
+import { AsyncIterableSink, asyncIterableSink } from "@/core/sink"
+import { course, head, OutInstanceType } from "@/river"
 import { iterableSource } from "@/sources"
 import {
   deepStrictEqual
@@ -12,9 +13,12 @@ describe("iteration", () => {
   verify("Can iterate over a bespoke source", async () => {
     const out: string[] = []
 
-    const source = head("NO_CONTROLLER", iterableSource(sample))
+    const source = head(
+      "NO_CONTROLLER",
+      iterableSource(sample)
+    )
 
-    for await (const item of courseIntoIterable(source)) {
+    for await (const item of course(source, asyncIterableSink())) {
       out.push(item)
     }
 
