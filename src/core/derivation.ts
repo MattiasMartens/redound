@@ -306,7 +306,7 @@ export function seal<Aggregate>(
 type Finalization = any
 export function close<References>(
   derivation: DerivationInstance<any, any, References>,
-  outcome: Outcome<any, Finalization>
+  outcome: Outcome
 ) {
   if (derivation.lifecycle.state !== "ENDED" && derivation.lifecycle.state !== "READY") {
     derivation.lifecycle = {

@@ -27,11 +27,14 @@ export function makeUnaryDerivation<U, T>(
   return makeDerivation(derivation, { main: source }, params)
 }
 
-export function defaultControllerRescue(error: Error, event: Option<any>) {
+export function defaultControllerRescue(error: Error, event: Option<any>, notifyingComponent: SourceInstance<any, any> | DerivationInstance<any, any, any> | SinkInstance<any, any, any>) {
   return some(
-    left({
+    some({
       error,
-      event
+      event,
+      componentId: notifyingComponent.id,
+      componentName: notifyingComponent.prototype.name,
+      componentGraphType: notifyingComponent.prototype.graphComponentType
     })
   )
 }
@@ -42,7 +45,7 @@ export function defaultControllerSeal(
     sources: Set<SourceInstance<any, any>>,
     sinks: Set<SinkInstance<any, any, any>>
   }
-): Option<Outcome<any, any>> {
+): Option<Outcome> {
   if (sealEvent.graphComponentType === "Sink") {
     for (const sink of domain.sinks) {
       if (sink.lifecycle.state === "ACTIVE") {
@@ -50,12 +53,8 @@ export function defaultControllerSeal(
       }
     }
 
-    // Note that under the default regime, the controller's finalization is determined only by whichever Sink was the last to seal.
-    // Hence, best-suited to graphs with only one Sink, or where the finalization does not matter.
     return some(
-      right(
-        sealEvent.result
-      )
+      none
     )
   } else {
     return none

@@ -64,7 +64,7 @@ export function instantiateAsyncIterableSink<T>(subscribeToEmitter: (sinkInstanc
     prototype: {
       close: (references, outcome) => void pipe(
         outcome,
-        mapLeft(
+        map(
           l => references.nextToYieldDeferred.reject(l)
         )
       ),
@@ -109,10 +109,10 @@ export function instantiateAsyncIterableSink<T>(subscribeToEmitter: (sinkInstanc
         state: "SEALED"
       }
     },
-    async close(outcome: Outcome<any, any>) {
+    async close(outcome: Outcome) {
       if (sinkInstance.lifecycle.state !== "ENDED") {
-        if (isLeft(outcome)) {
-          finalizedSinkResultPromise.reject(outcome.left.error)
+        if (isSome(outcome)) {
+          finalizedSinkResultPromise.reject(outcome.value.error)
         }
 
         const references = getSome(sinkInstance.references)
@@ -146,12 +146,12 @@ export function instantiateAsyncIterableSink<T>(subscribeToEmitter: (sinkInstanc
           references.controlReturnedDeferred.resolve()
         }
       } catch (e) {
-        sinkInstance.close(left(e))
+        sinkInstance.close(some(e))
         throw e
       } finally {
         references.controlReturnedDeferred.resolve()
         if (sinkInstance.lifecycle.state !== "ENDED") {
-          sinkInstance.close(right(undefined))
+          sinkInstance.close(none)
         }
       }
     }
@@ -257,10 +257,10 @@ export function instantiateSink<T, References, SinkResult>(sink: Sink<T, Referen
         )
       )
     },
-    async close(outcome: Outcome<any, any>) {
+    async close(outcome: Outcome) {
       if (sinkInstance.lifecycle.state !== "ENDED") {
-        if (isLeft(outcome)) {
-          finalizedSinkResultPromise.reject(outcome.left.error)
+        if (isSome(outcome)) {
+          finalizedSinkResultPromise.reject(outcome.value.error)
         } if (isSome(withheldSinkResult)) {
           finalizedSinkResultPromise.resolve(withheldSinkResult.value)
         } else if (sinkInstance.lifecycle.state !== "SEALED") {

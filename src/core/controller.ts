@@ -55,7 +55,7 @@ export function instantiateController<Finalization>(
     id
   )
 
-  const outcomePromise = defer<Outcome<any, Finalization>>()
+  const outcomePromise = defer<Outcome>()
   const domain = {
     sources: new Set<SourceInstance<any, any>>(),
     sinks: new Set<SinkInstance<any, any, any>>(),
@@ -64,7 +64,7 @@ export function instantiateController<Finalization>(
 
   const allSinksClosed = defer()
 
-  const propagateOutcome = (outcome: Outcome<any, Finalization>) => {
+  const propagateOutcome = (outcome: Outcome) => {
     if (!isSome(controllerInstance.outcome)) {
       controllerInstance.outcome = some(outcome)
       forEachIterable(
@@ -195,7 +195,7 @@ export function instantiateController<Finalization>(
 export function controller<T>(
   partialController: Partial<Controller<T>> = {}
 ): Controller<T> {
-  ; return {
+  return {
     name: "Controller",
     waitForPressure: 1,
     rescue: defaultControllerRescue,

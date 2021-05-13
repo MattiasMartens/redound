@@ -8,15 +8,18 @@ import {
 import { GenericEmitterInstance, PayloadTypeOf, SourceInstance, Emitter, SinkInstance, DerivationInstance } from './instances'
 import { Possible } from './patterns'
 
-export type Outcome<T, Finalization> = Either<{
+export type Outcome = Option<{
   error: Error,
-  event: Option<T>
-}, Finalization>
+  event: Option<any>,
+  componentId: string,
+  componentName: string,
+  componentGraphType: string
+}>
 
 export type GenericEmitter<References> = {
   /** In general, it should be enforced that the type of instances of Event<T> is confined to the subtypes specified in `emits`. In TypeScript it is best to offer the ability to enforce it at runtime. */
   emits: Set<any>,
-  close: (r: References, o: Outcome<any, Finalization>) => void | Promise<void>,
+  close: (r: References, o: Outcome) => void | Promise<void>,
   name: string
 }
 
@@ -49,7 +52,7 @@ export type Source<T, References> = GenericEmitter<References> & {
     references?: References,
     output?: PossiblyAsyncResult<T>
   },
-  close: (r: References, o: Outcome<any, Finalization>) => void | Promise<void>,
+  close: (r: References, o: Outcome) => void | Promise<void>,
   pull?: (query: Query, r: References, tag: string) => Either<
     Error,
     PossiblyAsyncResult<T> | {
@@ -121,7 +124,7 @@ export type Derivation<DerivationSourceType extends Record<string, Emitter<any>>
     output?: PossiblyAsyncResult<T>,
     aggregate?: Aggregate
   },
-  close: (m: Aggregate, o: Outcome<any, Finalization>) => void | Promise<void>
+  close: (m: Aggregate, o: Outcome) => void | Promise<void>
 }
 
 type Finalization = any
@@ -138,7 +141,7 @@ export type Sink<T, References, SinkResult> = {
   open: () => References,
   tagSeal: (tag: string, r: References) => void,
   seal: (r: References) => SinkResult | Promise<SinkResult>,
-  close: (r: References, o: Outcome<any, Finalization>) => void | Promise<void>,
+  close: (r: References, o: Outcome) => void | Promise<void>,
   name: string
 }
 
@@ -168,7 +171,7 @@ export type Controller<Finalization> = {
       sources: Set<SourceInstance<any, any>>,
       sinks: Set<SinkInstance<any, any, any>>
     }
-  ) => Promise<Option<Outcome<any, Finalization>>> | Option<Outcome<any, Finalization>>,
+  ) => Promise<Option<Outcome>> | Option<Outcome>,
   waitForPressure: number,
   rescue: (
     error: Error,
@@ -178,7 +181,7 @@ export type Controller<Finalization> = {
       sources: Set<SourceInstance<any, any>>,
       sinks: Set<SinkInstance<any, any, any>>
     }
-  ) => Promise<Option<Outcome<any, Finalization>>> | Option<Outcome<any, Finalization>>,
+  ) => Promise<Option<Outcome>> | Option<Outcome>,
   taggedEvent: (
     event: any,
     tag: string,
@@ -187,5 +190,5 @@ export type Controller<Finalization> = {
       sources: Set<SourceInstance<any, any>>,
       sinks: Set<SinkInstance<any, any, any>>
     }
-  ) => Promise<Option<Outcome<any, Finalization>>> | Option<Outcome<any, Finalization>>
+  ) => Promise<Option<Outcome>> | Option<Outcome>
 }

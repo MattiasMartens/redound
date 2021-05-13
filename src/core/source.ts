@@ -386,7 +386,7 @@ export function seal<T, References>(
 type Finalization = any
 export function close<T, References>(
   source: SourceInstance<T, References>,
-  outcome: Outcome<T, Finalization>
+  outcome: Outcome
 ) {
   sourceTry(
     async () => {

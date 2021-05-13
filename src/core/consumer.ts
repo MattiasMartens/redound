@@ -39,7 +39,7 @@ export function consume<T, MemberOrReferences>(
 type Finalization = any
 export function close<T, MemberOrReferences>(
   consumer: GenericConsumerInstance<T, MemberOrReferences>,
-  outcome: Outcome<T, Finalization>
+  outcome: Outcome
 ) {
   if (consumer.prototype.graphComponentType === "Sink") {
     (consumer as SinkInstance<T, MemberOrReferences, any>).close(

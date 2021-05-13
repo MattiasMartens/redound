@@ -14,7 +14,7 @@ export type SourceInstance<T, References> = {
   controller: Option<ControllerInstance<any>>,
   consumers: Set<GenericConsumerInstance<T, any>>,
   backpressure: Backpressure,
-  lifecycle: { state: "READY" | "ACTIVE" | "SEALED" | "ITERATING" } | { state: "ENDED", outcome: Outcome<T, Finalization> },
+  lifecycle: { state: "READY" | "ACTIVE" | "SEALED" | "ITERATING" } | { state: "ENDED", outcome: Outcome },
   // Initialized to 'Some' on first subscription event, reverted to 'None' once closed.
   references: Option<References>,
   pull?: (
@@ -53,7 +53,7 @@ export type DerivationInstance<DerivationSourceType extends Record<string, Emitt
   sealedSources: Set<GenericEmitterInstance<any, any>>,
   consumers: Set<GenericConsumerInstance<T, any>>,
   backpressure: Backpressure,
-  lifecycle: { state: "READY" | "ACTIVE" | "SEALED" } | { state: "ENDED", outcome: Outcome<T, Finalization> },
+  lifecycle: { state: "READY" | "ACTIVE" | "SEALED" } | { state: "ENDED", outcome: Outcome },
   aggregate: Option<Aggregate>
 } & DerivationVariation<DerivationSourceType, Aggregate>
 
@@ -67,10 +67,10 @@ export type SinkInstance<T, References, SinkResult> = {
   controller: Option<ControllerInstance<any>>,
   id: string,
   siphoning: boolean,
-  lifecycle: { state: "ACTIVE" } | { state: "SEALED" } | { state: "ENDED", outcome: Outcome<T, Finalization> },
+  lifecycle: { state: "ACTIVE" } | { state: "SEALED" } | { state: "ENDED", outcome: Outcome },
   tagSeal: (tag: string, r: References) => Promise<void>,
   seal: (r: References) => Promise<void>,
-  close: (outcome: Outcome<any, any>) => Promise<void>,
+  close: (outcome: Outcome) => Promise<void>,
   sinkResult: () => Promise<SinkResult>,
   // Initialized to 'Some' on first subscription event,
   // reverted to 'None' once closed.
@@ -107,8 +107,8 @@ export type ControllerInstance<Finalization> = {
     tag: string,
     notifyingComponent: SourceInstance<any, any> | DerivationInstance<any, any, any> | SinkInstance<any, any, any>
   ) => Promise<void>,
-  outcome: Option<Outcome<any, Finalization>>,
-  promisedOutcome: () => Promise<Outcome<any, Finalization>>,
+  outcome: Option<Outcome>,
+  promisedOutcome: () => Promise<Outcome>,
   // A function, intended to be generic, that the controller uses to determine that all close events have propagated fully to all sinks.
   handleClose: (
     notifyingComponent: SourceInstance<any, any> | DerivationInstance<any, any, any> | SinkInstance<any, any, any>
